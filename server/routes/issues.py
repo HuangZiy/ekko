@@ -106,9 +106,17 @@ def update_issue(project_id: str, issue_id: str, req: UpdateIssueRequest):
         issue.assignee = req.assignee
     if req.status is not None:
         new_status = IssueStatus(req.status)
-        issue.move_to(new_status)
+        try:
+            issue.move_to(new_status)
+        except ValueError as e:
+            raise HTTPException(400, str(e))
 
     storage.save_issue(issue)
+
+    # Sync board if status changed
+    if req.status is not None:
+        _sync_board_column(project_id, issue_id, req.status)
+
     _publish("issue_updated", {"issue": issue.to_json()})
     return issue.to_json()
 
@@ -129,6 +137,23 @@ def update_issue_content(project_id: str, issue_id: str, body: dict):
     return {"ok": True}
 
 
+@router.delete("/{issue_id}")
+def delete_issue(project_id: str, issue_id: str):
+    storage = _get_storage(project_id)
+    issue_dir = storage.issues_dir / issue_id
+    if not issue_dir.exists():
+        raise HTTPException(404, f"Issue {issue_id} not found")
+
+    import shutil
+    shutil.rmtree(issue_dir)
+
+    # Remove from board
+    _remove_from_board(project_id, issue_id)
+
+    _publish("issue_deleted", {"issue_id": issue_id})
+    return {"ok": True}
+
+
 def _add_to_board(project_id: str, issue_id: str, column: str):
     from server.app import get_harness_root
     board_file = get_harness_root() / "projects" / project_id / "board.json"
@@ -140,6 +165,37 @@ def _add_to_board(project_id: str, issue_id: str, column: str):
                     col["issues"].append(issue_id)
                 break
         board_file.write_text(json.dumps(data, indent=2, ensure_ascii=False))
+
+
+def _remove_from_board(project_id: str, issue_id: str):
+    from server.app import get_harness_root
+    board_file = get_harness_root() / "projects" / project_id / "board.json"
+    if not board_file.exists():
+        return
+    data = json.loads(board_file.read_text())
+    for col in data["columns"]:
+        if issue_id in col["issues"]:
+            col["issues"].remove(issue_id)
+    board_file.write_text(json.dumps(data, indent=2, ensure_ascii=False))
+
+
+def _sync_board_column(project_id: str, issue_id: str, status: str):
+    """Move issue to the board column matching its new status."""
+    from server.app import get_harness_root
+    board_file = get_harness_root() / "projects" / project_id / "board.json"
+    if not board_file.exists():
+        return
+    data = json.loads(board_file.read_text())
+    # Remove from all columns
+    for col in data["columns"]:
+        if issue_id in col["issues"]:
+            col["issues"].remove(issue_id)
+    # Add to target column
+    for col in data["columns"]:
+        if col["id"] == status:
+            col["issues"].append(issue_id)
+            break
+    board_file.write_text(json.dumps(data, indent=2, ensure_ascii=False))
 
 
 def _publish(event_type: str, data: dict):

@@ -23,6 +23,7 @@
   --header-bg: #ffffff;
   --input-bg: #ffffff;
   --card-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  --header-height: 48px;
 }
 
 [data-theme="dark"] {

@@ -85,6 +85,29 @@ def _project_show(args: argparse.Namespace) -> None:
         print(f"  {status:<15} {len(items)}")
 
 
+def _project_delete(args: argparse.Namespace) -> None:
+    import shutil
+    platform = _get_platform()
+    project_dir = platform.projects_dir / args.project_id
+    if not project_dir.exists():
+        print(f"Project not found: {args.project_id}", file=sys.stderr)
+        sys.exit(1)
+    store = platform.get_project_storage(args.project_id)
+    project = store.load_project_meta()
+    name = project.name if project else args.project_id
+    if not args.yes:
+        confirm = input(f"Delete project \"{name}\" ({args.project_id})? [y/N] ").strip().lower()
+        if confirm != 'y':
+            print("Cancelled.")
+            return
+    shutil.rmtree(project_dir)
+    if platform.get_active_project_id() == args.project_id:
+        active_file = platform.root / "active_project"
+        if active_file.exists():
+            active_file.unlink()
+    print(f"Deleted project {args.project_id}: {name}")
+
+
 # ---------------------------------------------------------------------------
 # Issue subcommands
 # ---------------------------------------------------------------------------
@@ -182,6 +205,34 @@ def _issue_move(args: argparse.Namespace) -> None:
         sys.exit(1)
     store.save_issue(issue)
     print(f"Moved {issue.id}: {old} -> {new_status.value}")
+
+
+def _issue_delete(args: argparse.Namespace) -> None:
+    import shutil
+    store = _get_storage(args)
+    issue_dir = store.issues_dir / args.issue_id
+    if not issue_dir.exists():
+        print(f"Issue not found: {args.issue_id}", file=sys.stderr)
+        sys.exit(1)
+
+    issue = store.load_issue(args.issue_id)
+    if not args.yes:
+        confirm = input(f"Delete issue \"{issue.title}\" ({args.issue_id})? [y/N] ").strip().lower()
+        if confirm != 'y':
+            print("Cancelled.")
+            return
+    shutil.rmtree(issue_dir)
+
+    # Remove from board
+    board_file = store.root / "board.json"
+    if board_file.exists():
+        data = json.loads(board_file.read_text())
+        for col in data["columns"]:
+            if args.issue_id in col["issues"]:
+                col["issues"].remove(args.issue_id)
+        board_file.write_text(json.dumps(data, indent=2, ensure_ascii=False))
+
+    print(f"Deleted {args.issue_id}: {issue.title}")
 
 
 # ---------------------------------------------------------------------------
@@ -402,6 +453,11 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("project_id", nargs="?", default=None, help="Project ID (default: active)")
     p.set_defaults(func=_project_show)
 
+    p = project_sub.add_parser("delete", help="Delete a project")
+    p.add_argument("project_id", help="Project ID to delete")
+    p.add_argument("-y", "--yes", action="store_true", help="Skip confirmation")
+    p.set_defaults(func=_project_delete)
+
     # -- issue --
     issue_parser = sub.add_parser("issue", help="Manage issues")
     issue_sub = issue_parser.add_subparsers(dest="issue_command")
@@ -428,6 +484,12 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("issue_id", help="Issue ID")
     p.add_argument("status", help="Target status (e.g. todo, in_progress)")
     p.set_defaults(func=_issue_move)
+
+    # issue delete
+    p = issue_sub.add_parser("delete", help="Delete an issue")
+    p.add_argument("issue_id", help="Issue ID (e.g. ISS-1)")
+    p.add_argument("-y", "--yes", action="store_true", help="Skip confirmation")
+    p.set_defaults(func=_issue_delete)
 
     # -- review --
     review_parser = sub.add_parser("review", help="Review an agent-done issue")

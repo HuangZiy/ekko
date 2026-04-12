@@ -23,6 +23,11 @@ class CreateProjectRequest(BaseModel):
     workspace_path: str
 
 
+class UpdateProjectRequest(BaseModel):
+    name: str | None = None
+    workspace_path: str | None = None
+
+
 class SwitchProjectRequest(BaseModel):
     project_id: str
 
@@ -111,3 +116,21 @@ def delete_project(project_id: str):
         if active_file.exists():
             active_file.unlink()
     return {"ok": True}
+
+
+@router.patch("/{project_id}")
+def update_project(project_id: str, req: UpdateProjectRequest):
+    platform = _get_platform()
+    store = platform.get_project_storage(project_id)
+    project = store.load_project_meta()
+    if not project:
+        raise HTTPException(404, f"Project {project_id} not found")
+
+    if req.name is not None:
+        project.name = req.name
+    if req.workspace_path is not None:
+        project.workspaces = [req.workspace_path]
+
+    store.save_project_meta(project)
+    from dataclasses import asdict
+    return asdict(project)

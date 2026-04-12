@@ -35,6 +35,7 @@ function App() {
   const reviewIssue = useBoardStore(s => s.reviewIssue)
   const runAllIssues = useBoardStore(s => s.runAllIssues)
   const runSingleIssue = useBoardStore(s => s.runSingleIssue)
+  const deleteIssue = useBoardStore(s => s.deleteIssue)
   const issues = useBoardStore(s => s.issues)
 
   const fetchProjects = useProjectStore(s => s.fetchProjects)
@@ -100,7 +101,7 @@ function App() {
 
       <div className="flex-1 flex flex-col min-w-0">
         {/* Header */}
-        <header className="flex items-center gap-3 px-6 py-3 border-b border-[var(--border)] bg-[var(--header-bg)]">
+        <header className="flex items-center gap-3 px-6 border-b border-[var(--border)] bg-[var(--header-bg)]" style={{ height: 'var(--header-height)' }}>
           <LayoutDashboard size={20} className="text-[var(--accent)]" />
           <h1 className="text-base font-semibold text-[var(--text-primary)]">
             {activeProject?.name || 'Ekko'}
@@ -165,6 +166,10 @@ function App() {
               setSelectedIssue(null)
             }}
             onRun={() => runSingleIssue(selectedIssue.id)}
+            onDelete={() => {
+              deleteIssue(selectedIssue.id)
+              setSelectedIssue(null)
+            }}
           />
         )}
       </AnimatePresence>

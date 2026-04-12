@@ -11,7 +11,7 @@ from fastapi.staticfiles import StaticFiles
 from sse_starlette.sse import EventSourceResponse
 
 from server.sse import event_bus
-from server.routes import issues, board, projects, reviews
+from server.routes import issues, board, projects, reviews, run, fs
 
 # Harness root — configurable, defaults to workspace/.harness
 _harness_root: Path | None = None
@@ -42,6 +42,8 @@ def create_app(harness_root: Path | None = None) -> FastAPI:
     app.include_router(issues.router)
     app.include_router(board.router)
     app.include_router(reviews.router)
+    app.include_router(run.router)
+    app.include_router(fs.router)
 
     @app.get("/api/projects/{project_id}/events")
     async def sse_events(project_id: str):

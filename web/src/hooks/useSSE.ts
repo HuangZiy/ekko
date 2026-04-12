@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { useBoardStore, generateLogId } from '../stores/boardStore'
+import { useProjectStore } from '../stores/projectStore'
 
 export function useSSE() {
   const projectId = useBoardStore(s => s.projectId)
@@ -8,6 +9,7 @@ export function useSSE() {
   const fetchBoard = useBoardStore(s => s.fetchBoard)
   const fetchIssues = useBoardStore(s => s.fetchIssues)
   const addSSELog = useBoardStore(s => s.addSSELog)
+  const fetchProjects = useProjectStore(s => s.fetchProjects)
   const sourceRef = useRef<EventSource | null>(null)
 
   useEffect(() => {
@@ -31,6 +33,7 @@ export function useSSE() {
       if (data.issue) {
         updateIssueFromEvent(data.issue)
         logEvent('issue_updated', `Issue ${data.issue.id} updated: ${data.issue.title}`, data.issue.id)
+        fetchProjects()
       }
     })
 
@@ -39,6 +42,7 @@ export function useSSE() {
       logEvent('issue_created', `Issue created: ${data.issue?.title || data.issue_id || 'unknown'}`, data.issue_id)
       fetchBoard()
       fetchIssues()
+      fetchProjects()
     })
 
     source.addEventListener('issue_moved', (e) => {
@@ -52,6 +56,7 @@ export function useSSE() {
       logEvent('issue_approved', `Issue ${data.issue_id || 'unknown'} approved`, data.issue_id)
       fetchBoard()
       fetchIssues()
+      fetchProjects()
     })
 
     source.addEventListener('issue_rejected', (e) => {
@@ -59,6 +64,7 @@ export function useSSE() {
       logEvent('issue_rejected', `Issue ${data.issue_id || 'unknown'} rejected`, data.issue_id)
       fetchBoard()
       fetchIssues()
+      fetchProjects()
     })
 
     source.addEventListener('agent_started', (e) => {
@@ -73,6 +79,21 @@ export function useSSE() {
       logEvent('agent_done', `Agent completed issue ${data.issue_id || 'unknown'}`, data.issue_id)
       fetchBoard()
       fetchIssues()
+      fetchProjects()
+    })
+
+    source.addEventListener('run_error', (e) => {
+      const data = JSON.parse(e.data)
+      const msg = data.error || 'Run failed'
+      logEvent('run_error', data.issue_id ? `${data.issue_id}: ${msg}` : msg, data.issue_id)
+    })
+
+    source.addEventListener('issue_deleted', (e) => {
+      const data = JSON.parse(e.data)
+      logEvent('issue_deleted', `Issue ${data.issue_id || 'unknown'} deleted`, data.issue_id)
+      fetchBoard()
+      fetchIssues()
+      fetchProjects()
     })
 
     source.onerror = () => {
@@ -85,5 +106,5 @@ export function useSSE() {
       source.close()
       sourceRef.current = null
     }
-  }, [projectId, updateIssueFromEvent, moveBoardFromEvent, fetchBoard, fetchIssues, addSSELog])
+  }, [projectId, updateIssueFromEvent, moveBoardFromEvent, fetchBoard, fetchIssues, addSSELog, fetchProjects])
 }

@@ -5,6 +5,7 @@ export interface ProjectInfo {
   name: string
   workspaces: string[]
   created_at: string
+  key?: string
   _active?: boolean
   issue_counts?: Record<string, number>
   total_issues?: number
@@ -18,6 +19,7 @@ interface ProjectState {
   createProject: (name: string, workspacePath: string) => Promise<void>
   switchProject: (projectId: string) => Promise<void>
   deleteProject: (projectId: string) => Promise<void>
+  updateProject: (projectId: string, patch: { name?: string; workspace_path?: string }) => Promise<void>
 }
 
 export const useProjectStore = create<ProjectState>((set, get) => ({
@@ -58,6 +60,15 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
 
   deleteProject: async (projectId) => {
     await fetch(`/api/projects/${projectId}`, { method: 'DELETE' })
+    await get().fetchProjects()
+  },
+
+  updateProject: async (projectId, patch) => {
+    await fetch(`/api/projects/${projectId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(patch),
+    })
     await get().fetchProjects()
   },
 }))

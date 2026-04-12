@@ -11,7 +11,7 @@ const typeColors: Record<string, string> = {
   issue_updated: 'text-cyan-500',
   issue_moved: 'text-green-500',
   issue_approved: 'text-green-600',
-  issue_rejected: 'text-red-500',
+  run_error: 'text-red-600',
 }
 
 function formatTime(iso: string): string {

@@ -48,11 +48,12 @@ interface BoardState {
   setProjectId: (id: string) => void
   fetchBoard: () => Promise<void>
   fetchIssues: () => Promise<void>
-  moveIssue: (issueId: string, toColumn: string) => Promise<void>
+  moveIssue: (issueId: string, toColumn: string) => Promise<{ ok: boolean; error?: string }>
   createIssue: (title: string, priority?: string, labels?: string[], description?: string, blockedBy?: string[]) => Promise<void>
   reviewIssue: (issueId: string, approved: boolean, comment?: string) => Promise<void>
   updateIssue: (issueId: string, patch: Partial<Pick<Issue, 'title' | 'priority' | 'labels' | 'blocked_by'>>) => Promise<void>
   updateIssueContent: (issueId: string, content: string) => Promise<void>
+  deleteIssue: (issueId: string) => Promise<void>
   runAllIssues: () => Promise<void>
   runSingleIssue: (issueId: string) => Promise<void>
   addSSELog: (entry: SSELogEntry) => void
@@ -93,7 +94,10 @@ export const useBoardStore = create<BoardState>((set, get) => ({
 
   moveIssue: async (issueId, toColumn) => {
     const { projectId, columns } = get()
-    if (!projectId) return
+    if (!projectId) return { ok: false, error: 'No project selected' }
+
+    // Save snapshot for rollback
+    const snapshot = columns.map(col => ({ ...col, issues: [...col.issues] }))
 
     // Optimistic update
     const newColumns = columns.map(col => ({
@@ -104,11 +108,23 @@ export const useBoardStore = create<BoardState>((set, get) => ({
     if (target) target.issues.push(issueId)
     set({ columns: newColumns })
 
-    await fetch(`/api/projects/${projectId}/board/move/${issueId}`, {
+    const res = await fetch(`/api/projects/${projectId}/board/move/${issueId}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ to_column: toColumn }),
     })
+
+    if (!res.ok) {
+      // Rollback
+      set({ columns: snapshot })
+      const data = await res.json().catch(() => ({}))
+      const error = data.detail || `Cannot move to ${toColumn}`
+      return { ok: false, error }
+    }
+
+    // Refresh issue data to get updated status
+    await get().fetchIssues()
+    return { ok: true }
   },
 
   createIssue: async (title, priority = 'medium', labels = [], description = '', blockedBy = []) => {
@@ -160,6 +176,16 @@ export const useBoardStore = create<BoardState>((set, get) => ({
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ content }),
     })
+  },
+
+  deleteIssue: async (issueId) => {
+    const { projectId } = get()
+    if (!projectId) return
+    await fetch(`/api/projects/${projectId}/issues/${issueId}`, {
+      method: 'DELETE',
+    })
+    await get().fetchBoard()
+    await get().fetchIssues()
   },
 
   runAllIssues: async () => {

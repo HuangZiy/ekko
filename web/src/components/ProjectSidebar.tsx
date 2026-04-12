@@ -1,13 +1,16 @@
 import { useState } from 'react'
-import { FolderKanban, Plus, Check, Trash2, ChevronDown } from 'lucide-react'
+import { FolderKanban, FolderOpen, Plus, Check, Trash2, ChevronDown, Info } from 'lucide-react'
 import { useProjectStore } from '../stores/projectStore'
 import type { ProjectInfo } from '../stores/projectStore'
+import { DirectoryPicker } from './DirectoryPicker'
+import { EkkoLogo } from './EkkoLogo'
 
 interface ProjectSidebarProps {
   onProjectSwitch: (projectId: string) => void
+  onProjectDetail: (project: ProjectInfo) => void
 }
 
-export function ProjectSidebar({ onProjectSwitch }: ProjectSidebarProps) {
+export function ProjectSidebar({ onProjectSwitch, onProjectDetail }: ProjectSidebarProps) {
   const projects = useProjectStore(s => s.projects)
   const activeProjectId = useProjectStore(s => s.activeProjectId)
   const switchProject = useProjectStore(s => s.switchProject)
@@ -16,6 +19,7 @@ export function ProjectSidebar({ onProjectSwitch }: ProjectSidebarProps) {
   const [showCreate, setShowCreate] = useState(false)
   const [newName, setNewName] = useState('')
   const [newPath, setNewPath] = useState('')
+  const [showPicker, setShowPicker] = useState(false)
   const [expanded, setExpanded] = useState(true)
 
   const handleCreate = async () => {
@@ -33,12 +37,18 @@ export function ProjectSidebar({ onProjectSwitch }: ProjectSidebarProps) {
 
   return (
     <div className="w-64 border-r border-[var(--border)] bg-white flex flex-col h-full">
+      {/* Logo — matches right header height */}
+      <div className="flex items-center px-4 border-b border-[var(--border)]" style={{ height: 'var(--header-height)' }}>
+        <EkkoLogo size={24} />
+      </div>
+
+      {/* Projects header */}
       <div
-        className="flex items-center gap-2 px-4 py-3 border-b border-[var(--border)] cursor-pointer hover:bg-gray-50"
+        className="flex items-center gap-2 px-4 py-2.5 cursor-pointer hover:bg-gray-50"
         onClick={() => setExpanded(!expanded)}
       >
-        <FolderKanban size={16} className="text-[var(--accent)]" />
-        <span className="text-sm font-semibold flex-1">Projects</span>
+        <FolderKanban size={14} className="text-[var(--text-secondary)]" />
+        <span className="text-xs font-semibold flex-1 text-[var(--text-secondary)] uppercase tracking-wider">Projects</span>
         <ChevronDown size={14} className={`text-gray-400 transition-transform ${expanded ? '' : '-rotate-90'}`} />
       </div>
 
@@ -51,6 +61,7 @@ export function ProjectSidebar({ onProjectSwitch }: ProjectSidebarProps) {
               isActive={project.id === activeProjectId}
               onSwitch={() => handleSwitch(project.id)}
               onDelete={() => deleteProject(project.id)}
+              onDetail={() => onProjectDetail(project)}
             />
           ))}
 
@@ -72,12 +83,21 @@ export function ProjectSidebar({ onProjectSwitch }: ProjectSidebarProps) {
               placeholder="Project name"
               className="w-full px-2 py-1.5 text-xs border border-[var(--border)] rounded focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
             />
-            <input
-              value={newPath}
-              onChange={e => setNewPath(e.target.value)}
-              placeholder="Workspace path (e.g. ./workspace)"
-              className="w-full px-2 py-1.5 text-xs border border-[var(--border)] rounded focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
-            />
+            <div className="flex gap-1">
+              <input
+                value={newPath}
+                onChange={e => setNewPath(e.target.value)}
+                placeholder="Workspace path"
+                className="flex-1 min-w-0 px-2 py-1.5 text-xs border border-[var(--border)] rounded focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
+              />
+              <button
+                onClick={() => setShowPicker(true)}
+                className="px-2 py-1.5 border border-[var(--border)] rounded hover:bg-blue-50 text-gray-500 hover:text-[var(--accent)]"
+                title="Browse directories"
+              >
+                <FolderOpen size={14} />
+              </button>
+            </div>
             <div className="flex gap-1">
               <button
                 onClick={handleCreate}
@@ -102,6 +122,11 @@ export function ProjectSidebar({ onProjectSwitch }: ProjectSidebarProps) {
           </button>
         )}
       </div>
+      <DirectoryPicker
+        open={showPicker}
+        onSelect={(path) => { setNewPath(path); setShowPicker(false) }}
+        onClose={() => setShowPicker(false)}
+      />
     </div>
   )
 }
@@ -111,13 +136,16 @@ function ProjectItem({
   isActive,
   onSwitch,
   onDelete,
+  onDetail,
 }: {
   project: ProjectInfo
   isActive: boolean
   onSwitch: () => void
   onDelete: () => void
+  onDetail: () => void
 }) {
-  const [showDelete, setShowDelete] = useState(false)
+  const [showActions, setShowActions] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const total = project.total_issues || 0
   const done = project.issue_counts?.human_done || 0
 
@@ -129,8 +157,8 @@ function ProjectItem({
           : 'border-l-transparent hover:bg-gray-50'
       }`}
       onClick={onSwitch}
-      onMouseEnter={() => setShowDelete(true)}
-      onMouseLeave={() => setShowDelete(false)}
+      onMouseEnter={() => setShowActions(true)}
+      onMouseLeave={() => setShowActions(false)}
     >
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5">
@@ -145,13 +173,41 @@ function ProjectItem({
           </div>
         )}
       </div>
-      {showDelete && !isActive && (
-        <button
-          onClick={e => { e.stopPropagation(); onDelete() }}
-          className="text-gray-300 hover:text-red-500 shrink-0"
-        >
-          <Trash2 size={14} />
-        </button>
+      {showActions && (
+        <div className="flex gap-0.5 shrink-0">
+          <button
+            onClick={e => { e.stopPropagation(); onDetail() }}
+            className="text-gray-300 hover:text-[var(--accent)] shrink-0"
+            title="Project details"
+          >
+            <Info size={14} />
+          </button>
+          {!isActive && (
+            <button
+              onClick={e => { e.stopPropagation(); setShowDeleteConfirm(true) }}
+              className="text-gray-300 hover:text-red-500 shrink-0"
+            >
+              <Trash2 size={14} />
+            </button>
+          )}
+        </div>
+      )}
+      {showDeleteConfirm && (
+        <div className="flex items-center gap-1 shrink-0" onClick={e => e.stopPropagation()}>
+          <span className="text-xs text-red-500">Delete?</span>
+          <button
+            onClick={() => { onDelete(); setShowDeleteConfirm(false) }}
+            className="text-xs px-1.5 py-0.5 bg-red-500 text-white rounded hover:bg-red-600"
+          >
+            Yes
+          </button>
+          <button
+            onClick={() => setShowDeleteConfirm(false)}
+            className="text-xs px-1.5 py-0.5 text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+          >
+            No
+          </button>
+        </div>
       )}
     </div>
   )

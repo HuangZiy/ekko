@@ -27,8 +27,33 @@ def get_board(project_id: str):
     board_file = project_dir / "board.json"
     if not board_file.exists():
         board = Board.create()
-        return {"columns": [{"id": c.id, "name": c.name, "issues": c.issues} for c in board.columns]}
-    return json.loads(board_file.read_text())
+        data = {"columns": [{"id": c.id, "name": c.name, "issues": c.issues} for c in board.columns]}
+    else:
+        data = json.loads(board_file.read_text())
+
+    # Auto-heal: ensure every issue appears on the board
+    storage = ProjectStorage(project_dir)
+    all_issues = storage.list_issues()
+    on_board = set()
+    for col in data["columns"]:
+        on_board.update(col["issues"])
+
+    dirty = False
+    for issue in all_issues:
+        if issue.id not in on_board:
+            # Place in column matching its status
+            target_col = issue.status.value
+            for col in data["columns"]:
+                if col["id"] == target_col:
+                    col["issues"].append(issue.id)
+                    dirty = True
+                    break
+
+    if dirty:
+        board_file.parent.mkdir(parents=True, exist_ok=True)
+        board_file.write_text(json.dumps(data, indent=2, ensure_ascii=False))
+
+    return data
 
 
 class MoveIssueRequest(BaseModel):
@@ -72,8 +97,24 @@ def move_issue_on_board(project_id: str, issue_id: str, req: MoveIssueRequest):
         if new_status and issue.status != new_status:
             issue.move_to(new_status)
             storage.save_issue(issue)
-    except (FileNotFoundError, ValueError):
+    except FileNotFoundError:
         pass  # issue meta might not exist yet
+    except ValueError as e:
+        # Revert board.json — put issue back in source column
+        board_data2 = json.loads(board_file.read_text()) if board_file.exists() else board_data
+        for col in board_data2["columns"]:
+            if issue_id in col["issues"]:
+                col["issues"].remove(issue_id)
+        # Find the column matching the issue's actual status
+        actual_col = {v.value: k for k, v in status_map.items()}.get(issue.status.value)
+        if actual_col:
+            for col in board_data2["columns"]:
+                if col["id"] == actual_col:
+                    if issue_id not in col["issues"]:
+                        col["issues"].append(issue_id)
+                    break
+        board_file.write_text(json.dumps(board_data2, indent=2, ensure_ascii=False))
+        raise HTTPException(400, str(e))
 
     # Publish SSE event
     from server.sse import event_bus

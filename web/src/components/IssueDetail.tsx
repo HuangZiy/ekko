@@ -6,8 +6,9 @@ import type { Issue } from '../stores/boardStore'
 import { useBoardStore } from '../stores/boardStore'
 import {
   Clock, Tag, AlertCircle, CheckCircle2, XCircle, GitBranch,
-  Pencil, Save, X, Image, FileCode, FlaskConical, ShieldCheck, Play
+  Pencil, Save, X, Image, FileCode, FlaskConical, ShieldCheck, Play, ChevronDown, Trash2
 } from 'lucide-react'
+import { VALID_TRANSITIONS, STATUS_LABELS } from '../constants/transitions'
 
 interface IssueDetailProps {
   issue: Issue
@@ -15,6 +16,7 @@ interface IssueDetailProps {
   onApprove: () => void
   onReject: (comment: string) => void
   onRun?: () => void
+  onDelete?: () => void
 }
 
 interface EvidenceData {
@@ -69,9 +71,10 @@ function parseEvidence(content: string): EvidenceData {
   return evidence
 }
 
-export function IssueDetail({ issue, onClose, onApprove, onReject, onRun }: IssueDetailProps) {
+export function IssueDetail({ issue, onClose, onApprove, onReject, onRun, onDelete }: IssueDetailProps) {
   const [rejectComment, setRejectComment] = useState('')
   const [showRejectForm, setShowRejectForm] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [content, setContent] = useState('')
   const [editing, setEditing] = useState(false)
   const [editTitle, setEditTitle] = useState(issue.title)
@@ -80,9 +83,35 @@ export function IssueDetail({ issue, onClose, onApprove, onReject, onRun }: Issu
   const [editingContent, setEditingContent] = useState(false)
   const [editContent, setEditContent] = useState('')
   const [saving, setSaving] = useState(false)
+  const [showStatusMenu, setShowStatusMenu] = useState(false)
+  const [statusError, setStatusError] = useState<string | null>(null)
 
   const updateIssue = useBoardStore(s => s.updateIssue)
   const updateIssueContent = useBoardStore(s => s.updateIssueContent)
+  const fetchBoard = useBoardStore(s => s.fetchBoard)
+  const fetchIssues = useBoardStore(s => s.fetchIssues)
+
+  const allowedTransitions = VALID_TRANSITIONS[issue.status] || []
+
+  const handleStatusChange = async (newStatus: string) => {
+    setShowStatusMenu(false)
+    setStatusError(null)
+    const projectId = useBoardStore.getState().projectId
+    if (!projectId) return
+    const res = await fetch(`/api/projects/${projectId}/issues/${issue.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: newStatus }),
+    })
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}))
+      setStatusError(data.detail || 'Status change failed')
+      setTimeout(() => setStatusError(null), 3000)
+      return
+    }
+    await fetchBoard()
+    await fetchIssues()
+  }
 
   useEffect(() => {
     const projectId = useBoardStore.getState().projectId
@@ -187,15 +216,47 @@ export function IssueDetail({ issue, onClose, onApprove, onReject, onRun }: Issu
               </button>
             </div>
           )}
+          {onDelete && (
+            <button
+              onClick={() => setShowDeleteConfirm(true)}
+              className="p-1.5 rounded-lg hover:bg-red-50 text-[var(--text-secondary)] hover:text-red-500 transition-colors"
+              title="Delete issue"
+            >
+              <Trash2 size={16} />
+            </button>
+          )}
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl">&times;</button>
         </div>
 
         <div className="px-6 py-4 space-y-6">
           {/* Status / Priority / Assignee */}
-          <div className="flex flex-wrap gap-3 text-sm">
-            <span className={`px-2 py-0.5 rounded text-white text-xs font-medium ${statusColor(issue.status)}`}>
-              {issue.status.replace('_', ' ')}
-            </span>
+          <div className="flex flex-wrap gap-3 text-sm items-center">
+            <div className="relative">
+              <button
+                onClick={() => allowedTransitions.length > 0 && setShowStatusMenu(!showStatusMenu)}
+                className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-white text-xs font-medium ${statusColor(issue.status)} ${allowedTransitions.length > 0 ? 'cursor-pointer hover:opacity-90' : 'cursor-default'}`}
+              >
+                {issue.status.replace('_', ' ')}
+                {allowedTransitions.length > 0 && <ChevronDown size={12} />}
+              </button>
+              {showStatusMenu && (
+                <div className="absolute top-full left-0 mt-1 bg-[var(--bg-card)] border border-[var(--border)] rounded-lg shadow-lg z-20 min-w-[140px] py-1">
+                  {allowedTransitions.map(status => (
+                    <button
+                      key={status}
+                      onClick={() => handleStatusChange(status)}
+                      className="w-full text-left px-3 py-1.5 text-xs hover:bg-[var(--bg-secondary)] text-[var(--text-primary)] flex items-center gap-2"
+                    >
+                      <span className={`w-2 h-2 rounded-full ${statusColor(status)}`} />
+                      {STATUS_LABELS[status] || status}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+            {statusError && (
+              <span className="text-xs text-red-500">{statusError}</span>
+            )}
             {editing ? (
               <select
                 value={editPriority}
@@ -355,6 +416,31 @@ export function IssueDetail({ issue, onClose, onApprove, onReject, onRun }: Issu
             </div>
           )}
         </div>
+
+        {/* Delete Confirmation */}
+        {showDeleteConfirm && (
+          <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/20">
+            <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-xl shadow-xl p-5 mx-6 max-w-sm">
+              <p className="text-sm text-[var(--text-primary)] mb-4">
+                Delete <span className="font-semibold">{issue.id}</span>? This cannot be undone.
+              </p>
+              <div className="flex justify-end gap-2">
+                <button
+                  onClick={() => setShowDeleteConfirm(false)}
+                  className="px-3 py-1.5 text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => { onDelete?.(); setShowDeleteConfirm(false) }}
+                  className="px-3 py-1.5 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700"
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </motion.div>
     </div>
   )

@@ -45,6 +45,28 @@ class ProjectStorage:
     def load_issue_content(self, issue_id: str) -> str:
         return (self.issues_dir / issue_id / "content.md").read_text()
 
+    def append_run_log(self, issue_id: str, run_id: str, entry: dict) -> None:
+        logs_dir = self.issues_dir / issue_id / "logs"
+        logs_dir.mkdir(parents=True, exist_ok=True)
+        with open(logs_dir / f"{run_id}.jsonl", "a") as f:
+            f.write(json.dumps(entry, ensure_ascii=False) + "\n")
+
+    def load_run_log(self, issue_id: str, run_id: str) -> list[dict]:
+        log_file = self.issues_dir / issue_id / "logs" / f"{run_id}.jsonl"
+        if not log_file.exists():
+            return []
+        entries = []
+        for line in log_file.read_text().splitlines():
+            if line.strip():
+                entries.append(json.loads(line))
+        return entries
+
+    def list_run_ids(self, issue_id: str) -> list[str]:
+        logs_dir = self.issues_dir / issue_id / "logs"
+        if not logs_dir.exists():
+            return []
+        return sorted(f.stem for f in logs_dir.glob("*.jsonl"))
+
     def list_issues(self) -> list[Issue]:
         if not self.issues_dir.exists():
             return []

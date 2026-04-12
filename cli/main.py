@@ -34,7 +34,7 @@ def _get_storage(args: argparse.Namespace):
 def _project_create(args: argparse.Namespace) -> None:
     platform = _get_platform()
     workspace_path = str(Path(args.workspace_path).resolve())
-    key = (args.key or "ISS").upper()
+    key = args.key.upper()
     project, store = platform.create_project(name=args.name, workspace_path=workspace_path, key=key)
     print(f"Created project {project.id}: {project.name}  (issue prefix: {project.key})")
     print(f"  Workspace: {workspace_path}")
@@ -96,8 +96,10 @@ def _issue_create(args: argparse.Namespace) -> None:
 
     # Determine issue prefix from project key
     project = store.load_project_meta()
-    prefix = project.key if project else "ISS"
-    issue_id = store.next_issue_id(prefix)
+    if project is None:
+        print("Error: project metadata not found in storage directory.", file=sys.stderr)
+        sys.exit(1)
+    issue_id = store.next_issue_id(project.key)
 
     issue = Issue.create(
         id=issue_id,

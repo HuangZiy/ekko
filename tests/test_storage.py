@@ -1,5 +1,7 @@
-from core.models import Issue
-from core.storage import ProjectStorage
+import tempfile
+from pathlib import Path
+from core.models import Issue, Project
+from core.storage import ProjectStorage, PlatformStorage
 
 
 def test_save_and_load_issue(tmp_path):
@@ -25,3 +27,17 @@ def test_list_issues(tmp_path):
     store.save_issue(Issue.create(title="B"))
     issues = store.list_issues()
     assert len(issues) == 2
+
+
+def test_project_storage_next_issue_id(tmp_path):
+    store = ProjectStorage(tmp_path)
+    assert store.next_issue_id("ISS") == "ISS-1"
+    assert store.next_issue_id("ISS") == "ISS-2"
+    assert store.next_issue_id("BLOG") == "BLOG-1"
+    assert store.next_issue_id("ISS") == "ISS-3"
+
+
+def test_platform_storage_next_project_id(tmp_path):
+    platform = PlatformStorage(tmp_path)
+    assert platform.next_project_id() == "PRJ-1"
+    assert platform.next_project_id() == "PRJ-2"

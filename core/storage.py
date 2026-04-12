@@ -11,6 +11,17 @@ class ProjectStorage:
         self.root = Path(root)
         self.issues_dir = self.root / "issues"
 
+    def next_issue_id(self, prefix: str = "ISS") -> str:
+        counter_file = self.root / "counter.json"
+        counters: dict[str, int] = {}
+        if counter_file.exists():
+            counters = json.loads(counter_file.read_text())
+        n = counters.get(prefix, 0) + 1
+        counters[prefix] = n
+        self.root.mkdir(parents=True, exist_ok=True)
+        counter_file.write_text(json.dumps(counters))
+        return f"{prefix}-{n}"
+
     def save_issue(self, issue: Issue) -> None:
         issue_dir = self.issues_dir / issue.id
         issue_dir.mkdir(parents=True, exist_ok=True)
@@ -75,6 +86,17 @@ class PlatformStorage:
     def __init__(self, harness_root: Path) -> None:
         self.root = harness_root
         self.projects_dir = self.root / "projects"
+
+    def next_project_id(self) -> str:
+        counter_file = self.root / "counter.json"
+        counters: dict[str, int] = {}
+        if counter_file.exists():
+            counters = json.loads(counter_file.read_text())
+        n = counters.get("PRJ", 0) + 1
+        counters["PRJ"] = n
+        self.root.mkdir(parents=True, exist_ok=True)
+        counter_file.write_text(json.dumps(counters))
+        return f"PRJ-{n}"
 
     def create_project(self, name: str, workspace_path: str) -> tuple[Project, ProjectStorage]:
         project = Project.create(name=name, workspace_path=workspace_path)

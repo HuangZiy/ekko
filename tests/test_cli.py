@@ -8,7 +8,7 @@ def run_cli(*args: str) -> subprocess.CompletedProcess:
     return subprocess.run(
         [sys.executable, "-m", "cli", *args],
         capture_output=True, text=True,
-        cwd="/Users/cn-edisonhuang01/MyWorks/blog-harness",
+        cwd="/Users/cn-edisonhuang01/MyWorks/ekko",
     )
 
 

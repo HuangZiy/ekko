@@ -13,7 +13,13 @@ def store(tmp_path):
 @pytest.fixture
 def cli(tmp_path, capsys):
     """Return a helper that runs CLI commands against a tmp project."""
-    project_dir = str(tmp_path / "project")
+    from core.models import Project
+    project_dir = tmp_path / "project"
+    # Create project metadata so _issue_create can read the key
+    store = ProjectStorage(project_dir)
+    project = Project.create(id="PRJ-1", name="test", workspace_path=str(tmp_path))
+    store.save_project_meta(project)
+    project_dir = str(project_dir)
 
     def run(*args: str):
         try:

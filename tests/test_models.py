@@ -50,7 +50,7 @@ def test_create_project():
     assert len(project.workspaces) == 1
 
 
-# --- Board tests ---
+# --- Explicit ID tests ---
 
 def test_issue_create_with_explicit_id():
     issue = Issue.create(id="ISS-1", title="Fix login")

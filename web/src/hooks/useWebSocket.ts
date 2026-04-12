@@ -14,6 +14,7 @@ export function useWebSocket() {
   const addSSELog = useBoardStore(s => s.addSSELog)
   const appendAgentLog = useBoardStore(s => s.appendAgentLog)
   const setWsSend = useBoardStore(s => s.setWsSend)
+  const removeRunningIssue = useBoardStore(s => s.removeRunningIssue)
   const fetchProjects = useProjectStore(s => s.fetchProjects)
 
   const wsRef = useRef<WebSocket | null>(null)
@@ -114,12 +115,14 @@ export function useWebSocket() {
 
           case 'agent_started':
             logEvent('agent_started', `Agent started on ${payload?.issue_id || 'unknown'}`, payload?.issue_id)
+            if (payload?.issue_id) removeRunningIssue(payload.issue_id)
             fetchBoard()
             fetchIssues()
             break
 
           case 'agent_done':
             logEvent('agent_done', `Agent completed ${payload?.issue_id || 'unknown'}`, payload?.issue_id)
+            if (payload?.issue_id) removeRunningIssue(payload.issue_id)
             fetchBoard()
             fetchIssues()
             fetchProjects()
@@ -149,8 +152,17 @@ export function useWebSocket() {
             }
             break
 
+          case 'harness_log':
+            if (data.issue_id) {
+              appendAgentLog(data.issue_id, {
+                ts: data.ts, type: 'harness_log', data: data.data,
+              })
+            }
+            break
+
           case 'run_error':
             logEvent('run_error', payload?.issue_id ? `${payload.issue_id}: ${payload.error}` : (payload?.error || 'Run failed'), payload?.issue_id)
+            if (payload?.issue_id) removeRunningIssue(payload.issue_id)
             break
         }
       }
@@ -181,7 +193,7 @@ export function useWebSocket() {
         wsRef.current = null
       }
     }
-  }, [projectId, updateIssueFromEvent, moveBoardFromEvent, fetchBoard, fetchIssues, addSSELog, appendAgentLog, setWsSend, fetchProjects, sendMessage])
+  }, [projectId, updateIssueFromEvent, moveBoardFromEvent, fetchBoard, fetchIssues, addSSELog, appendAgentLog, setWsSend, removeRunningIssue, fetchProjects, sendMessage])
 
   return { sendMessage }
 }

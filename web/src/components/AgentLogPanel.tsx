@@ -24,6 +24,23 @@ function formatEntry(entry: AgentLogEntry): { label: string; color: string; text
       const text = s === 'failed' ? `${s}: ${entry.data.error || ''}` : s
       return { label: 'Status', color, text }
     }
+    case 'harness_log': {
+      const level = entry.data.level || 'info'
+      const phase = entry.data.phase || ''
+      const colorMap: Record<string, string> = {
+        info: 'text-violet-500', success: 'text-green-500',
+        warning: 'text-amber-500', error: 'text-red-500',
+      }
+      const phaseLabel: Record<string, string> = {
+        state: 'State', loop: 'Loop', generator: 'Gen',
+        evaluator: 'Eval', evidence: 'Evidence', new_issue: 'NewIssue',
+      }
+      return {
+        label: phaseLabel[phase] || 'Harness',
+        color: colorMap[level] || 'text-violet-500',
+        text: entry.data.msg || '',
+      }
+    }
     default:
       return { label: entry.type, color: 'text-gray-400', text: JSON.stringify(entry.data) }
   }

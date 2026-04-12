@@ -49,6 +49,15 @@ export function IssueCard({ issue, onClick }: IssueCardProps) {
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1">
             <span className="text-xs text-gray-400 mb-1">{issue.id}</span>
+            {issue.status === 'in_progress' && (
+              <span className="ml-auto flex items-center gap-1 text-xs text-amber-600">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
+                </span>
+                Running
+              </span>
+            )}
             {canRun && (
               <button
                 onClick={handleRun}

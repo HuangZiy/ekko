@@ -6,7 +6,7 @@ import type { Issue } from '../stores/boardStore'
 import { useBoardStore } from '../stores/boardStore'
 import {
   Clock, Tag, AlertCircle, CheckCircle2, XCircle, GitBranch,
-  Pencil, Save, X, Image, FileCode, FlaskConical, ShieldCheck
+  Pencil, Save, X, Image, FileCode, FlaskConical, ShieldCheck, Play
 } from 'lucide-react'
 
 interface IssueDetailProps {
@@ -14,6 +14,7 @@ interface IssueDetailProps {
   onClose: () => void
   onApprove: () => void
   onReject: (comment: string) => void
+  onRun?: () => void
 }
 
 interface EvidenceData {
@@ -68,7 +69,7 @@ function parseEvidence(content: string): EvidenceData {
   return evidence
 }
 
-export function IssueDetail({ issue, onClose, onApprove, onReject }: IssueDetailProps) {
+export function IssueDetail({ issue, onClose, onApprove, onReject, onRun }: IssueDetailProps) {
   const [rejectComment, setRejectComment] = useState('')
   const [showRejectForm, setShowRejectForm] = useState(false)
   const [content, setContent] = useState('')
@@ -254,6 +255,18 @@ export function IssueDetail({ issue, onClose, onApprove, onReject }: IssueDetail
                   <GitBranch size={14} /> Blocks: {issue.blocks.join(', ')}
                 </div>
               )}
+            </div>
+          )}
+
+          {/* Run Action */}
+          {onRun && ['todo', 'backlog', 'rejected'].includes(issue.status) && (
+            <div className="border-t border-[var(--border)] pt-4">
+              <button
+                onClick={onRun}
+                className="flex items-center gap-1.5 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-medium"
+              >
+                <Play size={16} /> Run
+              </button>
             </div>
           )}
 

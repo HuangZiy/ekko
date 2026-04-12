@@ -2,12 +2,14 @@ import { useState, useEffect } from 'react'
 import type { Issue } from './stores/boardStore'
 import { useBoardStore } from './stores/boardStore'
 import { useProjectStore } from './stores/projectStore'
+import type { ProjectInfo } from './stores/projectStore'
 import { useSSE } from './hooks/useSSE'
 import { useTheme } from './hooks/useTheme'
 import { Board } from './components/Board'
 import { BoardStats } from './components/BoardStats'
 import { IssueDetail } from './components/IssueDetail'
 import { ProjectSidebar } from './components/ProjectSidebar'
+import { ProjectDetail } from './components/ProjectDetail'
 import { RunLogPanel } from './components/RunLogPanel'
 import { LayoutDashboard, Plus, Play, Sun, Moon } from 'lucide-react'
 import { AnimatePresence } from 'framer-motion'
@@ -15,6 +17,7 @@ import './index.css'
 
 function App() {
   const [selectedIssue, setSelectedIssue] = useState<Issue | null>(null)
+  const [selectedProject, setSelectedProject] = useState<ProjectInfo | null>(null)
   const [showCreateForm, setShowCreateForm] = useState(false)
   const [newTitle, setNewTitle] = useState('')
   const [newPriority, setNewPriority] = useState('medium')
@@ -31,6 +34,7 @@ function App() {
   const createIssue = useBoardStore(s => s.createIssue)
   const reviewIssue = useBoardStore(s => s.reviewIssue)
   const runAllIssues = useBoardStore(s => s.runAllIssues)
+  const runSingleIssue = useBoardStore(s => s.runSingleIssue)
   const issues = useBoardStore(s => s.issues)
 
   const fetchProjects = useProjectStore(s => s.fetchProjects)
@@ -92,7 +96,7 @@ function App() {
 
   return (
     <div className="h-screen flex">
-      <ProjectSidebar onProjectSwitch={handleProjectSwitch} />
+      <ProjectSidebar onProjectSwitch={handleProjectSwitch} onProjectDetail={setSelectedProject} />
 
       <div className="flex-1 flex flex-col min-w-0">
         {/* Header */}
@@ -160,6 +164,17 @@ function App() {
               reviewIssue(selectedIssue.id, false, comment)
               setSelectedIssue(null)
             }}
+            onRun={() => runSingleIssue(selectedIssue.id)}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Project Detail Slide-over */}
+      <AnimatePresence>
+        {selectedProject && (
+          <ProjectDetail
+            project={selectedProject}
+            onClose={() => setSelectedProject(null)}
           />
         )}
       </AnimatePresence>

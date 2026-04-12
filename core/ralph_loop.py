@@ -17,6 +17,7 @@ Flow:
 from __future__ import annotations
 import asyncio
 import json
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Awaitable, Callable
@@ -42,6 +43,28 @@ def _log(prefix: str, color: str, msg: str) -> None:
         print(f"[{prefix}] {msg}", flush=True)
 
 
+_COLOR_TO_LEVEL = {
+    C_CYAN: "info", C_GREEN: "success", C_YELLOW: "warning",
+    C_RED: "error", C_MAGENTA: "info",
+}
+
+
+async def _emit_harness(
+    on_event: Callable[[dict], Awaitable[None]] | None,
+    issue_id: str,
+    phase: str,
+    msg: str,
+    level: str = "info",
+) -> None:
+    if on_event:
+        await on_event({
+            "ts": int(time.time()),
+            "type": "harness_log",
+            "issue_id": issue_id,
+            "data": {"phase": phase, "msg": msg, "level": level},
+        })
+
+
 async def run_issue_loop(
     issue: Issue,
     storage: ProjectStorage,
@@ -60,42 +83,51 @@ async def run_issue_loop(
     if issue.status == IssueStatus.BACKLOG:
         issue.move_to(IssueStatus.TODO)
         storage.save_issue(issue)
+        await _sync_board(issue, storage, on_event)
     if issue.status == IssueStatus.REJECTED:
         issue.move_to(IssueStatus.TODO)
         storage.save_issue(issue)
+        await _sync_board(issue, storage, on_event)
     if issue.status in (IssueStatus.TODO, IssueStatus.FAILED):
         issue.move_to(IssueStatus.IN_PROGRESS)
         storage.save_issue(issue)
         _log("State", C_CYAN, f"{issue.id}: → in_progress")
+        await _emit_harness(on_event, issue.id, "state", "→ in_progress")
         await _sync_board(issue, storage, on_event)
 
     # === 2. Generator + Evaluator Loop ===
     passed = False
     for attempt in range(1, max_retries + 1):
         _log("Loop", C_CYAN, f"{issue.id} attempt #{attempt}/{max_retries}")
+        await _emit_harness(on_event, issue.id, "loop", f"attempt #{attempt}/{max_retries}")
 
         # --- Generator: Ralph writes code ---
         _log("Generator", C_CYAN, f"Starting: {issue.title}")
+        await _emit_harness(on_event, issue.id, "generator", f"Starting: {issue.title}")
         gen_stats = await _run_generator(issue, storage, workspace, on_event)
         all_stats.append({"phase": "generator", "attempt": attempt, **gen_stats})
 
         if not gen_stats.get("success"):
             _log("Generator", C_RED, f"Generator failed on attempt #{attempt}")
+            await _emit_harness(on_event, issue.id, "generator", f"Failed on attempt #{attempt}", "error")
             _append_log(issue, storage, "Generator Failed", f"Attempt #{attempt}")
             continue
 
         # --- Evaluator: verify THIS Issue only ---
         _log("Evaluator", C_MAGENTA, f"Verifying: {issue.title}")
+        await _emit_harness(on_event, issue.id, "evaluator", f"Verifying: {issue.title}")
         eval_result = await _run_evaluator(issue, storage, workspace)
         all_stats.append({"phase": "evaluator", "attempt": attempt, **eval_result.get("stats", {})})
 
         if eval_result["passed"]:
             _log("Evaluator", C_GREEN, f"Issue {issue.id} PASSED")
+            await _emit_harness(on_event, issue.id, "evaluator", "PASSED", "success")
             passed = True
             break
 
         # Evaluator found problems with current Issue → continue loop
         _log("Evaluator", C_YELLOW, f"Issue {issue.id} not passed, feedback appended")
+        await _emit_harness(on_event, issue.id, "evaluator", "Not passed, feedback appended", "warning")
         _append_log(issue, storage, f"Eval Feedback (attempt #{attempt})", eval_result.get("feedback", ""))
 
         # Evaluator found OTHER problems → create new Issues
@@ -104,6 +136,7 @@ async def run_issue_loop(
 
     # === 3. Collect evidence ===
     _log("Evidence", C_CYAN, f"Collecting evidence for {issue.id}")
+    await _emit_harness(on_event, issue.id, "evidence", "Collecting evidence")
     collect_evidence(issue.id, storage, workspace, run_build=True)
 
     # === 4. State: → Agent Done ===
@@ -114,8 +147,10 @@ async def run_issue_loop(
         await _sync_board(issue, storage, on_event)
         if passed:
             _log("State", C_GREEN, f"{issue.id}: → agent_done (PASSED, awaiting human review)")
+            await _emit_harness(on_event, issue.id, "state", "→ agent_done (PASSED)", "success")
         else:
             _log("State", C_YELLOW, f"{issue.id}: → agent_done (max retries, needs human review)")
+            await _emit_harness(on_event, issue.id, "state", "→ agent_done (max retries)", "warning")
 
     # Aggregate stats
     total_cost = sum(s.get("cost_usd", 0) for s in all_stats)

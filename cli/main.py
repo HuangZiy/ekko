@@ -394,9 +394,14 @@ def _plan(args: argparse.Namespace) -> None:
 
 def _run(args: argparse.Namespace) -> None:
     import anyio
-    from config import WORKSPACE_DIR
+    from pathlib import Path
 
     store = _get_storage(args)
+    project = store.load_project_meta()
+    if not project or not project.workspaces:
+        print("Error: project has no workspace configured.", file=sys.stderr)
+        sys.exit(1)
+    workspace = Path(project.workspaces[0]).resolve()
 
     async def _execute():
         from core.ralph_loop import run_issue_loop, run_board, find_ready_issues
@@ -408,7 +413,7 @@ def _run(args: argparse.Namespace) -> None:
                 print(f"Issue not found: {args.issue_id}", file=sys.stderr)
                 return
             print(f"Running {issue.id}: {issue.title}", flush=True)
-            stats = await run_issue_loop(issue, store, WORKSPACE_DIR)
+            stats = await run_issue_loop(issue, store, workspace)
             status = "PASSED" if stats["success"] else "NEEDS REVIEW"
             print(f"\n{status} — ${stats['cost_usd']:.2f}, {stats['attempts']} attempts", flush=True)
         else:
@@ -417,7 +422,7 @@ def _run(args: argparse.Namespace) -> None:
                 print("No actionable issues (todo + unblocked).")
                 return
             print(f"Running {len(ready)} actionable issues...", flush=True)
-            all_stats = await run_board(store, WORKSPACE_DIR)
+            all_stats = await run_board(store, workspace)
             total_cost = sum(s.get("cost_usd", 0) for s in all_stats)
             ok = sum(1 for s in all_stats if s.get("success"))
             print(f"\nCompleted: {ok}/{len(all_stats)} passed, total cost=${total_cost:.2f}", flush=True)

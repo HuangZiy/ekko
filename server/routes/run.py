@@ -45,10 +45,19 @@ async def _run_in_background(project_id: str, issue_id: str | None) -> None:
     from server.app import get_harness_root
     from server.ws import ws_manager
     from core.ralph_loop import run_issue_loop, find_ready_issues
-    from config import WORKSPACE_DIR
+    from pathlib import Path
 
     project_dir = get_harness_root() / "projects" / project_id
     storage = ProjectStorage(project_dir)
+
+    # Resolve workspace from project metadata
+    project = storage.load_project_meta()
+    if not project or not project.workspaces:
+        await ws_manager.broadcast(project_id, {
+            "type": "run_error", "data": {"error": "Project has no workspace configured"},
+        })
+        return
+    workspace = Path(project.workspaces[0]).resolve()
 
     run_counter = 0
 
@@ -74,7 +83,7 @@ async def _run_in_background(project_id: str, issue_id: str | None) -> None:
         await ws_manager.broadcast(project_id, {
             "type": "agent_started", "data": {"issue_id": issue_id, "title": issue.title},
         })
-        stats = await run_issue_loop(issue, storage, WORKSPACE_DIR, on_event=on_event)
+        stats = await run_issue_loop(issue, storage, workspace, on_event=on_event)
         clear_cancel(issue_id)
         await ws_manager.broadcast(project_id, {
             "type": "agent_done", "data": {
@@ -95,7 +104,7 @@ async def _run_in_background(project_id: str, issue_id: str | None) -> None:
             await ws_manager.broadcast(project_id, {
                 "type": "agent_started", "data": {"issue_id": issue.id, "title": issue.title},
             })
-            stats = await run_issue_loop(issue, storage, WORKSPACE_DIR, on_event=on_event)
+            stats = await run_issue_loop(issue, storage, workspace, on_event=on_event)
             clear_cancel(issue.id)
             await ws_manager.broadcast(project_id, {
                 "type": "agent_done", "data": {

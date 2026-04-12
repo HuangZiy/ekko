@@ -28,7 +28,7 @@ export function IssueCard({ issue, onClick }: IssueCardProps) {
     opacity: isDragging ? 0.5 : 1,
   }
 
-  const canRun = issue.status === 'todo' || issue.status === 'rejected'
+  const canRun = issue.status === 'todo' || issue.status === 'rejected' || issue.status === 'backlog'
 
   const handleRun = (e: React.MouseEvent) => {
     e.stopPropagation()

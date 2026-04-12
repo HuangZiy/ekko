@@ -12,7 +12,6 @@ dependencies = [
     "anyio",
     "fastapi",
     "uvicorn",
-    "sse-starlette",
 ]
 
 [project.scripts]

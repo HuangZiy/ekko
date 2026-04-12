@@ -54,22 +54,22 @@ def _log_message(message) -> None:
             _log("Done", C_RED, f"ERROR: {message.result}")
 
 
-def _get_git_diff() -> str:
+def _get_git_diff(workspace: Path) -> str:
     try:
-        stat = subprocess.run(["git", "diff", "HEAD~1", "--stat"], cwd=str(WORKSPACE_DIR),
+        stat = subprocess.run(["git", "diff", "HEAD~1", "--stat"], cwd=str(workspace),
                               capture_output=True, text=True, timeout=10).stdout.strip()
-        log = subprocess.run(["git", "log", "-1", "--oneline"], cwd=str(WORKSPACE_DIR),
+        log = subprocess.run(["git", "log", "-1", "--oneline"], cwd=str(workspace),
                              capture_output=True, text=True, timeout=10).stdout.strip()
         return f"Commit: {log}\n\nChanged files:\n{stat}"
     except Exception:
         return "(unable to get git diff)"
 
 
-def _start_dev_server():
+def _start_dev_server(workspace: Path):
     env = {**os.environ, "PORT": str(EVAL_PORT)}
     server = subprocess.Popen(
         ["npm", "run", "dev", "--", "-p", str(EVAL_PORT)],
-        cwd=str(WORKSPACE_DIR), env=env,
+        cwd=str(workspace), env=env,
         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
     )
     time.sleep(10)
@@ -81,7 +81,7 @@ def _stop_dev_server(server):
     server.wait()
 
 
-async def _run_eval_query(prompt: str, ss_dir: Path, max_turns: int = 40) -> tuple[str, dict]:
+async def _run_eval_query(prompt: str, ss_dir: Path, workspace: Path, max_turns: int = 40) -> tuple[str, dict]:
     system_prompt_path = PROMPTS_DIR / "evaluator_system.md"
     system_prompt = system_prompt_path.read_text() if system_prompt_path.exists() else ""
 
@@ -98,7 +98,7 @@ async def _run_eval_query(prompt: str, ss_dir: Path, max_turns: int = 40) -> tup
             mcp_servers={
                 "playwright": {"command": "npx", "args": ["@playwright/mcp@latest"]}
             },
-            cwd=str(WORKSPACE_DIR),
+            cwd=str(workspace),
             max_turns=max_turns,
             max_buffer_size=10 * 1024 * 1024,
         ),
@@ -125,6 +125,7 @@ async def run_issue_eval(
     issue_title: str,
     issue_content: str,
     screenshots_dir: Path | None = None,
+    workspace: Path | None = None,
 ) -> tuple[str, dict]:
     """Evaluate a specific Issue's completion. Returns (report, stats).
 
@@ -134,14 +135,15 @@ async def run_issue_eval(
     - [NEW_ISSUE] title — unrelated problem found (harness creates a new Issue)
     """
     from config import SCREENSHOTS_DIR as DEFAULT_SCREENSHOTS_DIR
+    ws = workspace or WORKSPACE_DIR
     ss_dir = screenshots_dir or DEFAULT_SCREENSHOTS_DIR
     ss_dir.mkdir(parents=True, exist_ok=True)
 
     _log("Eval", C_MAGENTA, f"Issue eval: {issue_title[:60]}")
 
-    git_diff = _get_git_diff()
+    git_diff = _get_git_diff(ws)
 
-    server = _start_dev_server()
+    server = _start_dev_server(ws)
     try:
         prompt = f"""增量评估：验证以下 Issue 是否正确完成。
 
@@ -177,7 +179,7 @@ async def run_issue_eval(
 - 格式 JPEG quality 50
 - 保存到 {ss_dir}"""
 
-        return await _run_eval_query(prompt, ss_dir, max_turns=30)
+        return await _run_eval_query(prompt, ss_dir, ws, max_turns=30)
     finally:
         _stop_dev_server(server)
 
@@ -203,9 +205,10 @@ async def run_incremental_eval(
 # Full eval (quality gate)
 # ---------------------------------------------------------------------------
 
-async def run_full_eval(screenshots_dir: Path | None = None) -> tuple[str, dict]:
+async def run_full_eval(screenshots_dir: Path | None = None, workspace: Path | None = None) -> tuple[str, dict]:
     """Full four-dimension evaluation with Playwright."""
     from config import SCREENSHOTS_DIR as DEFAULT_SCREENSHOTS_DIR
+    ws = workspace or WORKSPACE_DIR
     ss_dir = screenshots_dir or DEFAULT_SCREENSHOTS_DIR
     ss_dir.mkdir(parents=True, exist_ok=True)
 
@@ -214,7 +217,7 @@ async def run_full_eval(screenshots_dir: Path | None = None) -> tuple[str, dict]
     eval_criteria_path = PROMPTS_DIR / "eval_criteria.md"
     eval_criteria = eval_criteria_path.read_text() if eval_criteria_path.exists() else ""
 
-    server = _start_dev_server()
+    server = _start_dev_server(ws)
     try:
         prompt = f"""全量评估当前运行在 http://localhost:{EVAL_PORT} 的应用。
 
@@ -231,6 +234,6 @@ async def run_full_eval(screenshots_dir: Path | None = None) -> tuple[str, dict]
 - 格式 JPEG quality 50
 - 保存到 {ss_dir}"""
 
-        return await _run_eval_query(prompt, ss_dir, max_turns=80)
+        return await _run_eval_query(prompt, ss_dir, ws, max_turns=80)
     finally:
         _stop_dev_server(server)

@@ -168,6 +168,7 @@ async def _run_evaluator(issue: Issue, storage: ProjectStorage, workspace: Path)
             issue_title=issue.title,
             issue_content=content,
             screenshots_dir=screenshots_dir,
+            workspace=workspace,
         )
     except Exception as e:
         _log("Evaluator", C_RED, f"Eval error: {e}")

@@ -9,6 +9,7 @@ import {
   Pencil, Save, X, Image, FileCode, FlaskConical, ShieldCheck, Play, ChevronDown, Trash2
 } from 'lucide-react'
 import { VALID_TRANSITIONS, STATUS_LABELS } from '../constants/transitions'
+import { AgentLogPanel } from './AgentLogPanel'
 
 interface IssueDetailProps {
   issue: Issue
@@ -329,6 +330,19 @@ export function IssueDetail({ issue, onClose, onApprove, onReject, onRun, onDele
                 <Play size={16} /> Run
               </button>
             </div>
+          )}
+
+          {/* Agent Log */}
+          {['in_progress', 'agent_done'].includes(issue.status) && (
+            <AgentLogPanel
+              issueId={issue.id}
+              onCancel={() => {
+                const wsSend = useBoardStore.getState().wsSend
+                if (wsSend) {
+                  wsSend({ type: 'cancel_agent', issue_id: issue.id })
+                }
+              }}
+            />
           )}
 
           {/* Evidence Panel (agent_done only) */}

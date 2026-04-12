@@ -58,7 +58,7 @@ export function RunLogPanel() {
             className="overflow-hidden bg-[var(--bg-card)] border-t border-[var(--border)]"
           >
             <div className="flex items-center justify-between px-4 py-1.5 border-b border-[var(--border)]">
-              <span className="text-xs font-medium text-[var(--text-secondary)]">SSE Events</span>
+              <span className="text-xs font-medium text-[var(--text-secondary)]">Events</span>
               <button
                 onClick={clearSSELog}
                 className="text-xs text-[var(--text-secondary)] hover:text-[var(--danger)] flex items-center gap-1"
@@ -69,7 +69,7 @@ export function RunLogPanel() {
             <div ref={scrollRef} className="h-[180px] overflow-y-auto px-4 py-2 font-mono text-xs space-y-0.5">
               {sseLog.length === 0 && (
                 <div className="text-[var(--text-secondary)] py-4 text-center">
-                  No events yet. Events will appear here as they arrive via SSE.
+                  No events yet. Events will appear here as they arrive.
                 </div>
               )}
               {sseLog.map((entry: SSELogEntry) => (

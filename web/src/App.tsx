@@ -3,7 +3,7 @@ import type { Issue } from './stores/boardStore'
 import { useBoardStore } from './stores/boardStore'
 import { useProjectStore } from './stores/projectStore'
 import type { ProjectInfo } from './stores/projectStore'
-import { useSSE } from './hooks/useSSE'
+import { useWebSocket } from './hooks/useWebSocket'
 import { useTheme } from './hooks/useTheme'
 import { Board } from './components/Board'
 import { BoardStats } from './components/BoardStats'
@@ -42,7 +42,7 @@ function App() {
   const activeProjectId = useProjectStore(s => s.activeProjectId)
   const activeProject = useProjectStore(s => s.projects.find(p => p.id === s.activeProjectId))
 
-  useSSE()
+  const { sendMessage } = useWebSocket()
 
   useEffect(() => {
     fetchProjects()

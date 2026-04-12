@@ -1,0 +1,22 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "ekko"
+version = "0.1.0"
+description = "Ekko: Master of Time for Long-Running Harness — AI-driven development with kanban issue management"
+requires-python = ">=3.11"
+dependencies = [
+    "claude-agent-sdk",
+    "anyio",
+    "fastapi",
+    "uvicorn",
+    "sse-starlette",
+]
+
+[project.scripts]
+harness = "cli.main:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["core", "cli", "server", "agents"]

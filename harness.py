@@ -1,4 +1,4 @@
-"""Blog Harness — Unified loop orchestrator with task isolation and resume.
+"""Ekko — Unified loop orchestrator with task isolation and resume.
 
 Each harness run creates an isolated task under artifacts/tasks/<task_id>/ with:
   - state.json     — resumable checkpoint
@@ -450,117 +450,47 @@ async def run_harness(user_prompt: str) -> None:
             _sync_fix_plan_from_workspace(task_dir)
             phase = "loop"
 
-        # Phase 2: Main Loop
+        # Phase 2: Migrate fix_plan → Issues, then run Issue-based Ralph Loop
         if phase == "loop":
             _tee("=" * 60)
-            _tee("Phase 2: Build + Evaluate Loop")
+            _tee("Phase 2: Issue-based Ralph Loop")
             _tee("=" * 60)
 
-            while loop_count < MAX_RALPH_LOOPS:
-                # On fresh cycle, increment; on resume, stay at saved loop_count
-                if resume_step == "ralph":
-                    loop_count += 1
+            # Migrate fix_plan.md to Issues
+            fix_plan = WORKSPACE_DIR / "fix_plan.md"
+            if fix_plan.exists() and "- [ ]" in fix_plan.read_text():
+                from core.migrate import migrate_fix_plan
+                from core.storage import PlatformStorage
+                platform = PlatformStorage(ARTIFACTS_DIR)
+                active_id = platform.get_active_project_id()
+                if not active_id:
+                    # Create a default project
+                    project, store = platform.create_project(name=user_prompt[:30], workspace_path=str(WORKSPACE_DIR))
+                    active_id = project.id
+                    _tee(f"  Created project {active_id}")
+                store = platform.get_project_storage(active_id)
+                issues = migrate_fix_plan(fix_plan, store)
+                _tee(f"  Migrated {len(issues)} issues from fix_plan.md")
 
-                if not has_remaining_work() and resume_step == "ralph":
-                    _tee(f"\n  No remaining tasks in fix_plan.md.")
-                    break
-
-                # Step 1: Ralph (skip if resuming at eval step)
-                if resume_step == "ralph":
-                    _save_state(task_dir, task_id, "loop", loop_count, cycle_stats, user_prompt, harness_start, step="ralph")
-
-                    _tee(f"\n  --- Cycle #{loop_count}: Ralph ---")
-                    ralph_stats = await run_one_ralph_cycle()
+            # Run all ready issues via Issue-based Ralph Loop
+            from core.ralph_loop import run_board
+            from core.storage import PlatformStorage
+            platform = PlatformStorage(ARTIFACTS_DIR)
+            active_id = platform.get_active_project_id()
+            if active_id:
+                store = platform.get_project_storage(active_id)
+                all_stats = await run_board(store, WORKSPACE_DIR)
+                for s in all_stats:
                     cycle_stats.append({
                         "cycle": loop_count,
                         "phase": "Ralph",
-                        "task": ralph_stats.get("task", "—"),
-                        "cost_usd": ralph_stats.get("cost_usd", 0),
-                        "duration_ms": ralph_stats.get("duration_ms", 0),
-                        "num_turns": ralph_stats.get("num_turns", 0),
-                        "usage": ralph_stats.get("usage", {}),
+                        "task": s.get("title", "—"),
+                        "cost_usd": s.get("cost_usd", 0),
+                        "duration_ms": s.get("duration_ms", 0),
+                        "num_turns": s.get("attempts", 0),
+                        "usage": {},
                     })
-
-                    if not ralph_stats.get("success"):
-                        _tee(f"  Cycle #{loop_count} Ralph failed, continuing...")
-
-                    _sync_fix_plan_from_workspace(task_dir)
-                    # Save with step="eval" so resume knows to skip Ralph
-                    _save_state(task_dir, task_id, "loop", loop_count, cycle_stats, user_prompt, harness_start, step="eval")
-                else:
-                    _tee(f"\n  Resuming Cycle #{loop_count} at eval step (Ralph already done)")
-
-                # Step 2: Incremental Evaluator
-                task_desc = ralph_stats.get("task", "unknown task") if resume_step == "ralph" else "(resumed)"
-                _tee(f"  --- Cycle #{loop_count}: Incremental Eval ---")
-                report, eval_stats = await run_incremental_eval(
-                    task_description=task_desc,
-                    screenshots_dir=task_dir / "screenshots",
-                )
-                cycle_stats.append({
-                    "cycle": loop_count,
-                    "phase": "IncrEval",
-                    "cost_usd": eval_stats.get("cost_usd", 0),
-                    "duration_ms": eval_stats.get("duration_ms", 0),
-                    "num_turns": eval_stats.get("num_turns", 0),
-                    "usage": eval_stats.get("usage", {}),
-                })
-                save_task_artifact(task_dir, f"eval_incr_{loop_count}.md", report or "Evaluation returned no result")
-                _save_state(task_dir, task_id, "loop", loop_count, cycle_stats, user_prompt, harness_start, step="ralph")
-
-                # Reset resume_step after first iteration (subsequent cycles are fresh)
-                resume_step = "ralph"
-
-                # Extract FAIL items from incremental eval into fix_plan
-                append_eval_feedback_to_fix_plan(report or "")
-                _sync_fix_plan_from_workspace(task_dir)
-
-            else:
-                _tee(f"\n  Reached max loops ({MAX_RALPH_LOOPS})")
-
-            # Full evaluation at the end of the loop
-            _tee(f"\n  --- Full Evaluation ---")
-            report, eval_stats = await run_full_eval(screenshots_dir=task_dir / "screenshots")
-            cycle_stats.append({
-                "cycle": loop_count,
-                "phase": "FullEval",
-                "cost_usd": eval_stats.get("cost_usd", 0),
-                "duration_ms": eval_stats.get("duration_ms", 0),
-                "num_turns": eval_stats.get("num_turns", 0),
-                "usage": eval_stats.get("usage", {}),
-            })
-            save_task_artifact(task_dir, "eval_full.md", report or "Evaluation returned no result")
-
-            # If full eval found issues, feed back and continue looping
-            if not all_criteria_pass(report or ""):
-                _tee("  Full eval found issues, feeding back to fix_plan...")
-                append_eval_feedback_to_fix_plan(report or "")
-                _sync_fix_plan_from_workspace(task_dir)
-
-                if has_remaining_work():
-                    _tee("  Continuing loop to fix remaining issues...")
-                    # Run more cycles for the issues found by full eval
-                    extra_loops = 0
-                    while has_remaining_work() and extra_loops < 5:
-                        extra_loops += 1
-                        loop_count += 1
-                        _save_state(task_dir, task_id, "loop", loop_count, cycle_stats, user_prompt, harness_start)
-
-                        _tee(f"\n  --- Fix Cycle #{loop_count}: Ralph ---")
-                        ralph_stats = await run_one_ralph_cycle()
-                        cycle_stats.append({
-                            "cycle": loop_count,
-                            "phase": "Ralph",
-                            "task": ralph_stats.get("task", "—"),
-                            "cost_usd": ralph_stats.get("cost_usd", 0),
-                            "duration_ms": ralph_stats.get("duration_ms", 0),
-                            "num_turns": ralph_stats.get("num_turns", 0),
-                            "usage": ralph_stats.get("usage", {}),
-                        })
-                        _sync_fix_plan_from_workspace(task_dir)
-                        _save_state(task_dir, task_id, "loop", loop_count, cycle_stats, user_prompt, harness_start)
-            else:
-                _tee(f"\n  Full eval passed!")
+                    loop_count += 1
 
             phase = "readme"
 
@@ -585,6 +515,13 @@ async def run_harness(user_prompt: str) -> None:
             _log_file = None
 
 
+_CLI_SUBCOMMANDS = {"issue", "review", "project", "board", "plan", "run", "serve"}
+
 if __name__ == "__main__":
-    prompt = sys.argv[1] if len(sys.argv) > 1 else "创建一个极简风格的技术博客"
-    anyio.run(run_harness, prompt)
+    # Delegate to new CLI if a known subcommand is used
+    if len(sys.argv) > 1 and sys.argv[1] in _CLI_SUBCOMMANDS:
+        from cli.main import main as cli_main
+        cli_main(sys.argv[1:])
+    else:
+        prompt = sys.argv[1] if len(sys.argv) > 1 else "创建一个极简风格的技术博客"
+        anyio.run(run_harness, prompt)

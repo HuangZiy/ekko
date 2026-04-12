@@ -1,3 +1,11 @@
+"""Evaluator agent — verifies Issue completion via Playwright + code review.
+
+Two modes:
+- run_issue_eval(): Issue-aware incremental eval. Receives Issue object, verifies against
+  acceptance criteria, outputs [FAIL] for current issue problems and [NEW_ISSUE] for other findings.
+- run_full_eval(): Four-dimension full scoring (legacy, used for final quality gate).
+"""
+
 import os
 import subprocess
 import time
@@ -13,7 +21,6 @@ from config import MODEL, WORKSPACE_DIR
 PROMPTS_DIR = Path("prompts")
 EVAL_PORT = 3001
 
-# ANSI colors
 C_RESET = "\033[0m"
 C_CYAN = "\033[36m"
 C_GREEN = "\033[32m"
@@ -24,67 +31,45 @@ C_DIM = "\033[2m"
 
 
 def _log(prefix: str, color: str, msg: str) -> None:
-    from harness import _tee
-    _tee(f"{color}[{prefix}]{C_RESET} {msg}")
+    try:
+        from harness import _tee
+        _tee(f"{color}[{prefix}]{C_RESET} {msg}")
+    except ImportError:
+        print(f"[{prefix}] {msg}", flush=True)
 
 
 def _log_message(message) -> None:
     if isinstance(message, AssistantMessage):
         for block in message.content:
             if isinstance(block, TextBlock):
-                text = block.text
-                if len(text) > 300:
-                    text = text[:300] + "..."
+                text = block.text[:300] + "..." if len(block.text) > 300 else block.text
                 _log("Evaluator", C_MAGENTA, text)
             elif isinstance(block, ToolUseBlock):
-                inp = str(block.input)
-                if len(inp) > 120:
-                    inp = inp[:120] + "..."
+                inp = str(block.input)[:120]
                 _log("Tool", C_YELLOW, f"{block.name}({inp})")
-            elif isinstance(block, ToolResultBlock):
-                status = "ERROR" if block.is_error else "OK"
-                content = str(block.content or "")
-                if len(content) > 200:
-                    content = content[:200] + "..."
-                _log("Result", C_GREEN if status == "OK" else C_RED, f"[{status}] {content}")
     elif isinstance(message, ResultMessage):
         cost = f"${message.total_cost_usd:.2f}" if message.total_cost_usd else "?"
         _log("Done", C_GREEN, f"turns={message.num_turns} cost={cost} duration={message.duration_ms // 1000}s")
         if message.is_error:
             _log("Done", C_RED, f"ERROR: {message.result}")
-    elif isinstance(message, SystemMessage):
-        _log("System", C_DIM, f"{message.subtype}: {message.data}")
 
 
 def _get_git_diff() -> str:
-    """Get the git diff of the last commit (what Ralph just changed)."""
     try:
-        result = subprocess.run(
-            ["git", "diff", "HEAD~1", "--stat"],
-            cwd=str(WORKSPACE_DIR),
-            capture_output=True, text=True, timeout=10,
-        )
-        diff_stat = result.stdout.strip()
-
-        result2 = subprocess.run(
-            ["git", "log", "-1", "--oneline"],
-            cwd=str(WORKSPACE_DIR),
-            capture_output=True, text=True, timeout=10,
-        )
-        commit_msg = result2.stdout.strip()
-
-        return f"Commit: {commit_msg}\n\nChanged files:\n{diff_stat}"
+        stat = subprocess.run(["git", "diff", "HEAD~1", "--stat"], cwd=str(WORKSPACE_DIR),
+                              capture_output=True, text=True, timeout=10).stdout.strip()
+        log = subprocess.run(["git", "log", "-1", "--oneline"], cwd=str(WORKSPACE_DIR),
+                             capture_output=True, text=True, timeout=10).stdout.strip()
+        return f"Commit: {log}\n\nChanged files:\n{stat}"
     except Exception:
         return "(unable to get git diff)"
 
 
 def _start_dev_server():
-    """Start Next.js dev server, return process handle."""
     env = {**os.environ, "PORT": str(EVAL_PORT)}
     server = subprocess.Popen(
         ["npm", "run", "dev", "--", "-p", str(EVAL_PORT)],
-        cwd=str(WORKSPACE_DIR),
-        env=env,
+        cwd=str(WORKSPACE_DIR), env=env,
         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
     )
     time.sleep(10)
@@ -97,8 +82,8 @@ def _stop_dev_server(server):
 
 
 async def _run_eval_query(prompt: str, ss_dir: Path, max_turns: int = 40) -> tuple[str, dict]:
-    """Run a single evaluator query and return (report, stats)."""
-    system_prompt = (PROMPTS_DIR / "evaluator_system.md").read_text()
+    system_prompt_path = PROMPTS_DIR / "evaluator_system.md"
+    system_prompt = system_prompt_path.read_text() if system_prompt_path.exists() else ""
 
     result = "Evaluation failed — no result returned"
     stats = {"cost_usd": 0, "duration_ms": 0, "num_turns": 0, "usage": {}}
@@ -111,10 +96,7 @@ async def _run_eval_query(prompt: str, ss_dir: Path, max_turns: int = 40) -> tup
             allowed_tools=["Read", "Glob", "Grep", "Bash"],
             permission_mode="bypassPermissions",
             mcp_servers={
-                "playwright": {
-                    "command": "npx",
-                    "args": ["@playwright/mcp@latest"],
-                }
+                "playwright": {"command": "npx", "args": ["@playwright/mcp@latest"]}
             },
             cwd=str(WORKSPACE_DIR),
             max_turns=max_turns,
@@ -134,52 +116,63 @@ async def _run_eval_query(prompt: str, ss_dir: Path, max_turns: int = 40) -> tup
     return result or "Evaluation returned no result", stats
 
 
-async def run_incremental_eval(task_description: str, screenshots_dir: Path | None = None) -> tuple[str, dict]:
-    """Incremental evaluation — only verify what Ralph just changed.
+# ---------------------------------------------------------------------------
+# Issue-aware eval (used by core/ralph_loop.py)
+# ---------------------------------------------------------------------------
 
-    Cheaper and faster than full eval. Checks the specific change + build.
+async def run_issue_eval(
+    issue_id: str,
+    issue_title: str,
+    issue_content: str,
+    screenshots_dir: Path | None = None,
+) -> tuple[str, dict]:
+    """Evaluate a specific Issue's completion. Returns (report, stats).
+
+    The report uses these markers:
+    - [PASS] item — verification passed
+    - [FAIL] item — current Issue has this problem (Ralph should fix)
+    - [NEW_ISSUE] title — unrelated problem found (harness creates a new Issue)
     """
     from config import SCREENSHOTS_DIR as DEFAULT_SCREENSHOTS_DIR
     ss_dir = screenshots_dir or DEFAULT_SCREENSHOTS_DIR
     ss_dir.mkdir(parents=True, exist_ok=True)
 
-    _log("Eval", C_MAGENTA, f"Incremental eval: {task_description[:60]}")
+    _log("Eval", C_MAGENTA, f"Issue eval: {issue_title[:60]}")
 
     git_diff = _get_git_diff()
 
     server = _start_dev_server()
     try:
-        prompt = f"""增量评估：验证 Ralph 刚完成的这项修改是否正确。
+        prompt = f"""增量评估：验证以下 Issue 是否正确完成。
 
-## 本轮修改
+## Issue: {issue_id}
 
-任务：{task_description}
+### 标题
+{issue_title}
 
+### 详细内容与验收标准
+{issue_content if issue_content else '（无详细描述，根据标题判断）'}
+
+### 本次代码变更
 {git_diff}
 
 ## 评估要求
 
-1. 用 Playwright 打开 http://localhost:{EVAL_PORT}，只验证与本次修改相关的页面和功能
-2. 检查修改涉及的源码文件，确认实现正确
+1. 用 Playwright 打开 http://localhost:{EVAL_PORT}，验证与此 Issue 相关的页面和功能
+2. 对照 Issue 的验收标准逐项检查
 3. 运行 `npm run build` 确认构建通过
-4. 不需要全量评估所有页面，只关注本次变更
+4. 只关注此 Issue 的完成情况，不做全量评估
 
-## 输出格式
+## 输出格式（严格遵守）
 
-```
-## 增量评估
+对此 Issue 的每个验收标准：
+- [PASS] 标准描述 — 验证通过的说明
+- [FAIL] 标准描述 — 未通过的原因和修复建议
 
-### 变更验证: PASS/FAIL
-- 具体发现...
-
-### 构建检查: PASS/FAIL
-
-### 发现的问题
-- [FAIL] 问题描述（如果有）
-```
+如果在验证过程中发现了与此 Issue 无关的其他问题，用以下格式单独列出：
+- [NEW_ISSUE] 问题标题 — 简要描述
 
 截图规则：
-- 只截取与本次修改相关的页面
 - 截图前 browser_resize 设为 1920x1080
 - 格式 JPEG quality 50
 - 保存到 {ss_dir}"""
@@ -189,27 +182,46 @@ async def run_incremental_eval(task_description: str, screenshots_dir: Path | No
         _stop_dev_server(server)
 
 
-async def run_full_eval(screenshots_dir: Path | None = None) -> tuple[str, dict]:
-    """Full evaluation — four-dimension scoring with Playwright.
+# ---------------------------------------------------------------------------
+# Legacy: string-based incremental eval (backward compat for harness.py)
+# ---------------------------------------------------------------------------
 
-    Used at the end of the loop when all tasks are done, or periodically.
-    """
+async def run_incremental_eval(
+    task_description: str,
+    screenshots_dir: Path | None = None,
+) -> tuple[str, dict]:
+    """Legacy incremental eval — accepts a string task description."""
+    return await run_issue_eval(
+        issue_id="(legacy)",
+        issue_title=task_description,
+        issue_content="",
+        screenshots_dir=screenshots_dir,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Full eval (quality gate)
+# ---------------------------------------------------------------------------
+
+async def run_full_eval(screenshots_dir: Path | None = None) -> tuple[str, dict]:
+    """Full four-dimension evaluation with Playwright."""
     from config import SCREENSHOTS_DIR as DEFAULT_SCREENSHOTS_DIR
     ss_dir = screenshots_dir or DEFAULT_SCREENSHOTS_DIR
     ss_dir.mkdir(parents=True, exist_ok=True)
 
     _log("Eval", C_MAGENTA, f"Full evaluation on port {EVAL_PORT}...")
 
-    eval_criteria = (PROMPTS_DIR / "eval_criteria.md").read_text()
+    eval_criteria_path = PROMPTS_DIR / "eval_criteria.md"
+    eval_criteria = eval_criteria_path.read_text() if eval_criteria_path.exists() else ""
 
     server = _start_dev_server()
     try:
-        prompt = f"""全量评估当前运行在 http://localhost:{EVAL_PORT} 的 Blog 应用。
+        prompt = f"""全量评估当前运行在 http://localhost:{EVAL_PORT} 的应用。
 
 {eval_criteria}
 
 使用 Playwright 实际浏览页面：导航每个页面、点击交互元素、测试暗色模式切换、
-检查响应式布局、验证文章渲染、验证 Pretext 排版效果。
+检查响应式布局、验证文章渲染。
 对每个维度给出 X/10 分数和详细发现。
 对未达标项给出精确的问题描述和修复建议。
 

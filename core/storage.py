@@ -1,8 +1,9 @@
 from __future__ import annotations
 import json
 from pathlib import Path
+from dataclasses import asdict
 
-from core.models import Issue
+from core.models import Issue, Board, Project
 
 
 class ProjectStorage:
@@ -39,3 +40,85 @@ class ProjectStorage:
             if meta.exists():
                 issues.append(Issue.from_json(json.loads(meta.read_text())))
         return issues
+
+    def save_board(self, board: Board) -> None:
+        data = {"columns": [{"id": c.id, "name": c.name, "issues": c.issues} for c in board.columns]}
+        (self.root / "board.json").write_text(json.dumps(data, indent=2, ensure_ascii=False))
+
+    def load_board(self) -> Board | None:
+        board_file = self.root / "board.json"
+        if not board_file.exists():
+            return None
+        data = json.loads(board_file.read_text())
+        from core.models import BoardColumn
+        board = Board()
+        board.columns = [BoardColumn(id=c["id"], name=c["name"], issues=c.get("issues", [])) for c in data["columns"]]
+        return board
+
+    def save_project_meta(self, project: Project) -> None:
+        self.root.mkdir(parents=True, exist_ok=True)
+        (self.root / "project.json").write_text(
+            json.dumps(asdict(project), indent=2, ensure_ascii=False)
+        )
+
+    def load_project_meta(self) -> Project | None:
+        meta = self.root / "project.json"
+        if not meta.exists():
+            return None
+        data = json.loads(meta.read_text())
+        return Project(**data)
+
+
+class PlatformStorage:
+    """Manages multiple projects under .harness/projects/."""
+
+    def __init__(self, harness_root: Path) -> None:
+        self.root = harness_root
+        self.projects_dir = self.root / "projects"
+
+    def create_project(self, name: str, workspace_path: str) -> tuple[Project, ProjectStorage]:
+        project = Project.create(name=name, workspace_path=workspace_path)
+        project_dir = self.projects_dir / project.id
+        store = ProjectStorage(project_dir)
+        store.save_project_meta(project)
+        (project_dir / "issues").mkdir(parents=True, exist_ok=True)
+        (project_dir / "specs").mkdir(exist_ok=True)
+        (project_dir / "runs").mkdir(exist_ok=True)
+        board = Board.create()
+        store.save_board(board)
+        # Save active project marker
+        self._set_active(project.id)
+        return project, store
+
+    def list_projects(self) -> list[tuple[str, Project]]:
+        if not self.projects_dir.exists():
+            return []
+        result = []
+        for d in sorted(self.projects_dir.iterdir()):
+            meta = d / "project.json"
+            if meta.exists():
+                data = json.loads(meta.read_text())
+                result.append((d.name, Project(**data)))
+        return result
+
+    def get_project_storage(self, project_id: str) -> ProjectStorage:
+        return ProjectStorage(self.projects_dir / project_id)
+
+    def get_active_project_id(self) -> str | None:
+        active_file = self.root / "active_project"
+        if active_file.exists():
+            return active_file.read_text().strip()
+        # Fallback: return first project
+        projects = self.list_projects()
+        return projects[0][0] if projects else None
+
+    def _set_active(self, project_id: str) -> None:
+        self.root.mkdir(parents=True, exist_ok=True)
+        (self.root / "active_project").write_text(project_id)
+
+    def switch_project(self, project_id: str) -> bool:
+        if (self.projects_dir / project_id).exists():
+            self._set_active(project_id)
+            return True
+        return False
+

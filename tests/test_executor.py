@@ -3,7 +3,7 @@ from unittest.mock import patch, MagicMock
 from claude_agent_sdk import ResultMessage
 from core.models import Issue, IssueStatus
 from core.storage import ProjectStorage
-from core.executor import IssueExecutor, build_issue_prompt
+from core.executor import execute_issue, build_issue_prompt
 
 
 def test_build_issue_prompt_basic(tmp_path):
@@ -13,7 +13,7 @@ def test_build_issue_prompt_basic(tmp_path):
     store.save_issue(issue)
     store.save_issue_content(issue.id, "# 实现登录页\n\n需要用户名密码表单")
 
-    prompt = build_issue_prompt(issue, store)
+    prompt = build_issue_prompt(issue, store, tmp_path / "ws")
     assert "实现登录页" in prompt
     assert "用户名密码表单" in prompt
 
@@ -24,20 +24,13 @@ def test_build_issue_prompt_without_content(tmp_path):
     issue = Issue.create(title="修复 bug")
     store.save_issue(issue)
 
-    prompt = build_issue_prompt(issue, store)
+    prompt = build_issue_prompt(issue, store, tmp_path / "ws")
     assert "修复 bug" in prompt
 
 
-def test_executor_init(tmp_path):
-    """Executor should initialize with storage and workspace."""
-    store = ProjectStorage(tmp_path / "project")
-    executor = IssueExecutor(store, workspace=tmp_path / "ws")
-    assert executor.storage is store
-
-
 @pytest.mark.asyncio
-async def test_executor_run_success(tmp_path):
-    """Successful execution should move issue to AGENT_DONE and return stats."""
+async def test_execute_issue_success(tmp_path):
+    """Successful execution should return success=True. Does NOT change status."""
     store = ProjectStorage(tmp_path / "project")
     issue = Issue.create(title="test task")
     issue.move_to(IssueStatus.TODO)
@@ -56,25 +49,24 @@ async def test_executor_run_success(tmp_path):
     async def mock_query(*args, **kwargs):
         yield mock_result
 
-    executor = IssueExecutor(store, workspace=tmp_path / "ws")
     with patch("core.executor.query", mock_query):
-        stats = await executor.run(issue)
+        stats = await execute_issue(issue, store, tmp_path / "ws")
 
     assert stats["success"] is True
     assert stats["cost_usd"] == 0.05
+    # Executor does NOT change status — that's the scheduler's job
     reloaded = store.load_issue(issue.id)
-    assert reloaded.status == IssueStatus.AGENT_DONE
+    assert reloaded.status == IssueStatus.IN_PROGRESS
 
 
 @pytest.mark.asyncio
-async def test_executor_run_failure(tmp_path):
-    """Failed execution should move issue to FAILED."""
+async def test_execute_issue_failure(tmp_path):
+    """Failed execution should return success=False. Does NOT change status."""
     store = ProjectStorage(tmp_path / "project")
     issue = Issue.create(title="failing task")
     issue.move_to(IssueStatus.TODO)
     issue.move_to(IssueStatus.IN_PROGRESS)
     store.save_issue(issue)
-    store.save_issue_content(issue.id, "# Task\nThis will fail")
 
     mock_result = MagicMock(spec=ResultMessage)
     mock_result.is_error = True
@@ -87,10 +79,10 @@ async def test_executor_run_failure(tmp_path):
     async def mock_query(*args, **kwargs):
         yield mock_result
 
-    executor = IssueExecutor(store, workspace=tmp_path / "ws")
     with patch("core.executor.query", mock_query):
-        stats = await executor.run(issue)
+        stats = await execute_issue(issue, store, tmp_path / "ws")
 
     assert stats["success"] is False
+    # Status unchanged — executor doesn't touch it
     reloaded = store.load_issue(issue.id)
-    assert reloaded.status == IssueStatus.FAILED
+    assert reloaded.status == IssueStatus.IN_PROGRESS

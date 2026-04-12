@@ -1,0 +1,211 @@
+import { create } from 'zustand'
+
+export interface Issue {
+  id: string
+  title: string
+  status: string
+  priority: string
+  assignee: string | null
+  workspace: string
+  blocks: string[]
+  blocked_by: string[]
+  labels: string[]
+  created_at: string
+  updated_at: string
+  retry_count: number
+  content?: string
+  cost?: number
+}
+
+export interface BoardColumn {
+  id: string
+  name: string
+  issues: string[]
+}
+
+export interface SSELogEntry {
+  id: string
+  type: string
+  message: string
+  timestamp: string
+  issueId?: string
+}
+
+interface CreateIssuePayload {
+  title: string
+  priority?: string
+  labels?: string[]
+  description?: string
+  blocked_by?: string[]
+}
+
+interface BoardState {
+  columns: BoardColumn[]
+  issues: Record<string, Issue>
+  projectId: string | null
+  loading: boolean
+  sseLog: SSELogEntry[]
+  setProjectId: (id: string) => void
+  fetchBoard: () => Promise<void>
+  fetchIssues: () => Promise<void>
+  moveIssue: (issueId: string, toColumn: string) => Promise<void>
+  createIssue: (title: string, priority?: string, labels?: string[], description?: string, blockedBy?: string[]) => Promise<void>
+  reviewIssue: (issueId: string, approved: boolean, comment?: string) => Promise<void>
+  updateIssue: (issueId: string, patch: Partial<Pick<Issue, 'title' | 'priority' | 'labels' | 'blocked_by'>>) => Promise<void>
+  updateIssueContent: (issueId: string, content: string) => Promise<void>
+  runAllIssues: () => Promise<void>
+  runSingleIssue: (issueId: string) => Promise<void>
+  addSSELog: (entry: SSELogEntry) => void
+  clearSSELog: () => void
+  updateIssueFromEvent: (issue: Issue) => void
+  moveBoardFromEvent: (issueId: string, toColumn: string) => void
+}
+
+let logIdCounter = 0
+
+export const useBoardStore = create<BoardState>((set, get) => ({
+  columns: [],
+  issues: {},
+  projectId: null,
+  loading: false,
+  sseLog: [],
+
+  setProjectId: (id) => set({ projectId: id }),
+
+  fetchBoard: async () => {
+    const { projectId } = get()
+    if (!projectId) return
+    set({ loading: true })
+    const res = await fetch(`/api/projects/${projectId}/board`)
+    const data = await res.json()
+    set({ columns: data.columns, loading: false })
+  },
+
+  fetchIssues: async () => {
+    const { projectId } = get()
+    if (!projectId) return
+    const res = await fetch(`/api/projects/${projectId}/issues`)
+    const list: Issue[] = await res.json()
+    const map: Record<string, Issue> = {}
+    for (const issue of list) map[issue.id] = issue
+    set({ issues: map })
+  },
+
+  moveIssue: async (issueId, toColumn) => {
+    const { projectId, columns } = get()
+    if (!projectId) return
+
+    // Optimistic update
+    const newColumns = columns.map(col => ({
+      ...col,
+      issues: col.issues.filter(id => id !== issueId),
+    }))
+    const target = newColumns.find(c => c.id === toColumn)
+    if (target) target.issues.push(issueId)
+    set({ columns: newColumns })
+
+    await fetch(`/api/projects/${projectId}/board/move/${issueId}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ to_column: toColumn }),
+    })
+  },
+
+  createIssue: async (title, priority = 'medium', labels = [], description = '', blockedBy = []) => {
+    const { projectId } = get()
+    if (!projectId) return
+    const payload: CreateIssuePayload = { title, priority, labels }
+    if (description) payload.description = description
+    if (blockedBy.length > 0) payload.blocked_by = blockedBy
+    await fetch(`/api/projects/${projectId}/issues`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
+    await get().fetchBoard()
+    await get().fetchIssues()
+  },
+
+  reviewIssue: async (issueId, approved, comment = '') => {
+    const { projectId } = get()
+    if (!projectId) return
+    await fetch(`/api/projects/${projectId}/issues/${issueId}/review`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ approved, comment }),
+    })
+    await get().fetchBoard()
+    await get().fetchIssues()
+  },
+
+  updateIssue: async (issueId, patch) => {
+    const { projectId } = get()
+    if (!projectId) return
+    const res = await fetch(`/api/projects/${projectId}/issues/${issueId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(patch),
+    })
+    if (res.ok) {
+      const updated: Issue = await res.json()
+      set(state => ({ issues: { ...state.issues, [issueId]: updated } }))
+    }
+  },
+
+  updateIssueContent: async (issueId, content) => {
+    const { projectId } = get()
+    if (!projectId) return
+    await fetch(`/api/projects/${projectId}/issues/${issueId}/content`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content }),
+    })
+  },
+
+  runAllIssues: async () => {
+    const { projectId } = get()
+    if (!projectId) return
+    await fetch(`/api/projects/${projectId}/run`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+    })
+  },
+
+  runSingleIssue: async (issueId) => {
+    const { projectId } = get()
+    if (!projectId) return
+    await fetch(`/api/projects/${projectId}/run`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ issue_id: issueId }),
+    })
+  },
+
+  addSSELog: (entry) => {
+    set(state => ({
+      sseLog: [...state.sseLog.slice(-199), entry],
+    }))
+  },
+
+  clearSSELog: () => set({ sseLog: [] }),
+
+  updateIssueFromEvent: (issue) => {
+    set(state => ({ issues: { ...state.issues, [issue.id]: issue } }))
+  },
+
+  moveBoardFromEvent: (issueId, toColumn) => {
+    set(state => {
+      const newColumns = state.columns.map(col => ({
+        ...col,
+        issues: col.issues.filter(id => id !== issueId),
+      }))
+      const target = newColumns.find(c => c.id === toColumn)
+      if (target) target.issues.push(issueId)
+      return { columns: newColumns }
+    })
+  },
+}))
+
+export function generateLogId(): string {
+  return `log-${Date.now()}-${++logIdCounter}`
+}

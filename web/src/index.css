@@ -1,0 +1,113 @@
+@import "tailwindcss";
+
+:root {
+  --bg-primary: #fafaf8;
+  --bg-secondary: #f0f0ec;
+  --bg-card: #ffffff;
+  --bg-overlay: rgba(0, 0, 0, 0.3);
+  --text-primary: #1a1a1a;
+  --text-secondary: #6b7280;
+  --border: #e5e5e0;
+  --accent: #2563eb;
+  --accent-hover: #1d4ed8;
+  --success: #16a34a;
+  --warning: #d97706;
+  --danger: #dc2626;
+  --column-backlog: #94a3b8;
+  --column-todo: #3b82f6;
+  --column-in-progress: #f59e0b;
+  --column-agent-done: #8b5cf6;
+  --column-rejected: #ef4444;
+  --column-human-done: #22c55e;
+  --sidebar-bg: #ffffff;
+  --header-bg: #ffffff;
+  --input-bg: #ffffff;
+  --card-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+[data-theme="dark"] {
+  --bg-primary: #0f1117;
+  --bg-secondary: #1a1d27;
+  --bg-card: #1e2130;
+  --bg-overlay: rgba(0, 0, 0, 0.6);
+  --text-primary: #e4e4e7;
+  --text-secondary: #9ca3af;
+  --border: #2e3244;
+  --accent: #3b82f6;
+  --accent-hover: #2563eb;
+  --success: #22c55e;
+  --warning: #f59e0b;
+  --danger: #ef4444;
+  --sidebar-bg: #161822;
+  --header-bg: #161822;
+  --input-bg: #1a1d27;
+  --card-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+}
+
+body {
+  margin: 0;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+/* Dark mode overrides for Tailwind bg-white / text classes */
+[data-theme="dark"] .bg-white {
+  background-color: var(--bg-card) !important;
+}
+
+[data-theme="dark"] .bg-gray-50,
+[data-theme="dark"] .hover\:bg-gray-50:hover {
+  background-color: var(--bg-secondary) !important;
+}
+
+[data-theme="dark"] .bg-blue-50,
+[data-theme="dark"] .hover\:bg-blue-50:hover {
+  background-color: rgba(59, 130, 246, 0.15) !important;
+}
+
+[data-theme="dark"] .text-gray-400 {
+  color: #6b7280 !important;
+}
+
+[data-theme="dark"] .text-gray-500 {
+  color: #9ca3af !important;
+}
+
+[data-theme="dark"] .text-gray-600 {
+  color: #d1d5db !important;
+}
+
+[data-theme="dark"] .border-\[var\(--border\)\] {
+  border-color: var(--border) !important;
+}
+
+[data-theme="dark"] .shadow-xl {
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.4), 0 8px 10px -6px rgba(0, 0, 0, 0.3) !important;
+}
+
+[data-theme="dark"] input,
+[data-theme="dark"] textarea,
+[data-theme="dark"] select {
+  background-color: var(--input-bg) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--border) !important;
+}
+
+[data-theme="dark"] .prose {
+  color: var(--text-primary);
+}
+
+[data-theme="dark"] .prose code {
+  background-color: var(--bg-secondary);
+  color: #e4e4e7;
+}
+
+[data-theme="dark"] .prose pre {
+  background-color: #0d1117 !important;
+}

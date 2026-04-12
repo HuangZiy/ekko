@@ -1,20 +1,75 @@
+"""Issue executor — takes one Issue, runs Ralph, returns result.
+
+Does NOT manage state transitions. That's the scheduler's job.
+This is the equivalent of the old run_one_ralph_cycle(), but reads from Issue instead of fix_plan.md.
+"""
+
 from __future__ import annotations
 from pathlib import Path
 
-from claude_agent_sdk import query, ClaudeAgentOptions, ResultMessage
+from claude_agent_sdk import (
+    query, ClaudeAgentOptions, ResultMessage,
+    AssistantMessage, SystemMessage, TextBlock, ToolUseBlock, ToolResultBlock,
+)
 from config import MODEL, MAX_TURNS_PER_LOOP, MAX_BUDGET_PER_LOOP
-from core.models import Issue, IssueStatus
+from core.models import Issue
 from core.storage import ProjectStorage
 
 
-def build_issue_prompt(issue: Issue, storage: ProjectStorage) -> str:
-    """Build an agent prompt from Issue metadata and markdown content."""
+C_RESET = "\033[0m"
+C_CYAN = "\033[36m"
+C_GREEN = "\033[32m"
+C_YELLOW = "\033[33m"
+C_RED = "\033[31m"
+C_DIM = "\033[2m"
+
+
+def _log(prefix: str, color: str, msg: str) -> None:
+    try:
+        from harness import _tee
+        _tee(f"{color}[{prefix}]{C_RESET} {msg}")
+    except ImportError:
+        print(f"[{prefix}] {msg}", flush=True)
+
+
+def _log_message(message) -> None:
+    if isinstance(message, AssistantMessage):
+        for block in message.content:
+            if isinstance(block, TextBlock):
+                text = block.text[:300] + "..." if len(block.text) > 300 else block.text
+                _log("Ralph", C_CYAN, text)
+            elif isinstance(block, ToolUseBlock):
+                inp = str(block.input)[:120]
+                _log("Tool", C_YELLOW, f"{block.name}({inp})")
+    elif isinstance(message, ResultMessage):
+        cost = f"${message.total_cost_usd:.2f}" if message.total_cost_usd else "?"
+        _log("Done", C_GREEN, f"turns={message.num_turns} cost={cost} duration={message.duration_ms // 1000}s")
+        if message.is_error:
+            _log("Done", C_RED, f"ERROR: {message.result}")
+
+
+def build_issue_prompt(issue: Issue, storage: ProjectStorage, workspace: Path) -> str:
+    """Build Ralph prompt from Issue content + project context."""
     try:
         content = storage.load_issue_content(issue.id)
     except FileNotFoundError:
         content = ""
 
-    return f"""你是一个高级全栈工程师。请完成以下任务。
+    agent_md_path = workspace / "AGENT.md"
+    agent_md = agent_md_path.read_text() if agent_md_path.exists() else ""
+
+    specs_content = ""
+    for specs_dir in [workspace / ".harness" / "specs", storage.root / "specs"]:
+        if specs_dir.exists():
+            for f in sorted(specs_dir.glob("*.md")):
+                specs_content += f"\n\n### {f.name}\n{f.read_text()}"
+
+    base_prompt = ""
+    ralph_prompt_path = Path("prompts") / "ralph_prompt.md"
+    if ralph_prompt_path.exists():
+        base_prompt = ralph_prompt_path.read_text()
+
+    return f"""{base_prompt}
 
 ## 任务: {issue.title}
 
@@ -26,61 +81,47 @@ ID: {issue.id}
 
 {content if content else '（无详细描述，请根据标题完成任务）'}
 
-## 工作方式
+## 项目构建指南 (AGENT.md)
+{agent_md}
 
-1. 阅读任务详情，理解需求
-2. 修改代码前先搜索代码库确认现状
-3. 完整实现功能，不要占位符
-4. 运行构建和测试验证
-5. 构建通过后 git commit
+## 功能规格 (specs/)
+{specs_content}
 
-## 关键规则
+## 本轮任务（只做这一项，不要做其他任务）
 
-- 只做这一项任务，做好做完
-- 构建/测试不通过就不提交
-- 禁止执行 kill、pkill 等杀进程命令
-- 禁止操作 3000 端口
+请只实现上面这一项任务。完成后 git commit，然后停止。
 """
 
 
-class IssueExecutor:
-    """Executes a single Issue via claude-agent-sdk."""
+async def execute_issue(issue: Issue, storage: ProjectStorage, workspace: Path) -> dict:
+    """Execute a single Issue via Ralph. Returns stats dict.
 
-    def __init__(self, storage: ProjectStorage, workspace: Path) -> None:
-        self.storage = storage
-        self.workspace = workspace
+    Does NOT change issue status — caller (scheduler) handles that.
+    """
+    _log("Task", C_CYAN, f"{issue.id}: {issue.title}")
 
-    async def run(self, issue: Issue) -> dict:
-        """Execute an issue. Updates issue status and returns stats."""
-        prompt = build_issue_prompt(issue, self.storage)
-        stats: dict = {"success": False, "issue_id": issue.id}
+    prompt = build_issue_prompt(issue, storage, workspace)
+    stats: dict = {"success": False, "issue_id": issue.id, "title": issue.title}
 
-        async for message in query(
-            prompt=prompt,
-            options=ClaudeAgentOptions(
-                model=MODEL,
-                allowed_tools=["Read", "Write", "Edit", "Bash", "Glob", "Grep", "Agent"],
-                cwd=str(self.workspace),
-                max_turns=MAX_TURNS_PER_LOOP,
-                max_budget_usd=MAX_BUDGET_PER_LOOP,
-                permission_mode="bypassPermissions",
-            ),
-        ):
-            if isinstance(message, ResultMessage):
-                success = not message.is_error
-                stats.update({
-                    "success": success,
-                    "cost_usd": message.total_cost_usd or 0,
-                    "duration_ms": message.duration_ms,
-                    "num_turns": message.num_turns,
-                    "usage": message.usage or {},
-                })
+    async for message in query(
+        prompt=prompt,
+        options=ClaudeAgentOptions(
+            model=MODEL,
+            allowed_tools=["Read", "Write", "Edit", "Bash", "Glob", "Grep", "Agent"],
+            cwd=str(workspace),
+            max_turns=MAX_TURNS_PER_LOOP,
+            max_budget_usd=MAX_BUDGET_PER_LOOP,
+            permission_mode="bypassPermissions",
+        ),
+    ):
+        _log_message(message)
+        if isinstance(message, ResultMessage):
+            stats.update({
+                "success": not message.is_error,
+                "cost_usd": message.total_cost_usd or 0,
+                "duration_ms": message.duration_ms,
+                "num_turns": message.num_turns,
+                "usage": message.usage or {},
+            })
 
-                if success:
-                    issue.move_to(IssueStatus.AGENT_DONE)
-                else:
-                    issue.move_to(IssueStatus.FAILED)
-                    issue.retry_count += 1
-                self.storage.save_issue(issue)
-
-        return stats
+    return stats

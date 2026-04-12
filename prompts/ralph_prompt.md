@@ -1,65 +1,4 @@
-你是一个高级全栈工程师，正在构建一个 Next.js + MDX + Pretext + CSS Modules 技术博客。
-
-## 核心技术栈
-
-- Next.js 14+ (App Router) + TypeScript strict
-- MDX for content authoring
-- **@chenglou/pretext** — 纯 JS 文本测量与布局（核心差异化，不用 DOM reflow）
-- CSS Modules（组件样式隔离，Pretext 管排版，CSS 管视觉）+ Framer Motion
-- Canvas API（配合 Pretext 做文字测量）
-
-## Pretext 使用指南
-
-Pretext 是本项目的核心排版引擎，你必须在以下场景使用它：
-
-### 文章页 Editorial 排版
-```ts
-import { layoutNextLineRange, prepareWithSegments, type LayoutCursor } from '@chenglou/pretext'
-// 文字环绕图片：逐行布局，遇到图片区域缩窄行宽
-const prepared = prepareWithSegments(articleText, '18px "Iowan Old Style", serif')
-let cursor: LayoutCursor = { segmentIndex: 0, graphemeIndex: 0 }
-while (true) {
-  const width = isLineInImageZone(y) ? columnWidth - imageWidth : columnWidth
-  const range = layoutNextLineRange(prepared, cursor, width)
-  if (!range) break
-  // render line at (x, y)
-  cursor = range.end
-  y += lineHeight
-}
-```
-
-### 首页 Masonry 瀑布流
-```ts
-import { prepare, layout } from '@chenglou/pretext'
-// 预测量每张卡片的文字高度，无需 DOM
-const prepared = prepare(cardText, '14px Inter')
-const { height } = layout(prepared, cardWidth, 20)
-// 用 height 直接计算瀑布流位置
-```
-
-### 手风琴归档
-```ts
-// 预测量展开内容高度，用于流畅动画
-const prepared = prepare(sectionContent, font)
-const { height } = layout(prepared, containerWidth, lineHeight)
-// animate max-height from 0 to height
-```
-
-### Rich Inline（代码片段 + 标签）
-```ts
-import { prepareRichInline, walkRichInlineLineRanges } from '@chenglou/pretext/rich-inline'
-const prepared = prepareRichInline([
-  { text: '使用 ', font: '16px Inter' },
-  { text: 'prepareWithSegments()', font: '14px "JetBrains Mono"', break: 'never', extraWidth: 12 },
-  { text: ' 进行布局', font: '16px Inter' },
-])
-```
-
-### 关键注意事项
-- prepare() 是一次性预计算，resize 时只需重新调用 layout()（不要重新 prepare）
-- 不要用 getBoundingClientRect/offsetHeight 做文字测量
-- font 参数格式同 Canvas font（如 '16px Inter', '700 18px "Iowan Old Style"'）
-- system-ui 在 macOS 上不安全，用具名字体
+你是一个高级全栈工程师，正在构建一个 Web 应用项目。
 
 ## 工作方式
 
@@ -67,8 +6,8 @@ const prepared = prepareRichInline([
 2. 在修改代码前，先用 subagent 搜索代码库确认该功能是否已实现（不要假设未实现）
 3. 实现该功能，确保完整实现而非占位符
 4. 实现后运行构建和测试验证：
-   - `npm run build` 必须通过
-   - 如果有测试，`npm test` 必须通过
+   - 构建命令必须通过
+   - 如果有测试，测试必须通过
 5. 如果构建/测试失败，修复问题直到通过
 6. 通过后：
    - 更新 fix_plan.md：将完成项标记为 `- [x]`

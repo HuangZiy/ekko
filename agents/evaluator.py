@@ -15,11 +15,10 @@ from claude_agent_sdk import (
     query, ClaudeAgentOptions, ResultMessage,
     AssistantMessage, SystemMessage, TextBlock, ToolUseBlock, ToolResultBlock,
 )
-from config import MODEL, WORKSPACE_DIR
+from config import MODEL, WORKSPACE_DIR, EVAL_PORT
 
 
 PROMPTS_DIR = Path("prompts")
-EVAL_PORT = 3001
 
 C_RESET = "\033[0m"
 C_CYAN = "\033[36m"

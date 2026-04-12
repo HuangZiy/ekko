@@ -31,6 +31,12 @@ export interface SSELogEntry {
   issueId?: string
 }
 
+export interface AgentLogEntry {
+  ts: number
+  type: string
+  data: Record<string, any>
+}
+
 interface CreateIssuePayload {
   title: string
   priority?: string
@@ -45,6 +51,8 @@ interface BoardState {
   projectId: string | null
   loading: boolean
   sseLog: SSELogEntry[]
+  agentLogs: Record<string, AgentLogEntry[]>
+  wsSend: ((msg: Record<string, unknown>) => void) | null
   setProjectId: (id: string) => void
   fetchBoard: () => Promise<void>
   fetchIssues: () => Promise<void>
@@ -58,6 +66,9 @@ interface BoardState {
   runSingleIssue: (issueId: string) => Promise<void>
   addSSELog: (entry: SSELogEntry) => void
   clearSSELog: () => void
+  appendAgentLog: (issueId: string, entry: AgentLogEntry) => void
+  clearAgentLog: (issueId: string) => void
+  setWsSend: (fn: ((msg: Record<string, unknown>) => void) | null) => void
   updateIssueFromEvent: (issue: Issue) => void
   moveBoardFromEvent: (issueId: string, toColumn: string) => void
 }
@@ -70,6 +81,8 @@ export const useBoardStore = create<BoardState>((set, get) => ({
   projectId: null,
   loading: false,
   sseLog: [],
+  agentLogs: {},
+  wsSend: null,
 
   setProjectId: (id) => set({ projectId: id }),
 
@@ -214,6 +227,27 @@ export const useBoardStore = create<BoardState>((set, get) => ({
   },
 
   clearSSELog: () => set({ sseLog: [] }),
+
+  appendAgentLog: (issueId, entry) => {
+    set(state => {
+      const existing = state.agentLogs[issueId] || []
+      return {
+        agentLogs: {
+          ...state.agentLogs,
+          [issueId]: [...existing.slice(-499), entry],
+        },
+      }
+    })
+  },
+
+  clearAgentLog: (issueId) => {
+    set(state => {
+      const { [issueId]: _, ...rest } = state.agentLogs
+      return { agentLogs: rest }
+    })
+  },
+
+  setWsSend: (fn) => set({ wsSend: fn }),
 
   updateIssueFromEvent: (issue) => {
     set(state => ({ issues: { ...state.issues, [issue.id]: issue } }))

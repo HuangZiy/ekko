@@ -16,6 +16,9 @@ def migrate_fix_plan(fix_plan_path: Path, storage: ProjectStorage) -> list[Issue
     if not fix_plan_path.exists():
         return []
 
+    project = storage.load_project_meta()
+    prefix = project.key if project else "ISS"
+
     content = fix_plan_path.read_text()
     issues: list[Issue] = []
     current_section = ""
@@ -41,7 +44,8 @@ def migrate_fix_plan(fix_plan_path: Path, storage: ProjectStorage) -> list[Issue
             issue_title = parts[0].strip()
             description = parts[1].strip() if len(parts) > 1 else ""
 
-            issue = Issue.create(title=issue_title, priority="medium")
+            issue_id = storage.next_issue_id(prefix)
+            issue = Issue.create(id=issue_id, title=issue_title, priority="medium")
             issue.move_to(IssueStatus.TODO)
             labels = _section_to_labels(current_section)
             issue.labels = labels
@@ -60,7 +64,8 @@ def migrate_fix_plan(fix_plan_path: Path, storage: ProjectStorage) -> list[Issue
             issue_title = parts[0].strip()
             description = parts[1].strip() if len(parts) > 1 else ""
 
-            issue = Issue.create(title=issue_title, priority="medium")
+            issue_id = storage.next_issue_id(prefix)
+            issue = Issue.create(id=issue_id, title=issue_title, priority="medium")
             issue.move_to(IssueStatus.TODO)
             issue.move_to(IssueStatus.IN_PROGRESS)
             issue.move_to(IssueStatus.AGENT_DONE)

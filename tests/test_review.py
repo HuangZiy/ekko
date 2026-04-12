@@ -4,9 +4,14 @@ from core.storage import ProjectStorage
 from core.review import approve_issue, reject_issue
 
 
+_issue_counter = 0
+
+
 def _make_agent_done_issue(store, title, blocked_by=None):
     """Helper: create an issue in AGENT_DONE state."""
-    issue = Issue.create(title=title)
+    global _issue_counter
+    _issue_counter += 1
+    issue = Issue.create(id=f"ISS-{_issue_counter}", title=title)
     issue.move_to(IssueStatus.TODO)
     issue.move_to(IssueStatus.IN_PROGRESS)
     issue.move_to(IssueStatus.AGENT_DONE)
@@ -35,7 +40,7 @@ def test_approve_unlocks_dependents(tmp_path):
     a = _make_agent_done_issue(store, "Blocker A")
 
     # Create a dependent issue that's blocked by A
-    dep = Issue.create(title="Dependent")
+    dep = Issue.create(id="ISS-99", title="Dependent")
     dep.add_blocker(a.id)
     dep.move_to(IssueStatus.TODO)
     store.save_issue(dep)

@@ -11,7 +11,7 @@ def test_collect_evidence_appends_to_content(tmp_path):
     ws = tmp_path / "workspace"
     ws.mkdir()
 
-    issue = Issue.create(title="test task")
+    issue = Issue.create(id="ISS-1", title="test task")
     store.save_issue(issue)
     store.save_issue_content(issue.id, "# Task\n\nOriginal content")
 
@@ -34,7 +34,7 @@ def test_collect_evidence_without_existing_content(tmp_path):
     ws = tmp_path / "workspace"
     ws.mkdir()
 
-    issue = Issue.create(title="new task")
+    issue = Issue.create(id="ISS-1", title="new task")
     store.save_issue(issue)
 
     with patch("core.evidence.subprocess.run") as mock_run:
@@ -51,7 +51,7 @@ def test_collect_evidence_includes_build_result(tmp_path):
     ws = tmp_path / "workspace"
     ws.mkdir()
 
-    issue = Issue.create(title="build task")
+    issue = Issue.create(id="ISS-1", title="build task")
     store.save_issue(issue)
     store.save_issue_content(issue.id, "# Build task")
 

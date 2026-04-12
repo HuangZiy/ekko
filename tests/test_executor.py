@@ -9,7 +9,7 @@ from core.executor import execute_issue, build_issue_prompt
 def test_build_issue_prompt_basic(tmp_path):
     """Prompt should include issue title and markdown content."""
     store = ProjectStorage(tmp_path / "project")
-    issue = Issue.create(title="实现登录页", labels=["auth"])
+    issue = Issue.create(id="ISS-1", title="实现登录页", labels=["auth"])
     store.save_issue(issue)
     store.save_issue_content(issue.id, "# 实现登录页\n\n需要用户名密码表单")
 
@@ -21,7 +21,7 @@ def test_build_issue_prompt_basic(tmp_path):
 def test_build_issue_prompt_without_content(tmp_path):
     """Prompt should work even if no markdown content exists."""
     store = ProjectStorage(tmp_path / "project")
-    issue = Issue.create(title="修复 bug")
+    issue = Issue.create(id="ISS-1", title="修复 bug")
     store.save_issue(issue)
 
     prompt = build_issue_prompt(issue, store, tmp_path / "ws")
@@ -32,7 +32,7 @@ def test_build_issue_prompt_without_content(tmp_path):
 async def test_execute_issue_success(tmp_path):
     """Successful execution should return success=True. Does NOT change status."""
     store = ProjectStorage(tmp_path / "project")
-    issue = Issue.create(title="test task")
+    issue = Issue.create(id="ISS-1", title="test task")
     issue.move_to(IssueStatus.TODO)
     issue.move_to(IssueStatus.IN_PROGRESS)
     store.save_issue(issue)
@@ -63,7 +63,7 @@ async def test_execute_issue_success(tmp_path):
 async def test_execute_issue_failure(tmp_path):
     """Failed execution should return success=False. Does NOT change status."""
     store = ProjectStorage(tmp_path / "project")
-    issue = Issue.create(title="failing task")
+    issue = Issue.create(id="ISS-1", title="failing task")
     issue.move_to(IssueStatus.TODO)
     issue.move_to(IssueStatus.IN_PROGRESS)
     store.save_issue(issue)

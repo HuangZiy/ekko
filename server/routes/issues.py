@@ -66,8 +66,7 @@ def create_issue(project_id: str, req: CreateIssueRequest):
     # Add to board backlog
     _add_to_board(project_id, issue.id, "backlog")
 
-    # SSE
-    _publish("issue_created", {"issue": issue.to_json()})
+    _publish(project_id, "issue_created", {"issue": issue.to_json()})
 
     return issue.to_json()
 
@@ -117,7 +116,7 @@ def update_issue(project_id: str, issue_id: str, req: UpdateIssueRequest):
     if req.status is not None:
         _sync_board_column(project_id, issue_id, req.status)
 
-    _publish("issue_updated", {"issue": issue.to_json()})
+    _publish(project_id, "issue_updated", {"issue": issue.to_json()})
     return issue.to_json()
 
 
@@ -150,9 +149,26 @@ def delete_issue(project_id: str, issue_id: str):
     # Remove from board
     _remove_from_board(project_id, issue_id)
 
-    _publish("issue_deleted", {"issue_id": issue_id})
+    _publish(project_id, "issue_deleted", {"issue_id": issue_id})
     return {"ok": True}
 
+
+# --- Run log endpoints ---
+
+@router.get("/{issue_id}/logs")
+def list_issue_logs(project_id: str, issue_id: str):
+    storage = _get_storage(project_id)
+    return {"runs": storage.list_run_ids(issue_id)}
+
+
+@router.get("/{issue_id}/logs/{run_id}")
+def get_issue_log(project_id: str, issue_id: str, run_id: str):
+    storage = _get_storage(project_id)
+    entries = storage.load_run_log(issue_id, run_id)
+    return {"run_id": run_id, "entries": entries}
+
+
+# --- Board helpers ---
 
 def _add_to_board(project_id: str, issue_id: str, column: str):
     from server.app import get_harness_root
@@ -198,11 +214,11 @@ def _sync_board_column(project_id: str, issue_id: str, status: str):
     board_file.write_text(json.dumps(data, indent=2, ensure_ascii=False))
 
 
-def _publish(event_type: str, data: dict):
-    from server.sse import event_bus
+def _publish(project_id: str, event_type: str, data: dict):
+    from server.ws import ws_manager
     import asyncio
     try:
         loop = asyncio.get_event_loop()
-        loop.create_task(event_bus.publish(event_type, data))
+        loop.create_task(ws_manager.broadcast(project_id, {"type": event_type, "data": data}))
     except RuntimeError:
         pass

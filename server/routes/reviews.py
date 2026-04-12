@@ -55,13 +55,13 @@ def review_issue(project_id: str, issue_id: str, req: ReviewRequest):
                 break
         board_file.write_text(json.dumps(data, indent=2, ensure_ascii=False))
 
-    # SSE
-    from server.sse import event_bus
+    # WebSocket
+    from server.ws import ws_manager
     import asyncio
     try:
         loop = asyncio.get_event_loop()
         event_type = "issue_approved" if req.approved else "issue_rejected"
-        loop.create_task(event_bus.publish(event_type, {"issue_id": issue_id}))
+        loop.create_task(ws_manager.broadcast(project_id, {"type": event_type, "data": {"issue_id": issue_id}}))
     except RuntimeError:
         pass
 

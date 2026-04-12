@@ -116,12 +116,12 @@ def move_issue_on_board(project_id: str, issue_id: str, req: MoveIssueRequest):
         board_file.write_text(json.dumps(board_data2, indent=2, ensure_ascii=False))
         raise HTTPException(400, str(e))
 
-    # Publish SSE event
-    from server.sse import event_bus
+    # Publish WebSocket event
+    from server.ws import ws_manager
     import asyncio
     try:
         loop = asyncio.get_event_loop()
-        loop.create_task(event_bus.publish("issue_moved", {"issue_id": issue_id, "to_column": req.to_column}))
+        loop.create_task(ws_manager.broadcast(project_id, {"type": "issue_moved", "data": {"issue_id": issue_id, "to_column": req.to_column}}))
     except RuntimeError:
         pass
 

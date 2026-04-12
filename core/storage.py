@@ -104,8 +104,9 @@ class PlatformStorage:
     def next_project_id(self) -> str:
         return self._next_id("PRJ")
 
-    def create_project(self, name: str, workspace_path: str) -> tuple[Project, ProjectStorage]:
-        project = Project.create(name=name, workspace_path=workspace_path)
+    def create_project(self, name: str, workspace_path: str, key: str = "ISS") -> tuple[Project, ProjectStorage]:
+        project_id = self.next_project_id()
+        project = Project.create(id=project_id, name=name, workspace_path=workspace_path, key=key)
         project_dir = self.projects_dir / project.id
         store = ProjectStorage(project_dir)
         store.save_project_meta(project)

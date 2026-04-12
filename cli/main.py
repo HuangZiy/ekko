@@ -34,8 +34,9 @@ def _get_storage(args: argparse.Namespace):
 def _project_create(args: argparse.Namespace) -> None:
     platform = _get_platform()
     workspace_path = str(Path(args.workspace_path).resolve())
-    project, store = platform.create_project(name=args.name, workspace_path=workspace_path)
-    print(f"Created project {project.id}: {project.name}")
+    key = (args.key or "ISS").upper()
+    project, store = platform.create_project(name=args.name, workspace_path=workspace_path, key=key)
+    print(f"Created project {project.id}: {project.name}  (issue prefix: {project.key})")
     print(f"  Workspace: {workspace_path}")
     print(f"  Storage:   {store.root}")
 
@@ -92,7 +93,14 @@ def _issue_create(args: argparse.Namespace) -> None:
     from core.models import Issue
     import json
     store = _get_storage(args)
+
+    # Determine issue prefix from project key
+    project = store.load_project_meta()
+    prefix = project.key if project else "ISS"
+    issue_id = store.next_issue_id(prefix)
+
     issue = Issue.create(
+        id=issue_id,
         title=args.title,
         priority=args.priority,
         labels=args.label or [],
@@ -378,6 +386,7 @@ def build_parser() -> argparse.ArgumentParser:
     p = project_sub.add_parser("create", help="Create a new project")
     p.add_argument("name", help="Project name")
     p.add_argument("workspace_path", help="Path to workspace directory")
+    p.add_argument("--key", default="ISS", help="Issue ID prefix (e.g. BLOG → BLOG-1, BLOG-2). Default: ISS")
     p.set_defaults(func=_project_create)
 
     p = project_sub.add_parser("list", help="List all projects")

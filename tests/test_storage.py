@@ -40,3 +40,19 @@ def test_platform_storage_next_project_id(tmp_path):
     platform = PlatformStorage(tmp_path)
     assert platform.next_project_id() == "PRJ-1"
     assert platform.next_project_id() == "PRJ-2"
+
+
+def test_create_project_gets_incremental_id(tmp_path):
+    platform = PlatformStorage(tmp_path)
+    p1, _ = platform.create_project(name="Alpha", workspace_path="/tmp/alpha")
+    p2, _ = platform.create_project(name="Beta", workspace_path="/tmp/beta")
+    assert p1.id == "PRJ-1"
+    assert p2.id == "PRJ-2"
+
+
+def test_create_project_with_custom_key(tmp_path):
+    platform = PlatformStorage(tmp_path)
+    p, store = platform.create_project(name="Blog", workspace_path="/tmp/blog", key="BLOG")
+    assert p.key == "BLOG"
+    issue_id = store.next_issue_id(p.key)
+    assert issue_id == "BLOG-1"

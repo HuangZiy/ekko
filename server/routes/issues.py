@@ -50,7 +50,10 @@ def list_issues(project_id: str, status: str | None = None):
 @router.post("")
 def create_issue(project_id: str, req: CreateIssueRequest):
     storage = _get_storage(project_id)
-    issue = Issue.create(title=req.title, priority=req.priority, labels=req.labels)
+    project = storage.load_project_meta()
+    prefix = project.key if project else "ISS"
+    issue_id = storage.next_issue_id(prefix)
+    issue = Issue.create(id=issue_id, title=req.title, priority=req.priority, labels=req.labels)
     issue.workspace = req.workspace
     for blocker_id in req.blocked_by:
         issue.add_blocker(blocker_id)

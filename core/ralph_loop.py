@@ -192,7 +192,10 @@ async def _run_evaluator(issue: Issue, storage: ProjectStorage, workspace: Path)
 
 def _create_side_issue(title: str, storage: ProjectStorage) -> None:
     """Create a new Issue from Evaluator findings and add to board."""
-    new_issue = Issue.create(title=title, labels=["eval-finding"])
+    project = storage.load_project_meta()
+    prefix = project.key if project else "ISS"
+    issue_id = storage.next_issue_id(prefix)
+    new_issue = Issue.create(id=issue_id, title=title, labels=["eval-finding"])
     new_issue.move_to(IssueStatus.TODO)
     storage.save_issue(new_issue)
 

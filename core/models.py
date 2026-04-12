@@ -1,7 +1,5 @@
 from __future__ import annotations
 import json
-import time
-import hashlib
 from dataclasses import dataclass, field, asdict
 from enum import Enum
 from datetime import datetime, timezone
@@ -56,12 +54,10 @@ class Issue:
     max_retries: int = 3
 
     @classmethod
-    def create(cls, title: str, priority: str = "medium", labels: list[str] | None = None) -> Issue:
+    def create(cls, id: str, title: str, priority: str = "medium", labels: list[str] | None = None) -> Issue:
         now = datetime.now(timezone.utc).isoformat()
-        short_hash = hashlib.md5(f"{title}{time.time()}".encode()).hexdigest()[:6]
-        issue_id = f"ISS-{short_hash}"
         return cls(
-            id=issue_id, title=title,
+            id=id, title=title,
             priority=IssuePriority(priority),
             labels=labels or [],
             created_at=now, updated_at=now,
@@ -150,14 +146,15 @@ class Project:
     name: str
     workspaces: list[str] = field(default_factory=list)
     created_at: str = ""
+    key: str = "ISS"
 
     @classmethod
-    def create(cls, name: str, workspace_path: str) -> Project:
+    def create(cls, id: str, name: str, workspace_path: str, key: str = "ISS") -> Project:
         now = datetime.now(timezone.utc).isoformat()
-        short_hash = hashlib.md5(f"{name}{time.time()}".encode()).hexdigest()[:6]
         return cls(
-            id=f"PRJ-{short_hash}",
+            id=id,
             name=name,
             workspaces=[workspace_path],
             created_at=now,
+            key=key,
         )

@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Component } from 'react'
 import type { Issue } from './stores/boardStore'
+import type { ReactNode } from 'react'
 import { useBoardStore } from './stores/boardStore'
 import { useProjectStore } from './stores/projectStore'
 import type { ProjectInfo } from './stores/projectStore'
@@ -14,6 +15,26 @@ import { RunLogPanel } from './components/RunLogPanel'
 import { LayoutDashboard, Plus, Play, Sun, Moon } from 'lucide-react'
 import { AnimatePresence } from 'framer-motion'
 import './index.css'
+
+class ErrorBoundary extends Component<{ children: ReactNode }, { error: Error | null }> {
+  state = { error: null as Error | null }
+  static getDerivedStateFromError(error: Error) { return { error } }
+  render() {
+    if (this.state.error) {
+      return (
+        <div style={{ padding: 32, color: 'red', fontFamily: 'monospace', whiteSpace: 'pre-wrap' }}>
+          <h2>UI Error</h2>
+          <p>{this.state.error.message}</p>
+          <pre>{this.state.error.stack}</pre>
+          <button onClick={() => this.setState({ error: null })} style={{ marginTop: 16, padding: '8px 16px' }}>
+            Dismiss
+          </button>
+        </div>
+      )
+    }
+    return this.props.children
+  }
+}
 
 function App() {
   const [selectedIssue, setSelectedIssue] = useState<Issue | null>(null)
@@ -154,6 +175,7 @@ function App() {
       {/* Issue Detail Slide-over */}
       <AnimatePresence>
         {selectedIssue && (
+          <ErrorBoundary>
           <IssueDetail
             issue={selectedIssue}
             onClose={() => setSelectedIssue(null)}
@@ -171,10 +193,9 @@ function App() {
               setSelectedIssue(null)
             }}
           />
+          </ErrorBoundary>
         )}
       </AnimatePresence>
-
-      {/* Project Detail Slide-over */}
       <AnimatePresence>
         {selectedProject && (
           <ProjectDetail

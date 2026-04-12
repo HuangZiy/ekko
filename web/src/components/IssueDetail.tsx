@@ -89,7 +89,7 @@ export function IssueDetail({ issue, onClose, onApprove, onReject, onRun, onDele
 
   const updateIssue = useBoardStore(s => s.updateIssue)
   const updateIssueContent = useBoardStore(s => s.updateIssueContent)
-  const isRunning = useBoardStore(s => s.runningIssueIds.has(issue.id))
+  const isRunning = useBoardStore(s => s.runningIssueIds.includes(issue.id))
   const fetchBoard = useBoardStore(s => s.fetchBoard)
   const fetchIssues = useBoardStore(s => s.fetchIssues)
 

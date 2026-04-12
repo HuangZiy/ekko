@@ -50,7 +50,7 @@ interface BoardState {
   issues: Record<string, Issue>
   projectId: string | null
   loading: boolean
-  runningIssueIds: Set<string>
+  runningIssueIds: string[]
   sseLog: SSELogEntry[]
   agentLogs: Record<string, AgentLogEntry[]>
   wsSend: ((msg: Record<string, unknown>) => void) | null
@@ -83,7 +83,7 @@ export const useBoardStore = create<BoardState>((set, get) => ({
   issues: {},
   projectId: null,
   loading: false,
-  runningIssueIds: new Set(),
+  runningIssueIds: [],
   sseLog: [],
   agentLogs: {},
   wsSend: null,
@@ -91,14 +91,12 @@ export const useBoardStore = create<BoardState>((set, get) => ({
   setProjectId: (id) => set({ projectId: id }),
 
   addRunningIssue: (issueId) => set(state => ({
-    runningIssueIds: new Set([...state.runningIssueIds, issueId]),
+    runningIssueIds: state.runningIssueIds.includes(issueId) ? state.runningIssueIds : [...state.runningIssueIds, issueId],
   })),
 
-  removeRunningIssue: (issueId) => set(state => {
-    const next = new Set(state.runningIssueIds)
-    next.delete(issueId)
-    return { runningIssueIds: next }
-  }),
+  removeRunningIssue: (issueId) => set(state => ({
+    runningIssueIds: state.runningIssueIds.filter(id => id !== issueId),
+  })),
 
   fetchBoard: async () => {
     const { projectId } = get()

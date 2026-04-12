@@ -21,7 +21,7 @@ export function IssueCard({ issue, onClick }: IssueCardProps) {
     id: issue.id,
   })
   const runSingleIssue = useBoardStore(s => s.runSingleIssue)
-  const isRunning = useBoardStore(s => s.runningIssueIds.has(issue.id))
+  const isRunning = useBoardStore(s => s.runningIssueIds.includes(issue.id))
 
   const style = {
     transform: CSS.Transform.toString(transform),

@@ -1,11 +1,12 @@
 """Issue executor — takes one Issue, runs Ralph, returns result.
 
 Does NOT manage state transitions. That's the scheduler's job.
-This is the equivalent of the old run_one_ralph_cycle(), but reads from Issue instead of fix_plan.md.
 """
 
 from __future__ import annotations
+import time
 from pathlib import Path
+from typing import Awaitable, Callable
 
 from claude_agent_sdk import (
     query, ClaudeAgentOptions, ResultMessage,
@@ -46,6 +47,36 @@ def _log_message(message) -> None:
         _log("Done", C_GREEN, f"turns={message.num_turns} cost={cost} duration={message.duration_ms // 1000}s")
         if message.is_error:
             _log("Done", C_RED, f"ERROR: {message.result}")
+
+
+def _message_to_events(issue_id: str, message) -> list[dict]:
+    """Convert a SDK message to a list of WebSocket event dicts."""
+    ts = int(time.time())
+    events: list[dict] = []
+
+    if isinstance(message, AssistantMessage):
+        for block in message.content:
+            if isinstance(block, TextBlock):
+                events.append({
+                    "ts": ts, "type": "agent_token", "issue_id": issue_id,
+                    "data": {"text": block.text},
+                })
+            elif isinstance(block, ToolUseBlock):
+                events.append({
+                    "ts": ts, "type": "agent_tool_call", "issue_id": issue_id,
+                    "data": {"tool": block.name, "input": block.input},
+                })
+    elif isinstance(message, ResultMessage):
+        status = "failed" if message.is_error else "done"
+        data: dict = {"status": status}
+        if message.is_error:
+            data["error"] = message.result
+        events.append({
+            "ts": ts, "type": "agent_status", "issue_id": issue_id,
+            "data": data,
+        })
+
+    return events
 
 
 def build_issue_prompt(issue: Issue, storage: ProjectStorage, workspace: Path) -> str:
@@ -93,15 +124,28 @@ ID: {issue.id}
 """
 
 
-async def execute_issue(issue: Issue, storage: ProjectStorage, workspace: Path) -> dict:
+async def execute_issue(
+    issue: Issue,
+    storage: ProjectStorage,
+    workspace: Path,
+    on_event: Callable[[dict], Awaitable[None]] | None = None,
+) -> dict:
     """Execute a single Issue via Ralph. Returns stats dict.
 
     Does NOT change issue status — caller (scheduler) handles that.
+    on_event: optional async callback for streaming events to WebSocket/logs.
     """
     _log("Task", C_CYAN, f"{issue.id}: {issue.title}")
 
     prompt = build_issue_prompt(issue, storage, workspace)
     stats: dict = {"success": False, "issue_id": issue.id, "title": issue.title}
+
+    # Emit thinking status
+    if on_event:
+        await on_event({
+            "ts": int(time.time()), "type": "agent_status", "issue_id": issue.id,
+            "data": {"status": "thinking"},
+        })
 
     async for message in query(
         prompt=prompt,
@@ -115,6 +159,11 @@ async def execute_issue(issue: Issue, storage: ProjectStorage, workspace: Path) 
         ),
     ):
         _log_message(message)
+
+        if on_event:
+            for event in _message_to_events(issue.id, message):
+                await on_event(event)
+
         if isinstance(message, ResultMessage):
             stats.update({
                 "success": not message.is_error,

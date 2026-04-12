@@ -1,6 +1,6 @@
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { GripVertical, AlertCircle, Clock, Tag, Play } from 'lucide-react'
+import { GripVertical, AlertCircle, Clock, Tag, Play, Loader2 } from 'lucide-react'
 import type { Issue } from '../stores/boardStore'
 import { useBoardStore } from '../stores/boardStore'
 
@@ -21,6 +21,7 @@ export function IssueCard({ issue, onClick }: IssueCardProps) {
     id: issue.id,
   })
   const runSingleIssue = useBoardStore(s => s.runSingleIssue)
+  const isRunning = useBoardStore(s => s.runningIssueIds.has(issue.id))
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -49,7 +50,7 @@ export function IssueCard({ issue, onClick }: IssueCardProps) {
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1">
             <span className="text-xs text-gray-400 mb-1">{issue.id}</span>
-            {issue.status === 'in_progress' && (
+            {(isRunning || issue.status === 'in_progress') && (
               <span className="ml-auto flex items-center gap-1 text-xs text-amber-600">
                 <span className="relative flex h-2 w-2">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
@@ -58,7 +59,7 @@ export function IssueCard({ issue, onClick }: IssueCardProps) {
                 Running
               </span>
             )}
-            {canRun && (
+            {canRun && !isRunning && (
               <button
                 onClick={handleRun}
                 className="ml-auto p-1 rounded hover:bg-green-50 text-green-600 hover:text-green-700 transition-colors"

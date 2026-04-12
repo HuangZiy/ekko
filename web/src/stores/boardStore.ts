@@ -50,10 +50,13 @@ interface BoardState {
   issues: Record<string, Issue>
   projectId: string | null
   loading: boolean
+  runningIssueIds: Set<string>
   sseLog: SSELogEntry[]
   agentLogs: Record<string, AgentLogEntry[]>
   wsSend: ((msg: Record<string, unknown>) => void) | null
   setProjectId: (id: string) => void
+  addRunningIssue: (issueId: string) => void
+  removeRunningIssue: (issueId: string) => void
   fetchBoard: () => Promise<void>
   fetchIssues: () => Promise<void>
   moveIssue: (issueId: string, toColumn: string) => Promise<{ ok: boolean; error?: string }>
@@ -80,11 +83,22 @@ export const useBoardStore = create<BoardState>((set, get) => ({
   issues: {},
   projectId: null,
   loading: false,
+  runningIssueIds: new Set(),
   sseLog: [],
   agentLogs: {},
   wsSend: null,
 
   setProjectId: (id) => set({ projectId: id }),
+
+  addRunningIssue: (issueId) => set(state => ({
+    runningIssueIds: new Set([...state.runningIssueIds, issueId]),
+  })),
+
+  removeRunningIssue: (issueId) => set(state => {
+    const next = new Set(state.runningIssueIds)
+    next.delete(issueId)
+    return { runningIssueIds: next }
+  }),
 
   fetchBoard: async () => {
     const { projectId } = get()
@@ -213,6 +227,7 @@ export const useBoardStore = create<BoardState>((set, get) => ({
   runSingleIssue: async (issueId) => {
     const { projectId } = get()
     if (!projectId) return
+    get().addRunningIssue(issueId)
     await fetch(`/api/projects/${projectId}/run`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

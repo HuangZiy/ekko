@@ -6,7 +6,7 @@ import type { Issue } from '../stores/boardStore'
 import { useBoardStore } from '../stores/boardStore'
 import {
   Clock, Tag, AlertCircle, CheckCircle2, XCircle, GitBranch,
-  Pencil, Save, X, Image, FileCode, FlaskConical, ShieldCheck, Play, ChevronDown, Trash2
+  Pencil, Save, X, Image, FileCode, FlaskConical, ShieldCheck, Play, ChevronDown, Trash2, Loader2
 } from 'lucide-react'
 import { VALID_TRANSITIONS, STATUS_LABELS } from '../constants/transitions'
 import { AgentLogPanel } from './AgentLogPanel'
@@ -89,6 +89,7 @@ export function IssueDetail({ issue, onClose, onApprove, onReject, onRun, onDele
 
   const updateIssue = useBoardStore(s => s.updateIssue)
   const updateIssueContent = useBoardStore(s => s.updateIssueContent)
+  const isRunning = useBoardStore(s => s.runningIssueIds.has(issue.id))
   const fetchBoard = useBoardStore(s => s.fetchBoard)
   const fetchIssues = useBoardStore(s => s.fetchIssues)
 
@@ -325,10 +326,22 @@ export function IssueDetail({ issue, onClose, onApprove, onReject, onRun, onDele
             <div className="border-t border-[var(--border)] pt-4">
               <button
                 onClick={onRun}
-                className="flex items-center gap-1.5 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-medium"
+                disabled={isRunning}
+                className="flex items-center gap-1.5 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-medium disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                <Play size={16} /> Run
+                {isRunning ? (
+                  <><Loader2 size={16} className="animate-spin" /> Running...</>
+                ) : (
+                  <><Play size={16} /> Run</>
+                )}
               </button>
+            </div>
+          )}
+          {isRunning && !['todo', 'backlog', 'rejected'].includes(issue.status) && (
+            <div className="border-t border-[var(--border)] pt-4">
+              <span className="flex items-center gap-1.5 text-sm text-amber-600">
+                <Loader2 size={16} className="animate-spin" /> Running...
+              </span>
             </div>
           )}
 

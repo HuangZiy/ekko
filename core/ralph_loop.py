@@ -19,6 +19,7 @@ import asyncio
 import json
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Awaitable, Callable
 
 from core.models import Issue, IssueStatus, Board
 from core.storage import ProjectStorage
@@ -46,22 +47,27 @@ async def run_issue_loop(
     storage: ProjectStorage,
     workspace: Path,
     max_retries: int = 3,
+    on_event: Callable[[dict], Awaitable[None]] | None = None,
 ) -> dict:
     """Ralph Loop for a single Issue.
 
     Returns stats dict with success, cost, duration, etc.
+    on_event: optional async callback for streaming events to WebSocket.
     """
     all_stats: list[dict] = []
 
     # === 1. State: → In Progress ===
-    if issue.status in (IssueStatus.TODO, IssueStatus.FAILED, IssueStatus.REJECTED):
-        if issue.status == IssueStatus.REJECTED:
-            issue.move_to(IssueStatus.TODO)
-            storage.save_issue(issue)
+    if issue.status == IssueStatus.BACKLOG:
+        issue.move_to(IssueStatus.TODO)
+        storage.save_issue(issue)
+    if issue.status == IssueStatus.REJECTED:
+        issue.move_to(IssueStatus.TODO)
+        storage.save_issue(issue)
+    if issue.status in (IssueStatus.TODO, IssueStatus.FAILED):
         issue.move_to(IssueStatus.IN_PROGRESS)
         storage.save_issue(issue)
         _log("State", C_CYAN, f"{issue.id}: → in_progress")
-        _sync_board(issue, storage)
+        await _sync_board(issue, storage, on_event)
 
     # === 2. Generator + Evaluator Loop ===
     passed = False
@@ -70,7 +76,7 @@ async def run_issue_loop(
 
         # --- Generator: Ralph writes code ---
         _log("Generator", C_CYAN, f"Starting: {issue.title}")
-        gen_stats = await _run_generator(issue, storage, workspace)
+        gen_stats = await _run_generator(issue, storage, workspace, on_event)
         all_stats.append({"phase": "generator", "attempt": attempt, **gen_stats})
 
         if not gen_stats.get("success"):
@@ -105,7 +111,7 @@ async def run_issue_loop(
     if issue.status == IssueStatus.IN_PROGRESS:
         issue.move_to(IssueStatus.AGENT_DONE)
         storage.save_issue(issue)
-        _sync_board(issue, storage)
+        await _sync_board(issue, storage, on_event)
         if passed:
             _log("State", C_GREEN, f"{issue.id}: → agent_done (PASSED, awaiting human review)")
         else:
@@ -129,10 +135,15 @@ async def run_issue_loop(
 # Generator (Ralph)
 # ---------------------------------------------------------------------------
 
-async def _run_generator(issue: Issue, storage: ProjectStorage, workspace: Path) -> dict:
+async def _run_generator(
+    issue: Issue,
+    storage: ProjectStorage,
+    workspace: Path,
+    on_event: Callable[[dict], Awaitable[None]] | None = None,
+) -> dict:
     """Call Ralph to implement the Issue. Returns stats dict."""
     from core.executor import execute_issue
-    return await execute_issue(issue, storage, workspace)
+    return await execute_issue(issue, storage, workspace, on_event=on_event)
 
 
 # ---------------------------------------------------------------------------
@@ -222,7 +233,11 @@ def _append_log(issue: Issue, storage: ProjectStorage, title: str, content: str)
     storage.save_issue_content(issue.id, existing + entry)
 
 
-def _sync_board(issue: Issue, storage: ProjectStorage) -> None:
+async def _sync_board(
+    issue: Issue,
+    storage: ProjectStorage,
+    on_event: Callable[[dict], Awaitable[None]] | None = None,
+) -> None:
     board_file = storage.root / "board.json"
     if not board_file.exists():
         return
@@ -242,13 +257,8 @@ def _sync_board(issue: Issue, storage: ProjectStorage) -> None:
                 break
     board_file.write_text(json.dumps(data, indent=2, ensure_ascii=False))
 
-    try:
-        from server.sse import event_bus
-        asyncio.get_event_loop().create_task(
-            event_bus.publish("issue_updated", {"issue": issue.to_json()})
-        )
-    except Exception:
-        pass
+    if on_event:
+        await on_event({"type": "issue_updated", "data": {"issue": issue.to_json()}})
 
 
 # ---------------------------------------------------------------------------
@@ -266,7 +276,12 @@ def find_ready_issues(storage: ProjectStorage) -> list[Issue]:
     ]
 
 
-async def run_board(storage: ProjectStorage, workspace: Path, max_parallel: int = 1) -> list[dict]:
+async def run_board(
+    storage: ProjectStorage,
+    workspace: Path,
+    max_parallel: int = 1,
+    on_event: Callable[[dict], Awaitable[None]] | None = None,
+) -> list[dict]:
     """Run all ready issues. Supports parallel execution when max_parallel > 1."""
     all_stats = []
     ready = find_ready_issues(storage)
@@ -280,7 +295,7 @@ async def run_board(storage: ProjectStorage, workspace: Path, max_parallel: int 
     if max_parallel <= 1:
         # Sequential
         for issue in ready:
-            stats = await run_issue_loop(issue, storage, workspace)
+            stats = await run_issue_loop(issue, storage, workspace, on_event=on_event)
             all_stats.append(stats)
             status = "PASSED" if stats["success"] else "NEEDS REVIEW"
             _log("Board", C_GREEN if stats["success"] else C_YELLOW,
@@ -291,7 +306,7 @@ async def run_board(storage: ProjectStorage, workspace: Path, max_parallel: int 
 
         async def _run_one(issue: Issue) -> dict:
             async with semaphore:
-                return await run_issue_loop(issue, storage, workspace)
+                return await run_issue_loop(issue, storage, workspace, on_event=on_event)
 
         tasks = [asyncio.create_task(_run_one(issue)) for issue in ready]
         for coro in asyncio.as_completed(tasks):

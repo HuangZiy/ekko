@@ -1,19 +1,14 @@
 """FastAPI application — Ekko backend."""
 
 from __future__ import annotations
-import asyncio
-import json
 from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
-from sse_starlette.sse import EventSourceResponse
 
-from server.sse import event_bus
 from server.routes import issues, board, projects, reviews, run, fs
+from server.routes import ws as ws_route
 
-# Harness root — configurable, defaults to workspace/.harness
 _harness_root: Path | None = None
 
 
@@ -44,22 +39,7 @@ def create_app(harness_root: Path | None = None) -> FastAPI:
     app.include_router(reviews.router)
     app.include_router(run.router)
     app.include_router(fs.router)
-
-    @app.get("/api/projects/{project_id}/events")
-    async def sse_events(project_id: str):
-        queue = event_bus.subscribe()
-
-        async def stream():
-            try:
-                while True:
-                    event = await queue.get()
-                    yield {"event": event["type"], "data": json.dumps(event["data"])}
-            except asyncio.CancelledError:
-                pass
-            finally:
-                event_bus.unsubscribe(queue)
-
-        return EventSourceResponse(stream())
+    app.include_router(ws_route.router)
 
     @app.get("/api/health")
     def health():

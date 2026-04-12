@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState } from 'react'
+import { useRef, useEffect, useState, useMemo } from 'react'
 import { useBoardStore } from '../stores/boardStore'
 import type { AgentLogEntry } from '../stores/boardStore'
 import { Terminal, Square, History } from 'lucide-react'
@@ -46,8 +46,11 @@ function formatEntry(entry: AgentLogEntry): { label: string; color: string; text
   }
 }
 
+const EMPTY_LOGS: AgentLogEntry[] = []
+
 export function AgentLogPanel({ issueId, onCancel }: AgentLogPanelProps) {
-  const agentLogs = useBoardStore(s => s.agentLogs[issueId] || [])
+  const agentLogsRaw = useBoardStore(s => s.agentLogs[issueId])
+  const agentLogs = agentLogsRaw ?? EMPTY_LOGS
   const [historyRuns, setHistoryRuns] = useState<string[]>([])
   const [selectedRun, setSelectedRun] = useState<string | null>(null)
   const [historyEntries, setHistoryEntries] = useState<AgentLogEntry[]>([])

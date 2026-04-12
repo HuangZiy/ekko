@@ -83,10 +83,10 @@ function App() {
   }, [projectId, fetchBoard, fetchIssues])
 
   useEffect(() => {
-    if (selectedIssue && issues[selectedIssue.id]) {
+    if (selectedIssue && issues[selectedIssue.id] && issues[selectedIssue.id] !== selectedIssue) {
       setSelectedIssue(issues[selectedIssue.id])
     }
-  }, [issues, selectedIssue])
+  }, [issues])
 
   const handleProjectSwitch = (id: string) => {
     setProjectId(id)

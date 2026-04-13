@@ -249,6 +249,10 @@ export const useBoardStore = create<BoardState>((set, get) => ({
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ issue_id: issueId }),
     })
+    get().removeRunningIssue(issueId)
+    // Refresh to pick up the latest status from server
+    await get().fetchBoard()
+    await get().fetchIssues()
   },
 
   addSSELog: (entry) => {

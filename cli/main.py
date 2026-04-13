@@ -518,6 +518,102 @@ def _run(args: argparse.Namespace) -> None:
 
     anyio.run(_execute)
 
+# ---------------------------------------------------------------------------
+# Scheduler
+# ---------------------------------------------------------------------------
+
+def _scheduler_start(args: argparse.Namespace) -> None:
+    import anyio
+    from pathlib import Path
+
+    store = _get_storage(args)
+    project = store.load_project_meta()
+    if not project or not project.workspaces:
+        print("Error: project has no workspace configured.", file=sys.stderr)
+        sys.exit(1)
+    workspace = Path(project.workspaces[0]).resolve()
+
+    async def _execute():
+        from core.scheduler import scheduler
+
+        print(f"Starting scheduler for project {project.id}: {project.name}", flush=True)
+        print(f"  Interval:     {args.interval}s", flush=True)
+        print(f"  Max parallel: {args.max_parallel}", flush=True)
+        print(f"  Workspace:    {workspace}", flush=True)
+        print(flush=True)
+
+        await scheduler.run_loop(
+            project_id=project.id,
+            storage=store,
+            workspace=workspace,
+            interval=args.interval,
+            max_parallel=args.max_parallel,
+        )
+
+    try:
+        anyio.run(_execute)
+    except KeyboardInterrupt:
+        print("\nScheduler interrupted.", flush=True)
+
+
+def _scheduler_status(args: argparse.Namespace) -> None:
+    """Show scheduler status. In CLI-only mode this just shows ready issues."""
+    store = _get_storage(args)
+    project = store.load_project_meta()
+    if not project:
+        print("Error: no active project.", file=sys.stderr)
+        sys.exit(1)
+
+    from core.ralph_loop import find_ready_issues
+
+    ready = find_ready_issues(store)
+    all_issues = store.list_issues()
+    in_progress = [i for i in all_issues if i.status.value == "in_progress"]
+
+    print(f"Project:      {project.id}: {project.name}")
+    print(f"Ready issues: {len(ready)}")
+    if ready:
+        for i in ready:
+            blocked = " [BLOCKED]" if i.is_blocked() else ""
+            print(f"  {i.id}  [{i.priority.value:<6}]  {i.title}{blocked}")
+    print(f"In progress:  {len(in_progress)}")
+    if in_progress:
+        for i in in_progress:
+            print(f"  {i.id}  {i.title}")
+
+
+def _scheduler_once(args: argparse.Namespace) -> None:
+    """Run a single poll cycle and exit."""
+    import anyio
+    from pathlib import Path
+
+    store = _get_storage(args)
+    project = store.load_project_meta()
+    if not project or not project.workspaces:
+        print("Error: project has no workspace configured.", file=sys.stderr)
+        sys.exit(1)
+    workspace = Path(project.workspaces[0]).resolve()
+
+    async def _execute():
+        from core.scheduler import scheduler
+
+        print(f"Running single poll cycle for {project.id}...", flush=True)
+        all_stats = await scheduler.run_once(
+            project_id=project.id,
+            storage=store,
+            workspace=workspace,
+            max_parallel=args.max_parallel,
+        )
+        if not all_stats:
+            print("No issues dispatched.")
+            return
+        total_cost = sum(s.get("cost_usd", 0) for s in all_stats)
+        ok = sum(1 for s in all_stats if s.get("success"))
+        print(f"\nCompleted: {ok}/{len(all_stats)} passed, total cost=${total_cost:.2f}", flush=True)
+
+    anyio.run(_execute)
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="harness",
@@ -624,6 +720,22 @@ def build_parser() -> argparse.ArgumentParser:
     run_parser = sub.add_parser("run", help="Run execution loop for pending issues")
     run_parser.add_argument("issue_id", nargs="?", default=None, help="Run a specific issue (optional)")
     run_parser.set_defaults(func=_run)
+
+    # -- scheduler --
+    sched_parser = sub.add_parser("scheduler", help="Auto-dispatch scheduler for ready issues")
+    sched_sub = sched_parser.add_subparsers(dest="scheduler_command")
+
+    p = sched_sub.add_parser("start", help="Start scheduler (foreground, polls until Ctrl+C)")
+    p.add_argument("--interval", type=int, default=60, help="Poll interval in seconds (default 60)")
+    p.add_argument("--max-parallel", type=int, default=1, help="Max concurrent issue runs (default 1)")
+    p.set_defaults(func=_scheduler_start)
+
+    p = sched_sub.add_parser("status", help="Show ready issues and current state")
+    p.set_defaults(func=_scheduler_status)
+
+    p = sched_sub.add_parser("once", help="Run a single poll cycle and exit")
+    p.add_argument("--max-parallel", type=int, default=1, help="Max concurrent issue runs (default 1)")
+    p.set_defaults(func=_scheduler_once)
 
     return parser
 

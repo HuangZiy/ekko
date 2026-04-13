@@ -22,9 +22,17 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Awaitable, Callable
 
-from core.models import Issue, IssueStatus, Board
+from core.models import Issue, IssueStatus, IssuePriority, Board
 from core.storage import ProjectStorage
 from core.evidence import collect_evidence
+
+# Priority sort order — lower value = higher priority
+_PRIORITY_ORDER = {
+    IssuePriority.URGENT: 0,
+    IssuePriority.HIGH: 1,
+    IssuePriority.MEDIUM: 2,
+    IssuePriority.LOW: 3,
+}
 
 
 C_RESET = "\033[0m"
@@ -431,14 +439,18 @@ def find_ready_issues(storage: ProjectStorage) -> list[Issue]:
 
     BACKLOG issues are included because run_issue_loop handles the
     planning transition (BACKLOG → PLANNING → TODO → IN_PROGRESS).
+
+    Results are sorted by priority (urgent > high > medium > low).
     """
     all_issues = storage.list_issues()
     done_ids = {i.id for i in all_issues if i.status == IssueStatus.HUMAN_DONE}
-    return [
+    ready = [
         i for i in all_issues
         if i.status in (IssueStatus.TODO, IssueStatus.BACKLOG)
         and all(b in done_ids for b in i.blocked_by)
     ]
+    ready.sort(key=lambda i: _PRIORITY_ORDER.get(i.priority, 99))
+    return ready
 
 
 async def run_board(

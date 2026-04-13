@@ -10,6 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from server.routes import issues, board, projects, reviews, run, fs, uploads
 from server.routes import ws as ws_route
+from server.routes import scheduler as scheduler_route
 
 _harness_root: Path | None = None
 
@@ -91,6 +92,7 @@ def create_app(harness_root: Path | None = None) -> FastAPI:
     app.include_router(fs.router)
     app.include_router(uploads.router)
     app.include_router(ws_route.router)
+    app.include_router(scheduler_route.router)
 
     @app.on_event("startup")
     def reset_stuck_issues():
@@ -123,6 +125,12 @@ def create_app(harness_root: Path | None = None) -> FastAPI:
                 except Exception:
                     pass
         asyncio.create_task(watchdog())
+
+    @app.on_event("shutdown")
+    async def stop_scheduler():
+        """Stop all active scheduler loops on server shutdown."""
+        from core.scheduler import scheduler
+        await scheduler.stop_all()
 
     @app.get("/api/health")
     def health():

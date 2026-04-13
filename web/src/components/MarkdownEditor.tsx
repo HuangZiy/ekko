@@ -14,6 +14,8 @@ interface MarkdownEditorProps {
   /** project + issue context for image uploads */
   projectId?: string | null
   issueId?: string | null
+  /** custom upload URL — overrides the default projectId/issueId-based URL */
+  uploadUrl?: string | null
   className?: string
   /** auto-focus the textarea */
   autoFocus?: boolean
@@ -150,6 +152,7 @@ export function MarkdownEditor({
   rows = 8,
   projectId,
   issueId,
+  uploadUrl: uploadUrlProp,
   className = '',
   autoFocus = false,
 }: MarkdownEditorProps) {
@@ -159,7 +162,10 @@ export function MarkdownEditor({
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const canUpload = !!projectId && !!issueId
+  // Resolve the upload URL: explicit prop takes priority, then projectId+issueId combo
+  const resolvedUploadUrl = uploadUrlProp
+    || (projectId && issueId ? `/api/projects/${projectId}/issues/${issueId}/uploads` : null)
+  const canUpload = !!resolvedUploadUrl
 
   const insertTextAtCursor = useCallback((insertion: string) => {
     const ta = textareaRef.current
@@ -178,12 +184,12 @@ export function MarkdownEditor({
   }, [value, onChange])
 
   const uploadImage = useCallback(async (file: File) => {
-    if (!projectId || !issueId) return
+    if (!resolvedUploadUrl) return
     setUploading(true)
     try {
       const formData = new FormData()
       formData.append('file', file)
-      const res = await fetch(`/api/projects/${projectId}/issues/${issueId}/uploads`, {
+      const res = await fetch(resolvedUploadUrl, {
         method: 'POST',
         body: formData,
       })
@@ -200,7 +206,7 @@ export function MarkdownEditor({
     } finally {
       setUploading(false)
     }
-  }, [projectId, issueId, insertTextAtCursor])
+  }, [resolvedUploadUrl, insertTextAtCursor])
 
   const handlePaste = useCallback((e: ClipboardEvent<HTMLTextAreaElement>) => {
     if (!canUpload) return

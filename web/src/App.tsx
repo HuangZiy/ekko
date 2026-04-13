@@ -261,6 +261,7 @@ function App() {
                   onChange={setNewDescription}
                   placeholder="Describe the issue..."
                   rows={6}
+                  uploadUrl={projectId ? `/api/projects/${projectId}/uploads` : null}
                 />
               </div>
 

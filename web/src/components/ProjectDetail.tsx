@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { Pencil, Save, X, FolderOpen, Hash, Calendar, Tag, BarChart3 } from 'lucide-react'
+import { Pencil, Save, X, FolderOpen, Hash, Calendar, Tag, BarChart3, FlaskConical } from 'lucide-react'
 import type { ProjectInfo } from '../stores/projectStore'
 import { useProjectStore } from '../stores/projectStore'
 import { useBoardStore } from '../stores/boardStore'
@@ -33,6 +33,7 @@ export function ProjectDetail({ project, onClose }: ProjectDetailProps) {
   const [editName, setEditName] = useState(project.name)
   const [editWorkspace, setEditWorkspace] = useState(project.workspaces?.[0] || '')
   const [saving, setSaving] = useState(false)
+  const [projectStats, setProjectStats] = useState<{ total_runs: number; total_cost_usd: number; total_duration_ms: number } | null>(null)
 
   const updateProject = useProjectStore(s => s.updateProject)
   const issues = useBoardStore(s => s.issues)
@@ -40,6 +41,11 @@ export function ProjectDetail({ project, onClose }: ProjectDetailProps) {
   useEffect(() => {
     setEditName(project.name)
     setEditWorkspace(project.workspaces?.[0] || '')
+    fetch(`/api/projects/${project.id}`)
+      .then(r => r.json())
+      .then(data => {
+        if (data.run_stats) setProjectStats(data.run_stats)
+      })
   }, [project])
 
   // Compute issue stats from boardStore for live data
@@ -210,6 +216,29 @@ export function ProjectDetail({ project, onClose }: ProjectDetailProps) {
               <div className="text-sm text-[var(--text-secondary)] py-2">No issues yet</div>
             )}
           </div>
+
+          {/* Agent Run Stats */}
+          {projectStats && projectStats.total_runs > 0 && (
+            <div>
+              <div className="flex items-center gap-1.5 text-sm font-semibold text-[var(--text-primary)] mb-2">
+                <FlaskConical size={14} /> Agent Runs
+              </div>
+              <div className="grid grid-cols-3 gap-3">
+                <div className="px-3 py-2 bg-[var(--bg-secondary)] rounded-lg text-center">
+                  <div className="text-lg font-semibold text-[var(--text-primary)]">{projectStats.total_runs}</div>
+                  <div className="text-xs text-[var(--text-secondary)]">Runs</div>
+                </div>
+                <div className="px-3 py-2 bg-[var(--bg-secondary)] rounded-lg text-center">
+                  <div className="text-lg font-semibold text-[var(--text-primary)]">${projectStats.total_cost_usd.toFixed(2)}</div>
+                  <div className="text-xs text-[var(--text-secondary)]">Cost</div>
+                </div>
+                <div className="px-3 py-2 bg-[var(--bg-secondary)] rounded-lg text-center">
+                  <div className="text-lg font-semibold text-[var(--text-primary)]">{Math.round(projectStats.total_duration_ms / 1000)}s</div>
+                  <div className="text-xs text-[var(--text-secondary)]">Duration</div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </motion.div>
     </div>

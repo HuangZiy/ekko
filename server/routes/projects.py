@@ -99,6 +99,20 @@ def get_project(project_id: str):
         by_status[i.status.value] = by_status.get(i.status.value, 0) + 1
     d["issue_counts"] = by_status
     d["total_issues"] = len(issues)
+    # Aggregate run stats across all issues
+    total_cost = 0.0
+    total_duration = 0
+    total_runs = 0
+    for i in issues:
+        for rs in store.list_all_run_stats(i.id):
+            total_runs += 1
+            total_cost += rs.get("cost_usd", 0)
+            total_duration += rs.get("duration_ms", 0)
+    d["run_stats"] = {
+        "total_runs": total_runs,
+        "total_cost_usd": round(total_cost, 4),
+        "total_duration_ms": total_duration,
+    }
     return d
 
 

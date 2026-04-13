@@ -83,13 +83,18 @@ export function IssueDetail({ issue, onClose, onApprove, onReject, onRun, onDele
   const [editLabels, setEditLabels] = useState(issue.labels.join(', '))
   const [editingContent, setEditingContent] = useState(false)
   const [editContent, setEditContent] = useState('')
+  const [plan, setPlan] = useState('')
+  const [editingPlan, setEditingPlan] = useState(false)
+  const [editPlan, setEditPlan] = useState('')
   const [saving, setSaving] = useState(false)
   const [showStatusMenu, setShowStatusMenu] = useState(false)
   const [statusError, setStatusError] = useState<string | null>(null)
   const [children, setChildren] = useState<{ id: string; title: string; status: string }[]>([])
+  const [runStats, setRunStats] = useState<{ total_runs: number; total_cost_usd: number; total_duration_ms: number; runs: any[] } | null>(null)
 
   const updateIssue = useBoardStore(s => s.updateIssue)
   const updateIssueContent = useBoardStore(s => s.updateIssueContent)
+  const updateIssuePlan = useBoardStore(s => s.updateIssuePlan)
   const isRunning = useBoardStore(s => s.runningIssueIds.includes(issue.id))
   const fetchBoard = useBoardStore(s => s.fetchBoard)
   const fetchIssues = useBoardStore(s => s.fetchIssues)
@@ -123,8 +128,12 @@ export function IssueDetail({ issue, onClose, onApprove, onReject, onRun, onDele
         .then(r => r.json())
         .then(data => {
           setContent(data.content || '')
+          setPlan(data.plan || '')
           setChildren(data.children || [])
         })
+      fetch(`/api/projects/${projectId}/issues/${issue.id}/stats`)
+        .then(r => r.json())
+        .then(data => setRunStats(data))
     }
   }, [issue.id])
 
@@ -165,6 +174,19 @@ export function IssueDetail({ issue, onClose, onApprove, onReject, onRun, onDele
   const startEditContent = () => {
     setEditContent(content)
     setEditingContent(true)
+  }
+
+  const handleSavePlan = async () => {
+    setSaving(true)
+    await updateIssuePlan(issue.id, editPlan)
+    setPlan(editPlan)
+    setEditingPlan(false)
+    setSaving(false)
+  }
+
+  const startEditPlan = () => {
+    setEditPlan(plan)
+    setEditingPlan(true)
   }
 
   return (
@@ -356,6 +378,52 @@ export function IssueDetail({ issue, onClose, onApprove, onReject, onRun, onDele
             </div>
           )}
 
+          {/* Run Stats */}
+          {runStats && runStats.total_runs > 0 && (
+            <div>
+              <div className="flex items-center gap-1.5 text-sm font-semibold text-[var(--text-primary)] mb-2">
+                <FlaskConical size={14} /> Agent Runs ({runStats.total_runs})
+                <span className="ml-auto text-xs font-normal text-[var(--text-secondary)]">
+                  Total: ${runStats.total_cost_usd.toFixed(2)} · {Math.round(runStats.total_duration_ms / 1000)}s
+                </span>
+              </div>
+              <div className="border border-[var(--border)] rounded-lg overflow-hidden">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="bg-[var(--bg-secondary)] text-[var(--text-secondary)]">
+                      <th className="px-3 py-1.5 text-left font-medium">Run</th>
+                      <th className="px-3 py-1.5 text-right font-medium">Turns</th>
+                      <th className="px-3 py-1.5 text-right font-medium">Tokens</th>
+                      <th className="px-3 py-1.5 text-right font-medium">Cost</th>
+                      <th className="px-3 py-1.5 text-right font-medium">Duration</th>
+                      <th className="px-3 py-1.5 text-center font-medium">Result</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {runStats.runs.map((run: any) => (
+                      <tr key={run.run_id} className="border-t border-[var(--border)]">
+                        <td className="px-3 py-1.5 font-mono text-[var(--text-secondary)]">{run.run_id}</td>
+                        <td className="px-3 py-1.5 text-right text-[var(--text-primary)]">{run.turns}</td>
+                        <td className="px-3 py-1.5 text-right text-[var(--text-primary)]">
+                          {run.tokens_in + run.tokens_out > 0
+                          ? `${((run.tokens_in + run.tokens_out) / 1000).toFixed(1)}k`
+                            : '-'}
+                        </td>
+                        <td className="px-3 py-1.5 text-right text-[var(--text-primary)]">${run.cost_usd.toFixed(2)}</td>
+                        <td className="px-3 py-1.5 text-right text-[var(--text-primary)]">{Math.round(run.duration_ms / 1000)}s</td>
+                        <td className="px-3 py-1.5 text-center">
+                          {run.success
+                            ? <span className="text-green-600">Pass</span>
+                            : <span className="text-red-500">Fail</span>}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
           {/* Run / Stop Action */}
           {onRun && ['todo', 'backlog', 'rejected', 'failed'].includes(issue.status) && !isRunning && (
             <div className="border-t border-[var(--border)] pt-4">
@@ -395,6 +463,53 @@ export function IssueDetail({ issue, onClose, onApprove, onReject, onRun, onDele
           {issue.status === 'agent_done' && evidence && (
             <EvidencePanel evidence={evidence} />
           )}
+
+          {/* Plan */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-sm font-semibold text-[var(--text-primary)]">Plan</h3>
+              {!editingPlan ? (
+                <button
+                  onClick={startEditPlan}
+                  className="text-xs text-[var(--accent)] hover:underline flex items-center gap-1"
+                >
+                  <Pencil size={12} /> Edit
+                </button>
+              ) : (
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleSavePlan}
+                    disabled={saving}
+                    className="text-xs text-green-600 hover:underline flex items-center gap-1 disabled:opacity-50"
+                  >
+                    <Save size={12} /> Save
+                  </button>
+                  <button
+                    onClick={() => setEditingPlan(false)}
+                    className="text-xs text-red-500 hover:underline flex items-center gap-1"
+                  >
+                    <X size={12} /> Cancel
+                  </button>
+                </div>
+              )}
+            </div>
+            {editingPlan ? (
+              <textarea
+                value={editPlan}
+                onChange={e => setEditPlan(e.target.value)}
+                className="w-full h-64 p-3 border border-[var(--border)] rounded-lg text-sm font-mono resize-y bg-[var(--input-bg)] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
+                placeholder="Execution plan (markdown)..."
+              />
+            ) : (
+              <div className="prose prose-sm max-w-none">
+                {plan ? (
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{plan}</ReactMarkdown>
+                ) : (
+                  <p className="text-[var(--text-secondary)] text-sm italic">No plan yet</p>
+                )}
+              </div>
+            )}
+          </div>
 
           {/* Content */}
           <div>

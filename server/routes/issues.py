@@ -88,6 +88,7 @@ def get_issue(project_id: str, issue_id: str):
         result["content"] = storage.load_issue_content(issue_id)
     except FileNotFoundError:
         result["content"] = ""
+    result["plan"] = storage.load_issue_plan(issue_id)
 
     # Attach children (issues whose parent_id == this issue)
     all_issues = storage.list_issues()
@@ -148,6 +149,19 @@ def update_issue_content(project_id: str, issue_id: str, body: dict):
     return {"ok": True}
 
 
+@router.get("/{issue_id}/plan")
+def get_issue_plan(project_id: str, issue_id: str):
+    storage = _get_storage(project_id)
+    return {"plan": storage.load_issue_plan(issue_id)}
+
+
+@router.put("/{issue_id}/plan")
+def update_issue_plan(project_id: str, issue_id: str, body: dict):
+    storage = _get_storage(project_id)
+    storage.save_issue_plan(issue_id, body.get("plan", ""))
+    return {"ok": True}
+
+
 @router.delete("/{issue_id}")
 def delete_issue(project_id: str, issue_id: str):
     storage = _get_storage(project_id)
@@ -178,6 +192,38 @@ def get_issue_log(project_id: str, issue_id: str, run_id: str):
     storage = _get_storage(project_id)
     entries = storage.load_run_log(issue_id, run_id)
     return {"run_id": run_id, "entries": entries}
+
+
+@router.get("/{issue_id}/stats")
+def get_issue_stats(project_id: str, issue_id: str):
+    storage = _get_storage(project_id)
+    runs = storage.list_all_run_stats(issue_id)
+    total_cost = sum(r.get("cost_usd", 0) for r in runs)
+    total_duration = sum(r.get("duration_ms", 0) for r in runs)
+    total_turns = sum(r.get("details", [{}])[0].get("num_turns", 0) if r.get("details") else 0 for r in runs)
+    # Build per-run summary
+    per_run = []
+    for i, r in enumerate(runs):
+        details = r.get("details", [])
+        run_turns = sum(d.get("num_turns", 0) for d in details)
+        run_tokens_in = sum(d.get("usage", {}).get("input_tokens", 0) for d in details)
+        run_tokens_out = sum(d.get("usage", {}).get("output_tokens", 0) for d in details)
+        per_run.append({
+            "run_id": f"run-{i+1:03d}",
+            "success": r.get("success", False),
+            "attempts": r.get("attempts", 0),
+            "cost_usd": r.get("cost_usd", 0),
+            "duration_ms": r.get("duration_ms", 0),
+            "turns": run_turns,
+            "tokens_in": run_tokens_in,
+            "tokens_out": run_tokens_out,
+        })
+    return {
+        "total_runs": len(runs),
+        "total_cost_usd": total_cost,
+        "total_duration_ms": total_duration,
+        "runs": per_run,
+    }
 
 
 # --- Board helpers ---

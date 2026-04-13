@@ -67,6 +67,7 @@ interface BoardState {
   reviewIssue: (issueId: string, approved: boolean, comment?: string) => Promise<void>
   updateIssue: (issueId: string, patch: Partial<Pick<Issue, 'title' | 'priority' | 'labels' | 'blocked_by'>>) => Promise<void>
   updateIssueContent: (issueId: string, content: string) => Promise<void>
+  updateIssuePlan: (issueId: string, plan: string) => Promise<void>
   deleteIssue: (issueId: string) => Promise<void>
   runAllIssues: () => Promise<void>
   runSingleIssue: (issueId: string) => Promise<void>
@@ -204,6 +205,16 @@ export const useBoardStore = create<BoardState>((set, get) => ({
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ content }),
+    })
+  },
+
+  updateIssuePlan: async (issueId, plan) => {
+    const { projectId } = get()
+    if (!projectId) return
+    await fetch(`/api/projects/${projectId}/issues/${issueId}/plan`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ plan }),
     })
   },
 

@@ -45,6 +45,15 @@ class ProjectStorage:
     def load_issue_content(self, issue_id: str) -> str:
         return (self.issues_dir / issue_id / "content.md").read_text()
 
+    def save_issue_plan(self, issue_id: str, plan: str) -> None:
+        issue_dir = self.issues_dir / issue_id
+        issue_dir.mkdir(parents=True, exist_ok=True)
+        (issue_dir / "plan.md").write_text(plan)
+
+    def load_issue_plan(self, issue_id: str) -> str:
+        f = self.issues_dir / issue_id / "plan.md"
+        return f.read_text() if f.exists() else ""
+
     def append_run_log(self, issue_id: str, run_id: str, entry: dict) -> None:
         logs_dir = self.issues_dir / issue_id / "logs"
         logs_dir.mkdir(parents=True, exist_ok=True)
@@ -66,6 +75,26 @@ class ProjectStorage:
         if not logs_dir.exists():
             return []
         return sorted(f.stem for f in logs_dir.glob("*.jsonl"))
+
+    def save_run_stats(self, issue_id: str, run_id: str, stats: dict) -> None:
+        stats_dir = self.issues_dir / issue_id / "stats"
+        stats_dir.mkdir(parents=True, exist_ok=True)
+        (stats_dir / f"{run_id}.json").write_text(
+            json.dumps(stats, indent=2, ensure_ascii=False)
+        )
+
+    def load_run_stats(self, issue_id: str, run_id: str) -> dict | None:
+        f = self.issues_dir / issue_id / "stats" / f"{run_id}.json"
+        return json.loads(f.read_text()) if f.exists() else None
+
+    def list_all_run_stats(self, issue_id: str) -> list[dict]:
+        stats_dir = self.issues_dir / issue_id / "stats"
+        if not stats_dir.exists():
+            return []
+        result = []
+        for f in sorted(stats_dir.glob("*.json")):
+            result.append(json.loads(f.read_text()))
+        return result
 
     def list_issues(self) -> list[Issue]:
         if not self.issues_dir.exists():

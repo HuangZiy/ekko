@@ -90,6 +90,8 @@ async def _run_in_background(project_id: str, issue_id: str | None) -> None:
         })
         stats = await run_issue_loop(issue, storage, workspace, on_event=on_event, cancel_event=cancel_event)
         clear_cancel(issue_id)
+        run_id = f"run-{run_counter:03d}"
+        storage.save_run_stats(issue_id, run_id, stats)
         await ws_manager.broadcast(project_id, {
             "type": "agent_done", "data": {
                 "issue_id": issue_id, "success": stats["success"],
@@ -112,6 +114,8 @@ async def _run_in_background(project_id: str, issue_id: str | None) -> None:
             })
             stats = await run_issue_loop(issue, storage, workspace, on_event=on_event, cancel_event=cancel_event)
             clear_cancel(issue.id)
+            run_id = f"run-{run_counter:03d}"
+            storage.save_run_stats(issue.id, run_id, stats)
             await ws_manager.broadcast(project_id, {
                 "type": "agent_done", "data": {
                     "issue_id": issue.id, "success": stats["success"],

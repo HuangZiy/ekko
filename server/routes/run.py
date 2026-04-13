@@ -44,6 +44,7 @@ class RunRequest(BaseModel):
 
 async def _run_in_background(project_id: str, issue_id: str | None) -> None:
     from server.app import get_project_storage
+    from server.ws import ws_manager
     from core.ralph_loop import run_issue_loop, find_ready_issues
     from pathlib import Path
 

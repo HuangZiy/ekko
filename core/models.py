@@ -103,9 +103,10 @@ class BoardColumn:
     issues: list[str] = field(default_factory=list)
 
 
-# The 6 visible board columns (planning/failed/rejected are hidden states)
+# Board columns — planning is visible between backlog and todo
 BOARD_COLUMNS = [
     ("backlog", "Backlog"),
+    ("planning", "Planning"),
     ("todo", "Todo"),
     ("in_progress", "In Progress"),
     ("agent_done", "Agent Done"),

@@ -24,3 +24,7 @@ EVAL_PASS_THRESHOLD = 7  # each dimension >= 7/10
 
 # Planner
 MAX_PLANNER_TURNS = 50
+
+# Planning Agent (per-issue planning before generator)
+MAX_PLANNING_TURNS = 30
+MAX_PLANNING_BUDGET = 1.0  # USD per planning run

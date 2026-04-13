@@ -431,6 +431,53 @@ def _plan(args: argparse.Namespace) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Plan Issue (per-issue planning agent)
+# ---------------------------------------------------------------------------
+
+def _plan_issue(args: argparse.Namespace) -> None:
+    import anyio
+    from pathlib import Path
+
+    store = _get_storage(args)
+    project = store.load_project_meta()
+    if not project or not project.workspaces:
+        print("Error: project has no workspace configured.", file=sys.stderr)
+        sys.exit(1)
+    workspace = Path(project.workspaces[0]).resolve()
+
+    try:
+        issue = store.load_issue(args.issue_id)
+    except FileNotFoundError:
+        print(f"Issue not found: {args.issue_id}", file=sys.stderr)
+        sys.exit(1)
+
+    async def _execute():
+        from core.planner import run_issue_planning
+
+        print(f"Planning {issue.id}: {issue.title}", flush=True)
+        stats = await run_issue_planning(issue, store, workspace)
+
+        if stats.get("plan_generated"):
+            print(f"\nPlan generated for {issue.id}", flush=True)
+            plan = store.load_issue_plan(issue.id)
+            if plan:
+                print(f"\n{plan}", flush=True)
+        else:
+            print(f"\nNo plan generated for {issue.id}", flush=True)
+
+        if stats.get("split_issues"):
+            print(f"\nSplit into {len(stats['split_issues'])} child issues:", flush=True)
+            for cid in stats["split_issues"]:
+                child = store.load_issue(cid)
+                print(f"  {cid}: {child.title}", flush=True)
+
+        cost = stats.get("cost_usd", 0)
+        print(f"\nCost: ${cost:.2f}", flush=True)
+
+    anyio.run(_execute)
+
+
+# ---------------------------------------------------------------------------
 # Run
 # ---------------------------------------------------------------------------
 
@@ -567,6 +614,11 @@ def build_parser() -> argparse.ArgumentParser:
     plan_parser = sub.add_parser("plan", help="Run interactive planner → create issues")
     plan_parser.add_argument("prompt", help="Requirement description")
     plan_parser.set_defaults(func=_plan)
+
+    # -- plan-issue --
+    plan_issue_parser = sub.add_parser("plan-issue", help="Run planning agent for a specific issue")
+    plan_issue_parser.add_argument("issue_id", help="Issue ID to plan (e.g. ISS-4)")
+    plan_issue_parser.set_defaults(func=_plan_issue)
 
     # -- run --
     run_parser = sub.add_parser("run", help="Run execution loop for pending issues")

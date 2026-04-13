@@ -80,7 +80,80 @@ async def run_issue_loop(
     """
     all_stats: list[dict] = []
 
-    # === 1. State: → In Progress ===
+    # === 1. Planning Phase (before generator) ===
+    # If issue has no plan yet, run the Planning Agent first
+    plan_content = storage.load_issue_plan(issue.id)
+    needs_planning = not plan_content
+
+    if needs_planning:
+        # Transition to PLANNING status where possible
+        if issue.status == IssueStatus.BACKLOG:
+            issue.move_to(IssueStatus.PLANNING)
+            storage.save_issue(issue)
+            await _sync_board(issue, storage, on_event)
+        elif issue.status == IssueStatus.REJECTED:
+            issue.move_to(IssueStatus.TODO)
+            storage.save_issue(issue)
+            await _sync_board(issue, storage, on_event)
+        # For TODO/FAILED: run planning inline without status change
+        # (PLANNING is only reachable from BACKLOG in the state machine)
+
+        _log("Planning", C_CYAN, f"{issue.id}: Running planning agent")
+        await _emit_harness(on_event, issue.id, "planning", f"Analyzing: {issue.title}")
+
+        from core.planner import run_issue_planning
+        plan_stats = await run_issue_planning(
+            issue, storage, workspace, on_event=on_event, cancel_event=cancel_event,
+        )
+        all_stats.append({"phase": "planning", "attempt": 0, **plan_stats})
+
+        # Check cancellation after planning
+        if plan_stats.get("cancelled") or (cancel_event and cancel_event.is_set()):
+            _log("Cancel", C_YELLOW, f"{issue.id}: cancelled during planning")
+            await _emit_harness(on_event, issue.id, "state", "Cancelled during planning", "warning")
+            issue = storage.load_issue(issue.id)
+            if issue.status == IssueStatus.PLANNING:
+                issue.move_to(IssueStatus.BACKLOG)
+                storage.save_issue(issue)
+                await _sync_board(issue, storage, on_event)
+            return {
+                "success": False, "issue_id": issue.id, "title": issue.title,
+                "attempts": 0, "cost_usd": plan_stats.get("cost_usd", 0),
+                "duration_ms": plan_stats.get("duration_ms", 0), "details": all_stats,
+            }
+
+        # If planning split the issue into children, stop here
+        if plan_stats.get("split_issues"):
+            _log("Planning", C_CYAN, f"{issue.id}: Split into {len(plan_stats['split_issues'])} child issues")
+            await _emit_harness(on_event, issue.id, "planning",
+                                f"Split into {len(plan_stats['split_issues'])} child issues", "info")
+            # Reload issue (planner updated blocked_by)
+            issue = storage.load_issue(issue.id)
+            # Move back to TODO — it will wait for children to complete
+            if issue.status == IssueStatus.PLANNING:
+                issue.move_to(IssueStatus.TODO)
+                storage.save_issue(issue)
+                await _sync_board(issue, storage, on_event)
+            _log("State", C_CYAN, f"{issue.id}: → todo (waiting for child issues)")
+            await _emit_harness(on_event, issue.id, "state", "→ todo (waiting for children)")
+            return {
+                "success": True, "issue_id": issue.id, "title": issue.title,
+                "attempts": 0, "cost_usd": plan_stats.get("cost_usd", 0),
+                "duration_ms": plan_stats.get("duration_ms", 0), "details": all_stats,
+                "split": True,
+            }
+
+        # Planning done, move to TODO then IN_PROGRESS
+        issue = storage.load_issue(issue.id)
+        if issue.status == IssueStatus.PLANNING:
+            issue.move_to(IssueStatus.TODO)
+            storage.save_issue(issue)
+            await _sync_board(issue, storage, on_event)
+
+        _log("Planning", C_GREEN, f"{issue.id}: Planning complete")
+        await _emit_harness(on_event, issue.id, "planning", "Planning complete", "success")
+
+    # === 2. State: → In Progress ===
     if issue.status == IssueStatus.BACKLOG:
         issue.move_to(IssueStatus.TODO)
         storage.save_issue(issue)
@@ -96,7 +169,7 @@ async def run_issue_loop(
         await _emit_harness(on_event, issue.id, "state", "→ in_progress")
         await _sync_board(issue, storage, on_event)
 
-    # === 2. Generator + Evaluator Loop ===
+    # === 3. Generator + Evaluator Loop ===
     passed = False
     for attempt in range(1, max_retries + 1):
         _log("Loop", C_CYAN, f"{issue.id} attempt #{attempt}/{max_retries}")
@@ -145,7 +218,16 @@ async def run_issue_loop(
         for new_title in eval_result.get("new_issues", []):
             _create_side_issue(new_title, storage, parent_issue_id=issue.id)
 
-    # === 3. Handle cancellation → FAILED ===
+        # Evaluator can append to plan via [PLAN_APPEND] markers
+        plan_appends = eval_result.get("plan_appends", [])
+        if plan_appends:
+            existing_plan = storage.load_issue_plan(issue.id)
+            append_text = "\n".join(f"- [ ] {item}" for item in plan_appends)
+            updated_plan = f"{existing_plan}\n\n## Evaluator 追加任务\n\n{append_text}\n" if existing_plan else append_text
+            storage.save_issue_plan(issue.id, updated_plan)
+            _log("Evaluator", C_YELLOW, f"Appended {len(plan_appends)} items to plan")
+
+    # === 4. Handle cancellation → FAILED ===
     cancelled = cancel_event and cancel_event.is_set()
     if cancelled:
         issue = storage.load_issue(issue.id)
@@ -244,6 +326,7 @@ async def _run_evaluator(
     passed = True
     feedback_lines = []
     new_issues = []
+    plan_appends = []
 
     if report:
         for line in report.splitlines():
@@ -255,11 +338,16 @@ async def _run_evaluator(
                 title = stripped.removeprefix("- [NEW_ISSUE]").strip()
                 if title:
                     new_issues.append(title)
+            elif stripped.startswith("- [PLAN_APPEND]") or stripped.startswith("[PLAN_APPEND]"):
+                text = stripped.removeprefix("- [PLAN_APPEND]").removeprefix("[PLAN_APPEND]").strip()
+                if text:
+                    plan_appends.append(text)
 
     return {
         "passed": passed,
         "feedback": "\n".join(feedback_lines),
         "new_issues": new_issues,
+        "plan_appends": plan_appends,
         "stats": stats,
         "report": report,
     }
@@ -317,8 +405,9 @@ async def _sync_board(
         if issue.id in col["issues"]:
             col["issues"].remove(issue.id)
     status_to_col = {
-        "backlog": "backlog", "todo": "todo", "in_progress": "in_progress",
-        "agent_done": "agent_done", "rejected": "rejected", "human_done": "human_done",
+        "backlog": "backlog", "planning": "planning", "todo": "todo",
+        "in_progress": "in_progress", "agent_done": "agent_done",
+        "rejected": "rejected", "human_done": "human_done",
         "failed": "todo",
     }
     target = status_to_col.get(issue.status.value)
@@ -338,12 +427,16 @@ async def _sync_board(
 # ---------------------------------------------------------------------------
 
 def find_ready_issues(storage: ProjectStorage) -> list[Issue]:
-    """Find issues that are TODO and have no unresolved blockers."""
+    """Find issues that are ready to run: TODO or BACKLOG with no unresolved blockers.
+
+    BACKLOG issues are included because run_issue_loop handles the
+    planning transition (BACKLOG → PLANNING → TODO → IN_PROGRESS).
+    """
     all_issues = storage.list_issues()
     done_ids = {i.id for i in all_issues if i.status == IssueStatus.HUMAN_DONE}
     return [
         i for i in all_issues
-        if i.status == IssueStatus.TODO
+        if i.status in (IssueStatus.TODO, IssueStatus.BACKLOG)
         and all(b in done_ids for b in i.blocked_by)
     ]
 

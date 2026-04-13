@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback, type DragEvent, type ClipboardEvent, type ChangeEvent } from 'react'
 import ReactMarkdown from 'react-markdown'
+import type { Components } from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import {
   Bold, Italic, Heading1, Heading2, Heading3, Code, Link, List, ListOrdered,
@@ -144,6 +145,29 @@ const toolbarActions: ToolbarAction[] = [
     },
   },
 ]
+
+const previewComponents: Components = {
+  img: ({ src, alt, ...props }) => (
+    <img
+      src={src}
+      alt={alt || ''}
+      loading="lazy"
+      style={{ maxWidth: '100%', height: 'auto', borderRadius: '0.5rem', cursor: 'pointer' }}
+      onClick={() => src && window.open(src, '_blank')}
+      {...props}
+    />
+  ),
+  a: ({ href, children, ...props }) => (
+    <a href={href} target="_blank" rel="noopener noreferrer" {...props}>
+      {children}
+    </a>
+  ),
+  pre: ({ children, ...props }) => (
+    <pre style={{ overflow: 'auto', maxHeight: '400px' }} {...props}>
+      {children}
+    </pre>
+  ),
+}
 
 export function MarkdownEditor({
   value,
@@ -373,7 +397,7 @@ export function MarkdownEditor({
       ) : (
         <div className="p-3 prose prose-sm max-w-none min-h-[8rem] text-[var(--text-primary)]" style={{ minHeight: `${rows * 1.5}rem` }}>
           {value ? (
-            <ReactMarkdown remarkPlugins={[remarkGfm]}>{value}</ReactMarkdown>
+            <ReactMarkdown remarkPlugins={[remarkGfm]} components={previewComponents}>{value}</ReactMarkdown>
           ) : (
             <p className="text-[var(--text-secondary)] italic">Nothing to preview</p>
           )}

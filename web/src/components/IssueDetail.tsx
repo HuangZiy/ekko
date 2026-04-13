@@ -5,12 +5,36 @@ import { motion } from 'framer-motion'
 import type { Issue } from '../stores/boardStore'
 import { useBoardStore } from '../stores/boardStore'
 import { MarkdownEditor } from './MarkdownEditor'
+import type { Components } from 'react-markdown'
 import {
   Clock, Tag, AlertCircle, CheckCircle2, XCircle, GitBranch,
   Pencil, Save, X, Image, FileCode, FlaskConical, ShieldCheck, Play, ChevronDown, Trash2, Square, Bot, ArrowUpRight
 } from 'lucide-react'
 import { VALID_TRANSITIONS, STATUS_LABELS } from '../constants/transitions'
 import { AgentLogPanel } from './AgentLogPanel'
+
+const markdownComponents: Components = {
+  img: ({ src, alt, ...props }) => (
+    <img
+      src={src}
+      alt={alt || ''}
+      loading="lazy"
+      style={{ maxWidth: '100%', height: 'auto', borderRadius: '0.5rem', cursor: 'pointer' }}
+      onClick={() => src && window.open(src, '_blank')}
+      {...props}
+    />
+  ),
+  a: ({ href, children, ...props }) => (
+    <a href={href} target="_blank" rel="noopener noreferrer" {...props}>
+      {children}
+    </a>
+  ),
+  pre: ({ children, ...props }) => (
+    <pre style={{ overflow: 'auto', maxHeight: '400px' }} {...props}>
+      {children}
+    </pre>
+  ),
+}
 
 interface IssueDetailProps {
   issue: Issue
@@ -504,9 +528,12 @@ export function IssueDetail({ issue, onClose, onApprove, onReject, onRun, onDele
                 issueId={issue.id}
               />
             ) : (
-              <div className="prose prose-sm max-w-none">
+              <div className="prose prose-sm max-w-none text-[var(--text-primary)]">
                 {plan ? (
-                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{plan}</ReactMarkdown>
+                  <ReactMarkdown
+                    remarkPlugins={[remarkGfm]}
+                    components={markdownComponents}
+                  >{plan}</ReactMarkdown>
                 ) : (
                   <p className="text-[var(--text-secondary)] text-sm italic">No plan yet</p>
                 )}
@@ -553,8 +580,11 @@ export function IssueDetail({ issue, onClose, onApprove, onReject, onRun, onDele
                 issueId={issue.id}
               />
             ) : (
-              <div className="prose prose-sm max-w-none">
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
+              <div className="prose prose-sm max-w-none text-[var(--text-primary)]">
+                <ReactMarkdown
+                  remarkPlugins={[remarkGfm]}
+                  components={markdownComponents}
+                >{content}</ReactMarkdown>
               </div>
             )}
           </div>

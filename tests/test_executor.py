@@ -46,15 +46,10 @@ async def test_execute_issue_success(tmp_path):
     mock_result.usage = {"input_tokens": 100, "output_tokens": 50}
     mock_result.result = "Done"
 
-    async def mock_receive():
+    async def mock_query(*args, **kwargs):
         yield mock_result
 
-    mock_client = AsyncMock()
-    mock_client.connect = AsyncMock()
-    mock_client.disconnect = AsyncMock()
-    mock_client.receive_messages = mock_receive
-
-    with patch("core.executor.ClaudeSDKClient", return_value=mock_client):
+    with patch("core.executor.query", mock_query):
         stats = await execute_issue(issue, store, tmp_path / "ws")
 
     assert stats["success"] is True
@@ -81,15 +76,10 @@ async def test_execute_issue_failure(tmp_path):
     mock_result.usage = {}
     mock_result.result = "Error occurred"
 
-    async def mock_receive():
+    async def mock_query(*args, **kwargs):
         yield mock_result
 
-    mock_client = AsyncMock()
-    mock_client.connect = AsyncMock()
-    mock_client.disconnect = AsyncMock()
-    mock_client.receive_messages = mock_receive
-
-    with patch("core.executor.ClaudeSDKClient", return_value=mock_client):
+    with patch("core.executor.query", mock_query):
         stats = await execute_issue(issue, store, tmp_path / "ws")
 
     assert stats["success"] is False

@@ -12,6 +12,7 @@ from typing import Awaitable, Callable
 from claude_agent_sdk import (
     ClaudeSDKClient, ClaudeAgentOptions, ResultMessage,
     AssistantMessage, SystemMessage, TextBlock, ToolUseBlock, ToolResultBlock,
+    query,
 )
 from claude_agent_sdk.types import StreamEvent
 from config import MODEL, MAX_TURNS_PER_LOOP, MAX_BUDGET_PER_LOOP
@@ -175,9 +176,7 @@ async def execute_issue(
 ) -> dict:
     """Execute a single Issue via Ralph. Returns stats dict.
 
-    Does NOT change issue status — caller (scheduler) handles that.
-    on_event: optional async callback for streaming events to WebSocket/logs.
-    cancel_event: if set, interrupt the agent and return early with cancelled=True.
+    Uses query() for streaming messages. Cancel is checked between messages.
     """
     _log("Task", C_CYAN, f"{issue.id}: {issue.title}")
 
@@ -191,77 +190,41 @@ async def execute_issue(
             "data": {"status": "thinking"},
         })
 
-    client = ClaudeSDKClient(options=ClaudeAgentOptions(
-        model=MODEL,
-        allowed_tools=["Read", "Write", "Edit", "Bash", "Glob", "Grep", "Agent"],
-        cwd=str(workspace),
-        max_turns=MAX_TURNS_PER_LOOP,
-        max_budget_usd=MAX_BUDGET_PER_LOOP,
-        permission_mode="bypassPermissions",
-    ))
+    async for message in query(
+        prompt=prompt,
+        options=ClaudeAgentOptions(
+            model=MODEL,
+            allowed_tools=["Read", "Write", "Edit", "Bash", "Glob", "Grep", "Agent"],
+            cwd=str(workspace),
+            max_turns=MAX_TURNS_PER_LOOP,
+            max_budget_usd=MAX_BUDGET_PER_LOOP,
+            permission_mode="bypassPermissions",
+        ),
+    ):
+        _log_message(message)
 
-    try:
-        await client.connect(prompt)
+        if on_event:
+            for event in _message_to_events(issue.id, message):
+                await on_event(event)
 
-        msg_iter = client.receive_messages().__aiter__()
+        if isinstance(message, ResultMessage):
+            stats.update({
+                "success": not message.is_error,
+                "cost_usd": message.total_cost_usd or 0,
+                "duration_ms": message.duration_ms,
+                "num_turns": message.num_turns,
+                "usage": message.usage or {},
+            })
 
-        while True:
-            # Race: next message vs cancel event
-            msg_future = asyncio.ensure_future(msg_iter.__anext__())
-
-            if cancel_event:
-                cancel_future = asyncio.ensure_future(cancel_event.wait())
-                done, pending = await asyncio.wait(
-                    {msg_future, cancel_future},
-                    return_when=asyncio.FIRST_COMPLETED,
-                )
-                for p in pending:
-                    p.cancel()
-
-                if cancel_future in done:
-                    # Cancel arrived — interrupt agent
-                    _log("Cancel", C_YELLOW, f"{issue.id}: interrupted by user")
-                    try:
-                        await client.interrupt()
-                    except Exception:
-                        pass
-                    stats["cancelled"] = True
-                    if on_event:
-                        await on_event({
-                            "ts": int(time.time()), "type": "agent_status", "issue_id": issue.id,
-                            "data": {"status": "cancelled"},
-                        })
-                    break
-
-                # Message arrived — extract it
-                try:
-                    message = msg_future.result()
-                except StopAsyncIteration:
-                    break
-            else:
-                try:
-                    message = await msg_future
-                except StopAsyncIteration:
-                    break
-
-            _log_message(message)
-
+        # Check cancellation between messages
+        if cancel_event and cancel_event.is_set():
+            _log("Cancel", C_YELLOW, f"{issue.id}: cancelled by user")
+            stats["cancelled"] = True
             if on_event:
-                for event in _message_to_events(issue.id, message):
-                    await on_event(event)
-
-            if isinstance(message, ResultMessage):
-                stats.update({
-                    "success": not message.is_error,
-                    "cost_usd": message.total_cost_usd or 0,
-                    "duration_ms": message.duration_ms,
-                    "num_turns": message.num_turns,
-                    "usage": message.usage or {},
+                await on_event({
+                    "ts": int(time.time()), "type": "agent_status", "issue_id": issue.id,
+                    "data": {"status": "cancelled"},
                 })
-    finally:
-        try:
-            await client.disconnect()
-        except Exception:
-            pass
+            break
 
     return stats

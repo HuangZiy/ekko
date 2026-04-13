@@ -24,10 +24,7 @@
 
 - 禁止执行 kill、kill -9、pkill、killall 等杀进程命令
 - 禁止执行 lsof -ti | xargs kill 等组合命令
-- 禁止操作 3000 端口（该端口被系统服务占用）
-- 禁止操作 3001 端口（该端口被 Evaluator 占用）
-- 如果需要启动开发服务器，使用 3002 端口：`npm run dev -- -p 3002`
-- 如果端口冲突，使用 3003、3004 等更高端口，不要杀已有进程
+- 禁止启动开发服务器（dev server 由 harness 管理，不需要你启动）
 - 禁止执行 rm -rf /、rm -rf ~、rm -rf . 等危险删除命令
 
 重要：DO NOT IMPLEMENT PLACEHOLDER OR SIMPLE IMPLEMENTATIONS. WE WANT FULL IMPLEMENTATIONS.

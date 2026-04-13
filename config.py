@@ -4,8 +4,7 @@ from pathlib import Path
 MODEL = "claude-opus-4-6"
 
 # Paths
-WORKSPACE_DIR = Path("./workspace").resolve()
-ARTIFACTS_DIR = WORKSPACE_DIR / ".harness"  # inside workspace so Playwright can write here
+ARTIFACTS_DIR = Path(__file__).resolve().parent / ".harness"
 SCREENSHOTS_DIR = ARTIFACTS_DIR / "screenshots"
 SPECS_DIR = ARTIFACTS_DIR / "specs"
 TASKS_DIR = ARTIFACTS_DIR / "tasks"

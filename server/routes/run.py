@@ -96,12 +96,14 @@ async def _run_in_background(project_id: str, issue_id: str | None) -> None:
             })
         finally:
             clear_cancel(issue_id)
-            await ws_manager.broadcast(project_id, {
-                "type": "agent_done", "data": {
-                    "issue_id": issue_id, "success": stats.get("success", False),
-                    "cost_usd": stats.get("cost_usd", 0),
-                },
-            })
+            # Broadcast actual status so frontend refreshes
+            try:
+                final_issue = storage.load_issue(issue_id)
+                await ws_manager.broadcast(project_id, {
+                    "type": "issue_updated", "data": {"issue": final_issue.to_json()},
+                })
+            except Exception:
+                pass
     else:
         ready = find_ready_issues(storage)
         if not ready:
@@ -130,12 +132,13 @@ async def _run_in_background(project_id: str, issue_id: str | None) -> None:
                 })
             finally:
                 clear_cancel(issue.id)
-                await ws_manager.broadcast(project_id, {
-                    "type": "agent_done", "data": {
-                        "issue_id": issue.id, "success": stats.get("success", False),
-                        "cost_usd": stats.get("cost_usd", 0),
-                    },
-                })
+                try:
+                    final_issue = storage.load_issue(issue.id)
+                    await ws_manager.broadcast(project_id, {
+                        "type": "issue_updated", "data": {"issue": final_issue.to_json()},
+                    })
+                except Exception:
+                    pass
 
 
 @router.post("")

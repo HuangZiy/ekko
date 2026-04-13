@@ -133,6 +133,40 @@ class CancelRequest(BaseModel):
 
 @router.post("/cancel")
 async def cancel_issue(project_id: str, req: CancelRequest):
-    _get_storage(project_id)  # validate project exists
-    request_cancel(req.issue_id)
-    return {"ok": True, "issue_id": req.issue_id}
+    storage = _get_storage(project_id)
+    issue_id = req.issue_id
+
+    # Signal any active run
+    request_cancel(issue_id)
+
+    # If no active run is listening, force the status change directly
+    if issue_id not in _cancel_events:
+        from core.models import IssueStatus
+        try:
+            issue = storage.load_issue(issue_id)
+            if issue.status == IssueStatus.IN_PROGRESS:
+                issue.move_to(IssueStatus.FAILED)
+                issue.move_to(IssueStatus.TODO)
+                storage.save_issue(issue)
+                # Update board: move to todo column
+                import json
+                board_file = storage.root / "board.json"
+                if board_file.exists():
+                    data = json.loads(board_file.read_text())
+                    for col in data["columns"]:
+                        if issue_id in col["issues"]:
+                            col["issues"].remove(issue_id)
+                    for col in data["columns"]:
+                        if col["id"] == "todo":
+                            col["issues"].append(issue_id)
+                            break
+                    board_file.write_text(json.dumps(data, indent=2, ensure_ascii=False))
+                # Notify via WS
+                from server.ws import ws_manager
+                await ws_manager.broadcast(project_id, {
+                    "type": "issue_updated", "data": {"issue": issue.to_json()},
+                })
+        except FileNotFoundError:
+            pass
+
+    return {"ok": True, "issue_id": issue_id}

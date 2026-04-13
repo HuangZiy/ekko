@@ -38,20 +38,21 @@ def _log(prefix: str, color: str, msg: str) -> None:
         print(f"[{prefix}] {msg}", flush=True)
 
 
-def _log_message(message) -> None:
+def _log_message(message, issue_id: str = "") -> None:
+    tag = f"{issue_id} " if issue_id else ""
     if isinstance(message, AssistantMessage):
         for block in message.content:
             if isinstance(block, TextBlock):
                 text = block.text[:300] + "..." if len(block.text) > 300 else block.text
-                _log("Evaluator", C_MAGENTA, text)
+                _log("Evaluator", C_MAGENTA, f"{tag}{text}")
             elif isinstance(block, ToolUseBlock):
                 inp = str(block.input)[:120]
-                _log("Tool", C_YELLOW, f"{block.name}({inp})")
+                _log("Tool", C_YELLOW, f"{tag}{block.name}({inp})")
     elif isinstance(message, ResultMessage):
         cost = f"${message.total_cost_usd:.2f}" if message.total_cost_usd else "?"
-        _log("Done", C_GREEN, f"turns={message.num_turns} cost={cost} duration={message.duration_ms // 1000}s")
+        _log("Done", C_GREEN, f"{tag}turns={message.num_turns} cost={cost} duration={message.duration_ms // 1000}s")
         if message.is_error:
-            _log("Done", C_RED, f"ERROR: {message.result}")
+            _log("Done", C_RED, f"{tag}ERROR: {message.result}")
 
 
 def _get_git_diff(workspace: Path) -> str:
@@ -117,7 +118,7 @@ async def _run_eval_query(
             max_buffer_size=10 * 1024 * 1024,
         ),
     ):
-        _log_message(message)
+        _log_message(message, issue_id)
 
         if on_event and issue_id:
             from core.executor import _message_to_events

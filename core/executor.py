@@ -36,20 +36,21 @@ def _log(prefix: str, color: str, msg: str) -> None:
         print(f"[{prefix}] {msg}", flush=True)
 
 
-def _log_message(message) -> None:
+def _log_message(message, issue_id: str = "") -> None:
+    tag = f"{issue_id} " if issue_id else ""
     if isinstance(message, AssistantMessage):
         for block in message.content:
             if isinstance(block, TextBlock):
                 text = block.text[:300] + "..." if len(block.text) > 300 else block.text
-                _log("Ralph", C_CYAN, text)
+                _log("Ralph", C_CYAN, f"{tag}{text}")
             elif isinstance(block, ToolUseBlock):
                 inp = str(block.input)[:120]
-                _log("Tool", C_YELLOW, f"{block.name}({inp})")
+                _log("Tool", C_YELLOW, f"{tag}{block.name}({inp})")
     elif isinstance(message, ResultMessage):
         cost = f"${message.total_cost_usd:.2f}" if message.total_cost_usd else "?"
-        _log("Done", C_GREEN, f"turns={message.num_turns} cost={cost} duration={message.duration_ms // 1000}s")
+        _log("Done", C_GREEN, f"{tag}turns={message.num_turns} cost={cost} duration={message.duration_ms // 1000}s")
         if message.is_error:
-            _log("Done", C_RED, f"ERROR: {message.result}")
+            _log("Done", C_RED, f"{tag}ERROR: {message.result}")
 
 
 def _message_to_events(issue_id: str, message) -> list[dict]:
@@ -201,7 +202,7 @@ async def execute_issue(
             permission_mode="bypassPermissions",
         ),
     ):
-        _log_message(message)
+        _log_message(message, issue.id)
 
         if on_event:
             for event in _message_to_events(issue.id, message):

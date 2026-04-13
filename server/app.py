@@ -1,6 +1,8 @@
 """FastAPI application — Ekko backend."""
 
 from __future__ import annotations
+import asyncio
+import json
 from pathlib import Path
 
 from fastapi import FastAPI
@@ -17,6 +19,39 @@ def get_harness_root() -> Path:
         from config import ARTIFACTS_DIR
         return ARTIFACTS_DIR
     return _harness_root
+
+
+def _move_board_column(storage, issue_id: str, target_col: str) -> None:
+    board_file = storage.root / "board.json"
+    if not board_file.exists():
+        return
+    data = json.loads(board_file.read_text())
+    for col in data["columns"]:
+        if issue_id in col["issues"]:
+            col["issues"].remove(issue_id)
+    for col in data["columns"]:
+        if col["id"] == target_col:
+            col["issues"].append(issue_id)
+            break
+    board_file.write_text(json.dumps(data, indent=2, ensure_ascii=False))
+
+
+def _reset_stuck_issues() -> None:
+    """Reset any in_progress issues back to todo."""
+    try:
+        from core.models import IssueStatus
+        from core.storage import PlatformStorage
+        root = get_harness_root()
+        platform = PlatformStorage(root)
+        for pid, _ in platform.list_projects():
+            storage = platform.get_project_storage(pid)
+            for issue in storage.list_issues():
+                if issue.status == IssueStatus.IN_PROGRESS:
+                    issue.move_to(IssueStatus.TODO)
+                    storage.save_issue(issue)
+                    _move_board_column(storage, issue.id, "todo")
+    except Exception:
+        pass
 
 
 def create_app(harness_root: Path | None = None) -> FastAPI:
@@ -44,32 +79,34 @@ def create_app(harness_root: Path | None = None) -> FastAPI:
     @app.on_event("startup")
     def reset_stuck_issues():
         """Reset any in_progress issues back to todo on server start."""
-        try:
-            from core.models import IssueStatus
-            from core.storage import PlatformStorage
-            import json
-            root = get_harness_root()
-            platform = PlatformStorage(root)
-            for pid, _ in platform.list_projects():
-                storage = platform.get_project_storage(pid)
-                for issue in storage.list_issues():
-                    if issue.status == IssueStatus.IN_PROGRESS:
-                        issue.move_to(IssueStatus.TODO)
-                        storage.save_issue(issue)
-                        # Fix board column
-                        board_file = storage.root / "board.json"
-                        if board_file.exists():
-                            data = json.loads(board_file.read_text())
-                            for col in data["columns"]:
-                                if issue.id in col["issues"]:
-                                    col["issues"].remove(issue.id)
-                            for col in data["columns"]:
-                                if col["id"] == "todo":
-                                    col["issues"].append(issue.id)
-                                    break
-                            board_file.write_text(json.dumps(data, indent=2, ensure_ascii=False))
-        except Exception:
-            pass  # best-effort on startup
+        _reset_stuck_issues()
+
+    @app.on_event("startup")
+    async def start_issue_watchdog():
+        """Periodic check for stuck in_progress issues with no active run."""
+        async def watchdog():
+            while True:
+                await asyncio.sleep(30)
+                try:
+                    from server.routes.run import _cancel_events
+                    from server.ws import ws_manager
+                    from core.models import IssueStatus
+                    from core.storage import PlatformStorage
+                    root = get_harness_root()
+                    platform = PlatformStorage(root)
+                    for pid, _ in platform.list_projects():
+                        storage = platform.get_project_storage(pid)
+                        for issue in storage.list_issues():
+                            if issue.status == IssueStatus.IN_PROGRESS and issue.id not in _cancel_events:
+                                issue.move_to(IssueStatus.TODO)
+                                storage.save_issue(issue)
+                                _move_board_column(storage, issue.id, "todo")
+                                await ws_manager.broadcast(pid, {
+                                    "type": "issue_updated", "data": {"issue": issue.to_json()},
+                                })
+                except Exception:
+                    pass
+        asyncio.create_task(watchdog())
 
     @app.get("/api/health")
     def health():

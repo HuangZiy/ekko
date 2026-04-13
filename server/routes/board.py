@@ -91,6 +91,24 @@ def move_issue_on_board(project_id: str, issue_id: str, req: MoveIssueRequest):
     storage = ProjectStorage(project_dir)
     try:
         issue = storage.load_issue(issue_id)
+        # Enforce single running issue: reject drag to in_progress if another is already there
+        if req.to_column == "in_progress":
+            from core.models import IssueStatus
+            already_running = [i for i in storage.list_issues() if i.status == IssueStatus.IN_PROGRESS and i.id != issue_id]
+            if already_running:
+                # Revert board.json
+                board_data3 = json.loads(board_file.read_text()) if board_file.exists() else board_data
+                for col in board_data3["columns"]:
+                    if issue_id in col["issues"]:
+                        col["issues"].remove(issue_id)
+                actual_col = issue.status.value
+                for col in board_data3["columns"]:
+                    if col["id"] == actual_col:
+                        if issue_id not in col["issues"]:
+                            col["issues"].append(issue_id)
+                        break
+                board_file.write_text(json.dumps(board_data3, indent=2, ensure_ascii=False))
+                raise HTTPException(409, f"Issue {already_running[0].id} is already running")
         from core.models import IssueStatus
         status_map = {
             "backlog": IssueStatus.BACKLOG,

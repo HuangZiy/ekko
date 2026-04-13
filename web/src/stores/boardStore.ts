@@ -238,8 +238,13 @@ export const useBoardStore = create<BoardState>((set, get) => ({
   },
 
   runSingleIssue: async (issueId) => {
-    const { projectId } = get()
+    const { projectId, issues } = get()
     if (!projectId) return
+
+    // Prevent running if another issue is already in_progress
+    const hasRunning = Object.values(issues).some(i => i.status === 'in_progress')
+    if (hasRunning) return
+
     get().addRunningIssue(issueId)
 
     // Optimistic update: move issue to in_progress immediately
@@ -257,11 +262,18 @@ export const useBoardStore = create<BoardState>((set, get) => ({
       return { issues: updatedIssues, columns: updatedColumns }
     })
 
-    await fetch(`/api/projects/${projectId}/run`, {
+    const res = await fetch(`/api/projects/${projectId}/run`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ issue_id: issueId }),
     })
+
+    if (!res.ok) {
+      // Revert optimistic update on error
+      get().removeRunningIssue(issueId)
+      await get().fetchBoard()
+      await get().fetchIssues()
+    }
   },
 
   stopIssue: async (issueId) => {

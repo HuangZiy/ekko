@@ -23,6 +23,7 @@ export function IssueCard({ issue, onClick }: IssueCardProps) {
   const runSingleIssue = useBoardStore(s => s.runSingleIssue)
   const stopIssue = useBoardStore(s => s.stopIssue)
   const isRunning = useBoardStore(s => s.runningIssueIds.includes(issue.id)) || issue.status === 'in_progress'
+  const hasOtherRunning = useBoardStore(s => Object.values(s.issues).some(i => i.status === 'in_progress' && i.id !== issue.id))
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -30,7 +31,7 @@ export function IssueCard({ issue, onClick }: IssueCardProps) {
     opacity: isDragging ? 0.5 : 1,
   }
 
-  const canRun = issue.status === 'todo' || issue.status === 'rejected' || issue.status === 'backlog' || issue.status === 'failed'
+  const canRun = !hasOtherRunning && (issue.status === 'todo' || issue.status === 'rejected' || issue.status === 'backlog' || issue.status === 'failed')
 
   const handleRun = (e: React.MouseEvent) => {
     e.stopPropagation()

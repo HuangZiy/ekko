@@ -143,7 +143,14 @@ async def _run_in_background(project_id: str, issue_id: str | None) -> None:
 
 @router.post("")
 async def run_issues(project_id: str, req: RunRequest, background_tasks: BackgroundTasks):
-    _get_storage(project_id)  # validate project exists
+    storage = _get_storage(project_id)
+    # Enforce single running issue: reject if any issue is already in_progress
+    if req.issue_id:
+        from core.models import IssueStatus
+        from fastapi import HTTPException
+        running = [i for i in storage.list_issues() if i.status == IssueStatus.IN_PROGRESS]
+        if running:
+            raise HTTPException(409, f"Issue {running[0].id} is already running")
     background_tasks.add_task(_run_in_background, project_id, req.issue_id)
     return {"ok": True, "issue_id": req.issue_id}
 

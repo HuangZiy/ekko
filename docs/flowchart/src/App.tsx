@@ -52,6 +52,11 @@ const phaseColors: Record<Phase, { bg: string; border: string; text: string }> =
   done:      { bg: '#0a2a2a', border: '#2dd4bf', text: '#99f6e4' },
 };
 
+const phaseLabels: Record<Lang, Record<Phase, string>> = {
+  en: { input: 'Input', planning: 'Planning', kanban: 'Kanban', execution: 'Execution', review: 'Review', done: 'Done' },
+  zh: { input: '输入', planning: '规划', kanban: '看板', execution: '执行', review: '审核', done: '完成' },
+};
+
 // --- Steps ---
 
 const allSteps: StepDef[] = [
@@ -68,8 +73,8 @@ const allSteps: StepDef[] = [
     id: 'planner',
     title: 'Planner Agent',
     titleZh: 'Planner Agent',
-    description: 'Brainstorm → dependency-aware Issues',
-    descriptionZh: '交互式 brainstorming → 带依赖的 Issue',
+    description: 'Brainstorm → specs + dependency-aware Issues',
+    descriptionZh: '交互式 brainstorming → specs + 带依赖的 Issue',
     icon: '🧠',
     phase: 'planning',
   },
@@ -77,8 +82,8 @@ const allSteps: StepDef[] = [
     id: 'kanban',
     title: 'Kanban Board',
     titleZh: '看板',
-    description: 'Backlog → Todo → In Progress → Done',
-    descriptionZh: 'Backlog → Todo → In Progress → Done',
+    description: 'Backlog → Planning → Todo → In Progress → Done',
+    descriptionZh: 'Backlog → Planning → Todo → In Progress → Done',
     icon: '📋',
     phase: 'kanban',
   },
@@ -102,10 +107,10 @@ const allSteps: StepDef[] = [
   },
   {
     id: 'eval',
-    title: 'Incremental Eval',
-    titleZh: '增量评估',
-    description: 'Verify only this change passes',
-    descriptionZh: '只验证本次变更',
+    title: 'Evaluator',
+    titleZh: '评估器',
+    description: 'Playwright + incremental code review',
+    descriptionZh: 'Playwright + 增量代码审查',
     icon: '🔍',
     phase: 'execution',
   },
@@ -152,48 +157,52 @@ const allSteps: StepDef[] = [
 const notes: NoteDef[] = [
   {
     id: 'note-parallel',
-    text: 'Multiple agents can run\nin parallel on independent\nissues — no waiting.',
+    text: 'Multiple agents run in\nparallel on independent\nissues — no waiting.',
     textZh: '多个 Agent 可并行执行\n无依赖的 Issue\n无需等待',
     appearsWithStep: 4,
     phase: 'kanban',
   },
   {
+    id: 'note-backpressure',
+    text: 'Build/test must pass\nbefore moving forward.\nFailed → auto-retry.',
+    textZh: '构建/测试必须通过\n才能继续推进\n失败 → 自动重试',
+    appearsWithStep: 5,
+    phase: 'execution',
+  },
+  {
     id: 'note-reject',
-    text: 'Rejected issues go back\nto Todo with feedback\nappended — agents retry.',
+    text: 'Rejected issues return\nto Todo with feedback\nappended — agents retry.',
     textZh: '被拒绝的 Issue 带着反馈\n打回 Todo\nAgent 重新执行',
     appearsWithStep: 9,
     phase: 'review',
   },
-  {
-    id: 'note-resume',
-    text: 'Interrupted tasks resume\nat the exact step —\nno wasted work.',
-    textZh: '中断的任务精确恢复\n到步骤级别\n不浪费已完成的工作',
-    appearsWithStep: 6,
-    phase: 'execution',
-  },
 ];
 
-// --- Positions ---
+// --- Positions (branching layout) ---
 
 const positions: Record<string, { x: number; y: number }> = {
+  // Main flow — slight zigzag for visual interest
   'requirement':   { x: 400, y: 0 },
-  'planner':       { x: 400, y: 120 },
-  'kanban':        { x: 400, y: 240 },
-  'scheduler':     { x: 400, y: 360 },
-  'ralph':         { x: 400, y: 480 },
-  'eval':          { x: 400, y: 600 },
-  'evidence':      { x: 400, y: 720 },
-  'agent-done':    { x: 400, y: 840 },
-  'human-review':  { x: 400, y: 960 },
-  'human-done':    { x: 400, y: 1080 },
-  'note-parallel': { x: 740, y: 340 },
-  'note-reject':   { x: 740, y: 920 },
-  'note-resume':   { x: 60, y: 580 },
+  'planner':       { x: 400, y: 130 },
+  'kanban':        { x: 400, y: 270 },
+  'scheduler':     { x: 400, y: 400 },
+  // Execution branch — shifts right
+  'ralph':         { x: 520, y: 530 },
+  'eval':          { x: 520, y: 660 },
+  'evidence':      { x: 520, y: 790 },
+  // Review branch — shifts left
+  'agent-done':    { x: 400, y: 920 },
+  'human-review':  { x: 400, y: 1050 },
+  'human-done':    { x: 400, y: 1180 },
+  // Notes
+  'note-parallel':    { x: 730, y: 370 },
+  'note-backpressure':{ x: 180, y: 580 },
+  'note-reject':      { x: 100, y: 1020 },
 };
 
 // --- Edges ---
 
-const edgeDefs: { source: string; target: string; label?: string; labelZh?: string; animated?: boolean; style?: React.CSSProperties }[] = [
+const edgeDefs: { source: string; target: string; label?: string; labelZh?: string; animated?: boolean; style?: React.CSSProperties; type?: string }[] = [
   { source: 'requirement', target: 'planner' },
   { source: 'planner', target: 'kanban', label: 'Issues created', labelZh: '创建 Issue' },
   { source: 'kanban', target: 'scheduler' },
@@ -203,7 +212,7 @@ const edgeDefs: { source: string; target: string; label?: string; labelZh?: stri
   { source: 'evidence', target: 'agent-done' },
   { source: 'agent-done', target: 'human-review' },
   { source: 'human-review', target: 'human-done', label: 'Approve', labelZh: '通过', style: { stroke: '#4ade80' } },
-  { source: 'human-review', target: 'kanban', label: 'Reject', labelZh: '拒绝', style: { stroke: '#f87171' } },
+  { source: 'human-review', target: 'kanban', label: 'Reject', labelZh: '拒绝', style: { stroke: '#f87171' }, type: 'reject' },
 ];
 
 // --- Custom Node Components ---
@@ -226,15 +235,15 @@ function CustomNode({ data }: { data: CustomNodeData }) {
         border: `1.5px solid ${colors.border}`,
       }}
     >
-      <Handle type="target" position={Position.Top} style={{ background: colors.border, border: `1.5px solid ${colors.border}` }} />
-      <Handle type="target" position={Position.Left} style={{ background: colors.border, border: `1.5px solid ${colors.border}` }} />
+      <Handle type="target" position={Position.Top} id="top" style={{ background: colors.border, border: `1.5px solid ${colors.border}` }} />
+      <Handle type="target" position={Position.Left} id="left" style={{ background: colors.border, border: `1.5px solid ${colors.border}` }} />
       <div className="node-content">
         <div className="node-icon">{data.icon}</div>
         <div className="node-title" style={{ color: colors.text }}>{data.title}</div>
         <div className="node-description">{data.description}</div>
       </div>
-      <Handle type="source" position={Position.Bottom} style={{ background: colors.border, border: `1.5px solid ${colors.border}` }} />
-      <Handle type="source" position={Position.Right} style={{ background: colors.border, border: `1.5px solid ${colors.border}` }} />
+      <Handle type="source" position={Position.Bottom} id="bottom" style={{ background: colors.border, border: `1.5px solid ${colors.border}` }} />
+      <Handle type="source" position={Position.Right} id="right" style={{ background: colors.border, border: `1.5px solid ${colors.border}` }} />
     </div>
   );
 }
@@ -311,18 +320,16 @@ function createEdge(def: typeof edgeDefs[0], visibleCount: number, lang: Lang): 
   const targetIdx = allSteps.findIndex(s => s.id === def.target);
   const visible = sourceIdx < visibleCount && targetIdx < visibleCount;
 
-  // Special case: reject edge human-review back to kanban
-  const isRejectEdge = def.source === 'human-review' && def.target === 'kanban';
-
+  const isRejectEdge = def.type === 'reject';
   const label = lang === 'zh' ? (def.labelZh || def.label) : def.label;
 
   return {
     id: `${def.source}-${def.target}`,
     source: def.source,
     target: def.target,
-    sourceHandle: isRejectEdge ? `${def.source}-source-right` : undefined,
-    targetHandle: isRejectEdge ? `${def.target}-target-left` : undefined,
-    type: isRejectEdge ? 'smoothstep' : 'smoothstep',
+    sourceHandle: isRejectEdge ? 'right' : 'bottom',
+    targetHandle: isRejectEdge ? 'left' : 'top',
+    type: 'smoothstep',
     animated: def.animated && visible,
     label: visible ? label : undefined,
     labelStyle: { fill: '#888', fontSize: 12, fontWeight: 500 },
@@ -349,7 +356,6 @@ export default function App() {
   const getNodes = useCallback((count: number): Node[] => {
     const stepNodes = allSteps.map((step, i) => {
       const node = createNode(step, i, count, lang);
-      // Apply dragged positions
       if (nodePositionsRef.current[step.id]) {
         node.position = nodePositionsRef.current[step.id];
       }
@@ -370,13 +376,11 @@ export default function App() {
   }, [lang]);
 
   const onNodesChange = useCallback((changes: NodeChange[]) => {
-    // Track position changes from dragging
     for (const change of changes) {
       if (change.type === 'position' && change.position) {
         nodePositionsRef.current[change.id] = change.position;
       }
     }
-    // We need to force re-render
     setVisibleCount(c => c);
     void applyNodeChanges;
   }, []);
@@ -391,6 +395,7 @@ export default function App() {
     setVisibleCount(1);
     nodePositionsRef.current = {};
   };
+  const handleShowAll = () => setVisibleCount(allSteps.length);
 
   const nodes = getNodes(visibleCount);
   const edges = getEdges(visibleCount);
@@ -401,6 +406,10 @@ export default function App() {
   };
 
   const t = titles[lang];
+
+  // Determine current phase for the legend highlight
+  const currentStep = visibleCount > 0 ? allSteps[Math.min(visibleCount - 1, allSteps.length - 1)] : null;
+  const currentPhase = currentStep?.phase;
 
   return (
     <div className="app-container">
@@ -436,6 +445,20 @@ export default function App() {
         </ReactFlow>
       </div>
 
+      {/* Phase Legend */}
+      <div className="phase-legend">
+        {(Object.keys(phaseColors) as Phase[]).map(phase => (
+          <div
+            key={phase}
+            className={`phase-item ${currentPhase === phase ? 'active' : ''}`}
+            style={{ borderColor: phaseColors[phase].border }}
+          >
+            <span className="phase-dot" style={{ background: phaseColors[phase].border }} />
+            <span className="phase-label">{phaseLabels[lang][phase]}</span>
+          </div>
+        ))}
+      </div>
+
       <div className="controls">
         <button onClick={handlePrev} disabled={visibleCount <= 1}>
           ← Previous
@@ -446,7 +469,10 @@ export default function App() {
         <button onClick={handleNext} disabled={visibleCount >= allSteps.length}>
           Next →
         </button>
-        <button className="reset-btn" onClick={handleReset} disabled={visibleCount === 1}>
+        <button className="secondary-btn" onClick={handleShowAll} disabled={visibleCount >= allSteps.length}>
+          Show All
+        </button>
+        <button className="secondary-btn" onClick={handleReset} disabled={visibleCount === 1}>
           Reset
         </button>
       </div>

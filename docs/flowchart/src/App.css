@@ -78,12 +78,12 @@
   cursor: not-allowed;
 }
 
-.controls .reset-btn {
+.controls .secondary-btn {
   border-color: #333;
   color: #666;
 }
 
-.controls .reset-btn:hover:not(:disabled) {
+.controls .secondary-btn:hover:not(:disabled) {
   background: #1a1a1a;
   border-color: #666;
   color: #999;
@@ -198,6 +198,51 @@
 
 .react-flow__attribution {
   display: none !important;
+}
+
+/* Phase Legend */
+.phase-legend {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  padding: 10px 20px;
+  border-top: 1px solid #1e1e1e;
+  flex-wrap: wrap;
+}
+
+.phase-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 4px;
+  border: 1px solid transparent;
+  transition: all 0.3s ease;
+  opacity: 0.5;
+}
+
+.phase-item.active {
+  opacity: 1;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.phase-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.phase-label {
+  font-size: 11px;
+  color: #888;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.phase-item.active .phase-label {
+  color: #ccc;
 }
 
 .github-link {

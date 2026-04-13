@@ -159,7 +159,11 @@ async def run_issue_loop(
         # === 4. Collect evidence ===
         _log("Evidence", C_CYAN, f"Collecting evidence for {issue.id}")
         await _emit_harness(on_event, issue.id, "evidence", "Collecting evidence")
-        collect_evidence(issue.id, storage, workspace, run_build=True)
+        try:
+            collect_evidence(issue.id, storage, workspace, run_build=True)
+        except Exception as e:
+            _log("Evidence", C_RED, f"Evidence collection failed: {e}")
+            await _emit_harness(on_event, issue.id, "evidence", f"Failed: {e}", "error")
 
         # === 5. State: → Agent Done ===
         issue = storage.load_issue(issue.id)

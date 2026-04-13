@@ -95,6 +95,14 @@ def _message_to_events(issue_id: str, message) -> list[dict]:
         data: dict = {"status": status}
         if message.is_error:
             data["error"] = message.result
+        if message.total_cost_usd:
+            data["cost_usd"] = message.total_cost_usd
+        if message.duration_ms:
+            data["duration_ms"] = message.duration_ms
+        if message.num_turns:
+            data["num_turns"] = message.num_turns
+        if message.usage:
+            data["usage"] = message.usage
         events.append({
             "ts": ts, "type": "agent_status", "issue_id": issue_id,
             "data": data,

@@ -135,11 +135,21 @@ class ProjectStorage:
 
 
 class PlatformStorage:
-    """Manages multiple projects under .harness/projects/."""
+    """Manages multiple projects. Central registry at harness_root, project data in workspace/.harness/."""
 
     def __init__(self, harness_root: Path) -> None:
         self.root = harness_root
-        self.projects_dir = self.root / "projects"
+        self._registry_file = self.root / "registry.json"
+
+    def _load_registry(self) -> dict[str, str]:
+        """Load project_id → workspace_path mapping."""
+        if self._registry_file.exists():
+            return json.loads(self._registry_file.read_text())
+        return {}
+
+    def _save_registry(self, registry: dict[str, str]) -> None:
+        self.root.mkdir(parents=True, exist_ok=True)
+        self._registry_file.write_text(json.dumps(registry, indent=2, ensure_ascii=False))
 
     def _next_id(self, prefix: str) -> str:
         counter_file = self.root / "counter.json"
@@ -158,37 +168,44 @@ class PlatformStorage:
     def create_project(self, name: str, workspace_path: str, key: str = "ISS") -> tuple[Project, ProjectStorage]:
         project_id = self.next_project_id()
         project = Project.create(id=project_id, name=name, workspace_path=workspace_path, key=key)
-        project_dir = self.projects_dir / project.id
-        store = ProjectStorage(project_dir)
+        # Store project data in workspace/.harness/
+        project_root = Path(workspace_path) / ".harness"
+        store = ProjectStorage(project_root)
         store.save_project_meta(project)
-        (project_dir / "issues").mkdir(parents=True, exist_ok=True)
-        (project_dir / "specs").mkdir(exist_ok=True)
-        (project_dir / "runs").mkdir(exist_ok=True)
+        (project_root / "issues").mkdir(parents=True, exist_ok=True)
+        (project_root / "specs").mkdir(exist_ok=True)
+        (project_root / "runs").mkdir(exist_ok=True)
         board = Board.create()
         store.save_board(board)
-        # Save active project marker
-        self._set_active(project.id)
+        # Register in central registry
+        registry = self._load_registry()
+        registry[project_id] = workspace_path
+        self._save_registry(registry)
+        self._set_active(project_id)
         return project, store
 
     def list_projects(self) -> list[tuple[str, Project]]:
-        if not self.projects_dir.exists():
-            return []
+        registry = self._load_registry()
         result = []
-        for d in sorted(self.projects_dir.iterdir()):
-            meta = d / "project.json"
+        for pid, ws_path in sorted(registry.items()):
+            project_root = Path(ws_path) / ".harness"
+            meta = project_root / "project.json"
             if meta.exists():
                 data = json.loads(meta.read_text())
-                result.append((d.name, Project(**data)))
+                result.append((pid, Project(**data)))
         return result
 
     def get_project_storage(self, project_id: str) -> ProjectStorage:
-        return ProjectStorage(self.projects_dir / project_id)
+        registry = self._load_registry()
+        ws_path = registry.get(project_id)
+        if not ws_path:
+            raise FileNotFoundError(f"Project {project_id} not in registry")
+        return ProjectStorage(Path(ws_path) / ".harness")
 
     def get_active_project_id(self) -> str | None:
         active_file = self.root / "active_project"
         if active_file.exists():
             return active_file.read_text().strip()
-        # Fallback: return first project
         projects = self.list_projects()
         return projects[0][0] if projects else None
 
@@ -197,7 +214,8 @@ class PlatformStorage:
         (self.root / "active_project").write_text(project_id)
 
     def switch_project(self, project_id: str) -> bool:
-        if (self.projects_dir / project_id).exists():
+        registry = self._load_registry()
+        if project_id in registry:
             self._set_active(project_id)
             return True
         return False

@@ -314,6 +314,7 @@ async def _sync_board(
     status_to_col = {
         "backlog": "backlog", "todo": "todo", "in_progress": "in_progress",
         "agent_done": "agent_done", "rejected": "rejected", "human_done": "human_done",
+        "failed": "todo",
     }
     target = status_to_col.get(issue.status.value)
     if target:

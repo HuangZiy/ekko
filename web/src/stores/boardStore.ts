@@ -230,6 +230,22 @@ export const useBoardStore = create<BoardState>((set, get) => ({
     const { projectId } = get()
     if (!projectId) return
     get().addRunningIssue(issueId)
+
+    // Optimistic update: move issue to in_progress immediately
+    set(state => {
+      const issue = state.issues[issueId]
+      const updatedIssues = issue
+        ? { ...state.issues, [issueId]: { ...issue, status: 'in_progress' } }
+        : state.issues
+      const updatedColumns = state.columns.map(col => ({
+        ...col,
+        issues: col.issues.filter(id => id !== issueId),
+      }))
+      const target = updatedColumns.find(c => c.id === 'in_progress')
+      if (target) target.issues.push(issueId)
+      return { issues: updatedIssues, columns: updatedColumns }
+    })
+
     await fetch(`/api/projects/${projectId}/run`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

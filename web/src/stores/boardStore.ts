@@ -15,6 +15,9 @@ export interface Issue {
   retry_count: number
   content?: string
   cost?: number
+  source?: string
+  parent_id?: string | null
+  children?: { id: string; title: string; status: string }[]
 }
 
 export interface BoardColumn {

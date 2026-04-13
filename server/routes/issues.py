@@ -28,6 +28,7 @@ class CreateIssueRequest(BaseModel):
     description: str = ""
     blocked_by: list[str] = []
     workspace: str = "default"
+    parent_id: str | None = None
 
 
 class UpdateIssueRequest(BaseModel):
@@ -55,6 +56,9 @@ def create_issue(project_id: str, req: CreateIssueRequest):
     issue_id = storage.next_issue_id(prefix)
     issue = Issue.create(id=issue_id, title=req.title, priority=req.priority, labels=req.labels)
     issue.workspace = req.workspace
+    if req.parent_id:
+        issue.parent_id = req.parent_id
+        issue.source = "human"  # Web UI created, but linked to parent
     for blocker_id in req.blocked_by:
         issue.add_blocker(blocker_id)
     storage.save_issue(issue)
@@ -84,6 +88,14 @@ def get_issue(project_id: str, issue_id: str):
         result["content"] = storage.load_issue_content(issue_id)
     except FileNotFoundError:
         result["content"] = ""
+
+    # Attach children (issues whose parent_id == this issue)
+    all_issues = storage.list_issues()
+    result["children"] = [
+        {"id": i.id, "title": i.title, "status": i.status.value}
+        for i in all_issues if i.parent_id == issue_id
+    ]
+
     return result
 
 

@@ -86,6 +86,7 @@ export function IssueDetail({ issue, onClose, onApprove, onReject, onRun, onDele
   const [saving, setSaving] = useState(false)
   const [showStatusMenu, setShowStatusMenu] = useState(false)
   const [statusError, setStatusError] = useState<string | null>(null)
+  const [children, setChildren] = useState<{ id: string; title: string; status: string }[]>([])
 
   const updateIssue = useBoardStore(s => s.updateIssue)
   const updateIssueContent = useBoardStore(s => s.updateIssueContent)
@@ -120,7 +121,10 @@ export function IssueDetail({ issue, onClose, onApprove, onReject, onRun, onDele
     if (projectId) {
       fetch(`/api/projects/${projectId}/issues/${issue.id}`)
         .then(r => r.json())
-        .then(data => setContent(data.content || ''))
+        .then(data => {
+          setContent(data.content || '')
+          setChildren(data.children || [])
+        })
     }
   }, [issue.id])
 
@@ -318,6 +322,37 @@ export function IssueDetail({ issue, onClose, onApprove, onReject, onRun, onDele
                   <GitBranch size={14} /> Blocks: {issue.blocks.join(', ')}
                 </div>
               )}
+            </div>
+          )}
+
+          {/* Parent / Children */}
+          {issue.parent_id && (
+            <div className="flex items-center gap-1.5 text-sm text-violet-600">
+              <ArrowUpRight size={14} />
+              <span>来源于</span>
+              <span className="font-mono font-medium">{issue.parent_id}</span>
+              {issue.source === 'agent' && (
+                <span className="inline-flex items-center gap-0.5 text-xs px-1.5 py-0.5 rounded-full bg-violet-50 text-violet-600">
+                  <Bot size={10} /> Agent
+                </span>
+              )}
+            </div>
+          )}
+          {children.length > 0 && (
+            <div>
+              <div className="flex items-center gap-1.5 text-sm font-semibold text-[var(--text-primary)] mb-2">
+                <Bot size={14} className="text-violet-500" /> 子 Issue ({children.length})
+              </div>
+              <div className="space-y-1.5">
+                {children.map(child => (
+                  <div key={child.id} className="flex items-center gap-2 text-sm px-3 py-1.5 bg-[var(--bg-secondary)] rounded-lg">
+                    <span className={`w-2 h-2 rounded-full shrink-0 ${statusDot(child.status)}`} />
+                    <span className="font-mono text-xs text-gray-400">{child.id}</span>
+                    <span className="text-[var(--text-primary)] truncate">{child.title}</span>
+                    <span className="ml-auto text-xs text-[var(--text-secondary)]">{child.status.replace('_', ' ')}</span>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
 
@@ -571,4 +606,17 @@ function priorityBg(priority: string): string {
     low: 'bg-gray-100 text-gray-600',
   }
   return map[priority] || 'bg-gray-100 text-gray-600'
+}
+
+function statusDot(status: string): string {
+  const map: Record<string, string> = {
+    backlog: 'bg-slate-400',
+    todo: 'bg-blue-500',
+    in_progress: 'bg-amber-500',
+    agent_done: 'bg-violet-500',
+    rejected: 'bg-red-500',
+    human_done: 'bg-green-500',
+    failed: 'bg-red-400',
+  }
+  return map[status] || 'bg-gray-400'
 }

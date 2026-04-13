@@ -52,6 +52,8 @@ class Issue:
     run_ids: list[str] = field(default_factory=list)
     retry_count: int = 0
     max_retries: int = 3
+    source: str = "human"
+    parent_id: str | None = None
 
     @classmethod
     def create(cls, id: str, title: str, priority: str = "medium", labels: list[str] | None = None) -> Issue:

@@ -291,3 +291,82 @@ class TestIssueScheduler:
         assert len(results) == 1
         assert results[0]["success"] is True
         assert results[0]["issue_id"] == "ISS-1"
+
+    @pytest.mark.asyncio
+    async def test_trigger_poll_wakes_loop(self):
+        """trigger_poll should interrupt the sleep and cause an immediate poll."""
+        from core.scheduler import IssueScheduler
+
+        sched = IssueScheduler()
+        poll_count = 0
+
+        async def mock_poll_cycle(project_id, storage, workspace, on_event=None):
+            nonlocal poll_count
+            poll_count += 1
+            return []
+
+        with patch.object(sched, "_resolve_project") as mock_resolve, \
+             patch.object(sched, "_poll_cycle", side_effect=mock_poll_cycle):
+            mock_storage = MagicMock()
+            mock_resolve.return_value = (mock_storage, Path("/tmp/ws"))
+
+            # Start with a long interval so it won't poll naturally
+            await sched.start("PRJ-1", interval=300)
+            # Wait for first poll to complete
+            await asyncio.sleep(0.05)
+            first_count = poll_count
+
+            # Trigger immediate poll
+            sched.trigger_poll("PRJ-1")
+            await asyncio.sleep(0.1)
+            second_count = poll_count
+
+            await sched.stop("PRJ-1")
+
+        # trigger_poll should have caused at least one extra poll
+        assert second_count > first_count
+
+    @pytest.mark.asyncio
+    async def test_trigger_poll_noop_when_not_running(self):
+        """trigger_poll should be a no-op when scheduler is not running."""
+        from core.scheduler import IssueScheduler
+
+        sched = IssueScheduler()
+        # Should not raise
+        sched.trigger_poll("PRJ-NONEXISTENT")
+
+    @pytest.mark.asyncio
+    async def test_interruptible_sleep_wake(self):
+        """_interruptible_sleep should return False when wake event is set."""
+        from core.scheduler import IssueScheduler, _ProjectSchedule
+
+        sched = IssueScheduler()
+        proj = _ProjectSchedule(interval=300)
+
+        async def _set_wake():
+            await asyncio.sleep(0.02)
+            proj._wake_event.set()
+
+        asyncio.create_task(_set_wake())
+        should_stop = await sched._interruptible_sleep(proj)
+
+        assert should_stop is False
+        # wake_event should be cleared after sleep
+        assert not proj._wake_event.is_set()
+
+    @pytest.mark.asyncio
+    async def test_interruptible_sleep_stop(self):
+        """_interruptible_sleep should return True when stop event is set."""
+        from core.scheduler import IssueScheduler, _ProjectSchedule
+
+        sched = IssueScheduler()
+        proj = _ProjectSchedule(interval=300)
+
+        async def _set_stop():
+            await asyncio.sleep(0.02)
+            proj._stop_event.set()
+
+        asyncio.create_task(_set_stop())
+        should_stop = await sched._interruptible_sleep(proj)
+
+        assert should_stop is True

@@ -59,6 +59,12 @@ def review_issue(project_id: str, issue_id: str, req: ReviewRequest):
         loop = asyncio.get_event_loop()
         event_type = "issue_approved" if req.approved else "issue_rejected"
         loop.create_task(ws_manager.broadcast(project_id, {"type": event_type, "data": {"issue_id": issue_id}}))
+
+        # After approve, wake the scheduler so newly unblocked issues
+        # are picked up immediately instead of waiting for the next poll.
+        if req.approved:
+            from core.scheduler import scheduler
+            scheduler.trigger_poll(project_id)
     except RuntimeError:
         pass
 

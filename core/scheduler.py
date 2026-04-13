@@ -49,6 +49,7 @@ class _ProjectSchedule:
     task: asyncio.Task | None = field(default=None, repr=False)
     running_issues: set[str] = field(default_factory=set)
     _stop_event: asyncio.Event = field(default_factory=asyncio.Event, repr=False)
+    _wake_event: asyncio.Event = field(default_factory=asyncio.Event, repr=False)
 
 
 class IssueScheduler:
@@ -167,6 +168,18 @@ class IssueScheduler:
             sched.max_parallel = max(1, max_parallel)
         return self.status(project_id)
 
+    def trigger_poll(self, project_id: str) -> None:
+        """Wake the scheduler loop immediately for *project_id*.
+
+        Use after review-approve or any event that unblocks issues so the
+        next poll cycle happens right away instead of waiting for the interval.
+        No-op if the scheduler is not running for this project.
+        """
+        sched = self._schedules.get(project_id)
+        if sched and sched.enabled and sched.task and not sched.task.done():
+            sched._wake_event.set()
+            logger.info("Scheduler wake triggered for %s", project_id)
+
     # ------------------------------------------------------------------
     # Public — CLI mode (no server, no WS)
     # ------------------------------------------------------------------
@@ -211,12 +224,10 @@ class IssueScheduler:
         try:
             while sched.enabled and not sched._stop_event.is_set():
                 await self._poll_cycle(project_id, storage, workspace, on_event)
-                # Interruptible sleep
-                try:
-                    await asyncio.wait_for(sched._stop_event.wait(), timeout=sched.interval)
-                    break  # stop_event was set
-                except asyncio.TimeoutError:
-                    pass  # normal — interval elapsed
+                # Interruptible sleep — wakes on stop OR trigger_poll
+                should_stop = await self._interruptible_sleep(sched)
+                if should_stop:
+                    break
         except asyncio.CancelledError:
             pass
         finally:
@@ -243,12 +254,10 @@ class IssueScheduler:
                 except Exception:
                     logger.exception("Scheduler poll error for %s", project_id)
 
-                # Interruptible sleep
-                try:
-                    await asyncio.wait_for(sched._stop_event.wait(), timeout=sched.interval)
+                # Interruptible sleep — wakes on stop OR trigger_poll
+                should_stop = await self._interruptible_sleep(sched)
+                if should_stop:
                     break
-                except asyncio.TimeoutError:
-                    pass
         except asyncio.CancelledError:
             pass
         finally:
@@ -395,6 +404,34 @@ class IssueScheduler:
             }
         finally:
             self._unregister_running(issue_id, sched)
+
+    async def _interruptible_sleep(self, sched: _ProjectSchedule) -> bool:
+        """Sleep for *interval* seconds, interruptible by stop or wake events.
+
+        Returns ``True`` if the loop should stop (stop_event was set),
+        ``False`` if the sleep was interrupted by wake or timed out normally.
+        """
+        stop_task = asyncio.ensure_future(sched._stop_event.wait())
+        wake_task = asyncio.ensure_future(sched._wake_event.wait())
+        try:
+            _done, pending = await asyncio.wait(
+                {stop_task, wake_task},
+                timeout=sched.interval,
+                return_when=asyncio.FIRST_COMPLETED,
+            )
+        except asyncio.CancelledError:
+            stop_task.cancel()
+            wake_task.cancel()
+            raise
+
+        for t in (stop_task, wake_task):
+            if not t.done():
+                t.cancel()
+
+        # Reset wake so it can be triggered again next cycle
+        sched._wake_event.clear()
+
+        return sched._stop_event.is_set()
 
     # ------------------------------------------------------------------
     # Internal — running-issue tracking

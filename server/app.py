@@ -126,6 +126,37 @@ def create_app(harness_root: Path | None = None) -> FastAPI:
                     pass
         asyncio.create_task(watchdog())
 
+    @app.on_event("startup")
+    async def auto_start_schedulers():
+        """Auto-start the scheduler for every registered project.
+
+        This is the key to "automatic execution" — the scheduler begins
+        polling for ready issues as soon as the server boots, so newly
+        unblocked issues are picked up without any manual trigger.
+        """
+        try:
+            from core.scheduler import scheduler
+            from core.storage import PlatformStorage
+            from server.ws import ws_manager
+
+            root = get_harness_root()
+            platform = PlatformStorage(root)
+            projects = platform.list_projects()
+
+            for pid,project in projects:
+                async def _make_on_event(project_id: str):
+                    async def on_event(event: dict) -> None:
+                        await ws_manager.broadcast(project_id, event)
+                    return on_event
+
+                on_event = await _make_on_event(pid)
+                await scheduler.start(pid, on_event=on_event)
+        except Exception:
+            import logging
+            logging.getLogger("ekko.scheduler").exception(
+                "Failed to auto-start schedulers on startup"
+            )
+
     @app.on_event("shutdown")
     async def stop_scheduler():
         """Stop all active scheduler loops on server shutdown."""

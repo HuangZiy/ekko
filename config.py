@@ -32,4 +32,4 @@ MAX_PLANNING_BUDGET = 1.0  # USD per planning run
 # Scheduler (auto-run)
 SCHEDULER_POLL_INTERVAL = 60    # seconds between polls
 SCHEDULER_MAX_PARALLEL = 1      # max concurrent issue runs per project
-SCHEDULER_ENABLED_DEFAULT = False  # must be explicitly enabled
+SCHEDULER_ENABLED_DEFAULT = True  # auto-enabled: scheduler starts with server

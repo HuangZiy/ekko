@@ -299,6 +299,34 @@ def _review(args: argparse.Namespace) -> None:
         if unlocked:
             print(f"Unblocked: {', '.join(unlocked)}")
 
+        # Auto-dispatch: run a single scheduler poll so newly unblocked
+        # issues are picked up immediately.
+        from core.ralph_loop import find_ready_issues
+        ready = find_ready_issues(store)
+        if ready:
+            project = store.load_project_meta()
+            if project and project.workspaces:
+                import anyio
+                workspace = Path(project.workspaces[0]).resolve()
+                print(f"\n[Scheduler] {len(ready)} ready issue(s) found, auto-dispatching...", flush=True)
+
+                async def _auto_dispatch():
+                    from core.scheduler import scheduler
+                    return await scheduler.run_once(
+                        project_id=project.id,
+                        storage=store,
+                        workspace=workspace,
+                    )
+
+                try:
+                    all_stats = anyio.run(_auto_dispatch)
+                    if all_stats:
+                        ok = sum(1 for s in all_stats if s.get("success"))
+                        total_cost = sum(s.get("cost_usd", 0) for s in all_stats)
+                        print(f"[Scheduler] Completed: {ok}/{len(all_stats)} passed, cost=${total_cost:.2f}", flush=True)
+                except Exception as e:
+                    print(f"[Scheduler] Auto-dispatch error: {e}", flush=True)
+
     elif args.reject:
         issue.move_to(IssueStatus.REJECTED)
         # Then move back to todo so it can be reworked

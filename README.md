@@ -26,29 +26,30 @@
 
 ## What is Ekko?
 
-Ekko is an AI-powered development harness built on the [Claude Agent SDK](https://github.com/anthropics/claude-agent-sdk). It turns a single requirement into a fully managed development pipeline — planning, implementation, evaluation, and human review — all orchestrated through a kanban board.
+Ekko is an AI-powered development harness built on the [Claude Agent SDK](https://github.com/anthropics/claude-agent-sdk). Give it a single requirement — it plans, implements, evaluates, and iterates autonomously until you approve.
 
-Unlike simple code-generation tools, Ekko manages the **full lifecycle**: decomposing requirements into dependency-aware issues, dispatching them to parallel agents, collecting evidence (git diff + build output + Playwright screenshots), and gating completion on human approval.
+Not a code generator. Ekko manages the **full development lifecycle**: decomposing requirements into dependency-aware issues, dispatching them to parallel agents with build/test backpressure, collecting evidence (git diff + build output + Playwright screenshots), and gating every completion on human approval.
 
-Inspired by:
-- Anthropic's [three-agent architecture](https://www.anthropic.com/engineering/harness-design-long-running-apps) — Planner / Generator / Evaluator
-- The [Ralph Wiggum technique](https://ghuntley.com/ralph/) — single-task loops with build/test backpressure
-- [vibe-kanban](https://github.com/BloopAI/vibe-kanban) — local board UI for AI-driven development
+Inspired by Anthropic's [three-agent architecture](https://www.anthropic.com/engineering/harness-design-long-running-apps) (Planner / Generator / Evaluator), the [Ralph Wiggum technique](https://ghuntley.com/ralph/) (single-task loops with backpressure), and [vibe-kanban](https://github.com/BloopAI/vibe-kanban) (local board UI for AI-driven development).
+
+---
 
 ## Features
 
 | Feature | Description |
 |---|---|
-| **Kanban Board** | 7-column board with drag-and-drop Web UI — Backlog through Human Done |
+| **Kanban Board** | 7-column drag-and-drop Web UI — Backlog through Human Done |
 | **Interactive Planning** | Planner agent decomposes requirements into dependency-aware issues with specs |
-| **Multi-Agent Parallel** | Scheduler dispatches unblocked issues to concurrent agents via async semaphore |
+| **Multi-Agent Parallel** | Scheduler dispatches unblocked issues to concurrent async semaphore |
 | **Build/Test Backpressure** | Agents must pass build and tests before marking work complete |
 | **Human-in-the-Loop** | Every issue requires explicit Approve / Reject before closing |
 | **Evidence Collection** | Git diff, build output, Playwright screenshots bundled per issue |
-| **Issue Splitting** | Planning agent can split complex issues into children with dependency tracking |
+| **Issue Splitting** | Planner can split complex issues into children with dependency tracking |
 | **Checkpoint Resume** | Interrupted tasks resume at the exact step — no wasted work |
 | **Real-time Web UI** | React + Tailwind dashboard with SSE streaming and review panels |
-| **CLI-first** | Full CLI for project / issue / review / plan / run — scriptable and composable |
+| **CLI-first** | Full CLI for project / issue / review / plan  scriptable and composable |
+
+---
 
 ## Architecture
 
@@ -85,7 +86,15 @@ Inspired by:
 └─────────────────────────────────────────────────────────────┘
 ```
 
-> [View the interactive version →](https://huangziy.github.io/ekko/)
+<p align="center">
+  <a href="https://huangziy.github.io/ekko/">
+    <img src="docs/assets/flowchart-preview.png" alt="Interactive Architecture" width="600" />
+    <br/>
+    View Interactive Flowchart — click through each step with animations
+  </a>
+</p>
+
+---
 
 ## Quick Install
 
@@ -95,29 +104,36 @@ Prerequisites: Python ≥ 3.11, Node.js ≥ 20, [uv](https://github.com/astral-s
 git clone https://github.com/HuangZiy/ekko.git && cd ekko
 uv pip install -e .
 cd web && npm install && cd ..
-```
-
-Set your API key:
-
-```bash
 export ANTHROPIC_API_KEY="sk-ant-..."
 ```
 
 The `harness` command is now available globally.
 
+---
+
 ## Getting Started
 
+**1. Create a project**
+
 ```bash
-# 1. Create a project
 harness project create "My App" ./my-app
+```
 
-# 2. Plan — one sentence in, dependency-aware issues out
+**2. Plan — one sentence in, dependency-aware issues out**
+
+```bash
 harness plan "Build a dashboard with auth and analytics"
+```
 
-# 3. Run — agents pick up issues automatically
+**3. Run — agents pick up issues automatically**
+
+```bash
 harness run
+```
 
-# 4. Review in the Web UI
+**4. Review in the Web UI**
+
+```bash
 harness serve --dev    # → http://localhost:5173
 ```
 
@@ -128,6 +144,8 @@ harness issue create "Implement login page" --label auth --priority high
 harness run ISS-1
 harness review ISS-1 --approve
 ```
+
+---
 
 ## CLI Reference
 
@@ -144,14 +162,19 @@ harness review ISS-1 --approve
 | `harness issue show <id>` | Show issue details |
 | `harness issue move <id> <status>` | Move issue to a status |
 | `harness issue delete <id> [-y]` | Delete an issue |
-| `harness review <id> --approve` | Approve an Agent Done issue |
-| `harness review <id> --reject --comment "..."` | Reject with feedback |
 | `harness plan "<requirement>"` | Interactive planning → auto-create issues |
 | `harness plan-issue <id>` | Plan a single issue |
 | `harness run [<id>]` | Execute all ready issues or a specific one |
+| `harness review <id> --approve` | Approve an Agent Done issue |
+| `harness review <id> --reject --comment "..."` | Reject with feedback |
 | `harness serve [--port N] [--dev]` | Launch Web UI |
 | `harness board` | Print board to terminal |
+| `harness scheduler start [--interval N] [--max-parallel N]` | Start auto-dispatch scheduler |
+| `harness scheduler status` | Show scheduler status |
+| `harness scheduler once` | Run one dispatch cycle |
 | `harness migrate` | Convert fix_plan.md → issues |
+
+---
 
 ## Issue Lifecycle
 
@@ -173,6 +196,8 @@ Backlog ──→ Planning ──→ Todo ──→ In Progress ──→ Agent 
 | `failed` | Eval failed — auto-retried |
 | `rejected` | Human rejected — feedback appended, back to todo |
 
+---
+
 ## Project Structure
 
 ```
@@ -188,7 +213,7 @@ ekko/
 │   ├── planner.py          # Per-issue planning agent (writes plan.md, can split)
 │   ├── evidence.py         # Evidence collection (git diff, build, screenshots)
 │   ├── review.py           # Human review logic (approve / reject)
-│   └── migrate.py          # fix_plan.md → issues migration
+│   └── scheduler.py        # Auto-dispatch scheduler
 │
 ├── agents/                 # Claude Agent SDK wrappers
 │   ├── planner.py          # Interactive brainstorming planner
@@ -209,23 +234,19 @@ ekko/
 │       └── components/     # Board, Column, IssueCard, IssueDetail
 │
 ├── prompts/                # Agent system prompts (Markdown)
-│   ├── planner_system.md
-│   ├── ralph_prompt.md
-│   └── evaluator_system.md
 │
 ├── docs/
 │   ├── assets/             # Banner SVG
 │   └── flowchart/          # Interactive architecture (Vite + React + @xyflow/react)
 │
 └── .harness/               # Runtime data store (auto-created)
-    ├── registry.json       # project_id → workspace mapping
-    ├── active_project      # Currently active project ID
-    └── <workspace>/.harness/
-        ├── project.json    # Project metadata
-        ├── board.json      # Kanban board state
-        ├── issues/ISS-*/   # meta.json + content.md + plan.md + logs/ + stats/
-        └── specs/          # Functional specs from planner
+    ├── project.json        # Project metadata
+    ├── board.json          # Kanban board state
+    ├── issues/ISS-*/       # meta.json + content.md + plan.md + logs/ + stats/
+    └── specs/              # Functional specs from planner
 ```
+
+---
 
 ## Configuration
 
@@ -242,6 +263,8 @@ Edit `config.py`:
 | `MAX_PLANNING_BUDGET` | `1.0` | Max spend per planning run (USD) |
 | `SCHEDULER_MAX_PARALLEL` | `1` | Max concurrent issue runs per project |
 
+---
+
 ## Tech Stack
 
 | Layer | Technology |
@@ -254,6 +277,8 @@ Edit `config.py`:
 | Storage | JSON + Markdown files (no database) |
 | Package Managers | uv (Python), npm (Node.js) |
 | Build | hatchling |
+
+---
 
 ## Contributing
 
@@ -269,6 +294,8 @@ pytest
 cd web && npm run build && cd ..
 ```
 
+---
+
 ## License
 
 [MIT](https://github.com/HuangZiy/ekko/blob/main/LICENSE)
@@ -281,12 +308,11 @@ cd web && npm run build && cd ..
 
 Ekko 是一个基于 [Claude Agent SDK](https://github.com/anthropics/claude-agent-sdk) 的 AI 驱动开发套件。给它一句话需求，它会自动规划、实现、评估、迭代——直到你审核通过。
 
-与简单的代码生成工具不同，Ekko 管理**完整的开发生命周期**：将需求拆解为带依赖关系的 Issue，分派给并行 Agent 执行，收集证据（git diff + 构建输出 + Playwright 截图），并以人类审核作为完成门控。
+不是代码生成器。Ekko 管理**完整的开发生命周期**：将需求拆解为带依赖关系的 Issue，分派给并行 Agent 执行，收集证据（git diff + 构建输出 + Playwright 截图），并以人类审核作为完成门控。
 
-灵感来源：
-- Anthropic 的[三 Agent 架构](https://www.anthropic.com/engineering/harness-design-long-running-apps) — Planner / Generator / Evaluator
-- [Ralph Wiggum 技术](https://ghuntley.com/ralph/) — 单任务循环 + build/test 反压
-- [vibe-kanban](https://github.com/BloopAI/vibe-kanban) — AI 驱动开发的本地看板 UI
+灵感来源：Anthropic 的[三 Agent 架构](https://www.anthropic.com/engineering/harness-design-long-running-apps)（Planner / Generator / Evaluator）、[Ralph Wiggum 技术](https://ghuntley.com/ralph/)（单任务循环 + build/test 反压）、[vibe-kanban](https://github.com/BloopAI/vibe-kanban)（AI 驱动开发的本地看板 UI）。
+
+---
 
 ## 核心特性
 
@@ -302,6 +328,8 @@ Ekko 是一个基于 [Claude Agent SDK](https://github.com/anthropics/claude-age
 | **断点续传** | 中断的任务精确恢复到步骤级别 — 不浪费已完成的工作 |
 | **实时 Web UI** | React + Tailwind 仪表盘，SSE 推送 + 审核面板 |
 | **CLI 优先** | 完整 CLI 支持 project / issue / review / plan / run — 可脚本化 |
+
+---
 
 ## 架构
 
@@ -338,7 +366,15 @@ Ekko 是一个基于 [Claude Agent SDK](https://github.com/anthropics/claude-age
 └─────────────────────────────────────────────────────────────┘
 ```
 
-> [查看交互式架构图 →](https://huangziy.github.io/ekko/)
+<p align="center">
+  <a href="https://huangziy.github.io/ekko/">
+    <img src="docs/assets/flowchart-preview.png" alt="交互式架构图" width="600" />
+    <br/>
+    查看交互式架构图 — 逐步点击查看每个阶段的动画演示
+  </a>
+</p>
+
+---
 
 ## 快速安装
 
@@ -348,29 +384,36 @@ Ekko 是一个基于 [Claude Agent SDK](https://github.com/anthropics/claude-age
 git clone https://github.com/HuangZiy/ekko.git && cd ekko
 uv pip install -e .
 cd web && npm install && cd ..
-```
-
-设置 API Key：
-
-```bash
 export ANTHROPIC_API_KEY="sk-ant-..."
 ```
 
 安装后 `harness` 命令全局可用。
 
+---
+
 ## 快速上手
 
+**1. 创建项目**
+
 ```bash
-# 1. 创建项目
 harness project create "我的应用" ./my-app
+```
 
-# 2. 规划 — 一句话输入，带依赖的 Issue 输出
+**2. 规划 — 一句话输入，带依赖的 Issue 输出**
+
+```bash
 harness plan "构建一个带认证和数据分析的后台系统"
+```
 
-# 3. 运行 — Agent 自动领取 Issue
+**3. 运行 — Agent 自动领取 Issue**
+
+```bash
 harness run
+```
 
-# 4. 在 Web UI 中审核
+**4. 在 Web UI 中审核**
+
+```bash
 harness serve --dev    # → http://localhost:5173
 ```
 
@@ -381,6 +424,8 @@ harness issue create "实现登录页面" --label auth --priority high
 harness run ISS-1
 harness review ISS-1 --approve
 ```
+
+---
 
 ## CLI 命令速查
 
@@ -397,14 +442,19 @@ harness review ISS-1 --approve
 | `harness issue show <id>` | 查看 Issue 详情 |
 | `harness issue move <id> <状态>` | 移动 Issue |
 | `harness issue delete <id> [-y]` | 删除 Issue |
-| `harness review <id> --approve` | 审核通过 |
-| `harness review <id> --reject --comment "..."` | 审核拒绝并附反馈 |
 | `harness plan "<需求>"` | 交互式规划 → 自动创建 Issue |
 | `harness plan-issue <id>` | 对单个 Issue 进行规划 |
 | `harness run [<id>]` | 执行所有就绪 Issue（或指定单个） |
+| `harness review <id> --approve` | 审核通过 |
+| `harness review <id> --reject --comment "..."` | 审核拒绝并附反馈 |
 | `harness serve [--port N] [--dev]` | 启动 Web UI |
 | `harness board` | 终端打印看板 |
+| `harness scheduler start [--interval N] [--max-parallel N]` | 启动自动调度器 |
+| `harness scheduler status` | 查看调度器状态 |
+| `harness scheduler once` | 执行一次调度 |
 | `harness migrate` | 将 fix_plan.md 转为 Issue |
+
+---
 
 ## Issue 生命周期
 
@@ -426,6 +476,8 @@ Backlog ──→ Planning ──→ Todo ──→ In Progress ──→ Agent 
 | `failed` | 评估未通过，自动重试 |
 | `rejected` | 人类审核不通过，追加反馈打回 Todo |
 
+---
+
 ## 项目结构
 
 ```
@@ -441,7 +493,7 @@ ekko/
 │   ├── planner.py          # 单 Issue 规划 Agent（写 plan.md，可拆分）
 │   ├── evidence.py         # 证据收集（git diff、构建、截图）
 │   ├── review.py           # 人类审核逻辑（approve / reject）
-│   └── migrate.py          # fix_plan.md → issues 迁移
+│   └── scheduler.py        # 自动调度器
 │
 ├── agents/                 # Claude Agent SDK 封装
 │   ├── planner.py          # 交互式 brainstorming 规划器
@@ -468,14 +520,13 @@ ekko/
 │   └── flowchart/          # 交互式架构图（Vite + React + @xyflow/react）
 │
 └── .harness/               # 运行时数据（自动创建）
-    ├── registry.json       # project_id → workspace 映射
-    ├── active_project      # 当前活跃项目 ID
-    └── <workspace>/.harness/
-        ├── project.json    # 项目元数据
-        ├── board.json      # 看板状态
-        ├── issues/ISS-*/   # meta.json + content.md + plan.md + logs/ + stats/
-        └── specs/          # 规划器产出的功能规格
+    ├── project.json        # 项目元数据
+    ├── board.json          # 看板状态
+    ├── issues/ISS-*/       # meta.json + content.md + plan.md + logs/ + stats/
+    └── specs/              # 规划器产出的功能规格
 ```
+
+---
 
 ## 配置
 
@@ -492,6 +543,8 @@ ekko/
 | `MAX_PLANNING_BUDGET` | `1.0` | 每次规划最大花费 (USD) |
 | `SCHEDULER_MAX_PARALLEL` | `1` | 每个项目最大并行 Issue 数 |
 
+---
+
 ## 技术栈
 
 | 层级 | 技术 |
@@ -504,6 +557,8 @@ ekko/
 | 存储 | JSON + Markdown（无数据库） |
 | 包管理 | uv (Python)、npm (Node.js) |
 | 构建 | hatchling |
+
+---
 
 ## 参与贡献
 
@@ -518,6 +573,8 @@ pytest
 # 构建前端
 cd web && npm run build && cd ..
 ```
+
+---
 
 ## 许可证
 

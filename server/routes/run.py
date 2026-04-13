@@ -34,11 +34,8 @@ def clear_cancel(issue_id: str) -> None:
 
 
 def _get_storage(project_id: str) -> ProjectStorage:
-    from server.app import get_harness_root
-    project_dir = get_harness_root() / "projects" / project_id
-    if not project_dir.exists():
-        raise HTTPException(404, f"Project {project_id} not found")
-    return ProjectStorage(project_dir)
+    from server.app import get_project_storage
+    return get_project_storage(project_id)
 
 
 class RunRequest(BaseModel):
@@ -46,13 +43,11 @@ class RunRequest(BaseModel):
 
 
 async def _run_in_background(project_id: str, issue_id: str | None) -> None:
-    from server.app import get_harness_root
-    from server.ws import ws_manager
+    from server.app import get_project_storage
     from core.ralph_loop import run_issue_loop, find_ready_issues
     from pathlib import Path
 
-    project_dir = get_harness_root() / "projects" / project_id
-    storage = ProjectStorage(project_dir)
+    storage = get_project_storage(project_id)
 
     # Resolve workspace from project metadata
     project = storage.load_project_meta()

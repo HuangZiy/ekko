@@ -14,11 +14,9 @@ router = APIRouter(prefix="/api/projects/{project_id}/board", tags=["board"])
 
 
 def _get_project_dir(project_id: str) -> Path:
-    from server.app import get_harness_root
-    d = get_harness_root() / "projects" / project_id
-    if not d.exists():
-        raise HTTPException(404, f"Project {project_id} not found")
-    return d
+    from server.app import get_project_storage
+    storage = get_project_storage(project_id)
+    return storage.root
 
 
 @router.get("")

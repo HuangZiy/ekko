@@ -14,11 +14,8 @@ router = APIRouter(prefix="/api/projects/{project_id}/issues", tags=["issues"])
 
 
 def _get_storage(project_id: str) -> ProjectStorage:
-    from server.app import get_harness_root
-    project_dir = get_harness_root() / "projects" / project_id
-    if not project_dir.exists():
-        raise HTTPException(404, f"Project {project_id} not found")
-    return ProjectStorage(project_dir)
+    from server.app import get_project_storage
+    return get_project_storage(project_id)
 
 
 class CreateIssueRequest(BaseModel):
@@ -229,8 +226,9 @@ def get_issue_stats(project_id: str, issue_id: str):
 # --- Board helpers ---
 
 def _add_to_board(project_id: str, issue_id: str, column: str):
-    from server.app import get_harness_root
-    board_file = get_harness_root() / "projects" / project_id / "board.json"
+    from server.app import get_project_storage
+    storage = get_project_storage(project_id)
+    board_file = storage.root / "board.json"
     if board_file.exists():
         data = json.loads(board_file.read_text())
         for col in data["columns"]:
@@ -242,8 +240,9 @@ def _add_to_board(project_id: str, issue_id: str, column: str):
 
 
 def _remove_from_board(project_id: str, issue_id: str):
-    from server.app import get_harness_root
-    board_file = get_harness_root() / "projects" / project_id / "board.json"
+    from server.app import get_project_storage
+    storage = get_project_storage(project_id)
+    board_file = storage.root / "board.json"
     if not board_file.exists():
         return
     data = json.loads(board_file.read_text())
@@ -255,8 +254,9 @@ def _remove_from_board(project_id: str, issue_id: str):
 
 def _sync_board_column(project_id: str, issue_id: str, status: str):
     """Move issue to the board column matching its new status."""
-    from server.app import get_harness_root
-    board_file = get_harness_root() / "projects" / project_id / "board.json"
+    from server.app import get_project_storage
+    storage = get_project_storage(project_id)
+    board_file = storage.root / "board.json"
     if not board_file.exists():
         return
     data = json.loads(board_file.read_text())

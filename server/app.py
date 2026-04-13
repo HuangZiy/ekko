@@ -21,6 +21,17 @@ def get_harness_root() -> Path:
     return _harness_root
 
 
+def get_project_storage(project_id: str):
+    """Get ProjectStorage for a project via registry. Used by all route handlers."""
+    from core.storage import PlatformStorage
+    from fastapi import HTTPException
+    platform = PlatformStorage(get_harness_root())
+    try:
+        return platform.get_project_storage(project_id)
+    except FileNotFoundError:
+        raise HTTPException(404, f"Project {project_id} not found")
+
+
 def _move_board_column(storage, issue_id: str, target_col: str) -> None:
     board_file = storage.root / "board.json"
     if not board_file.exists():

@@ -12,11 +12,8 @@ router = APIRouter(prefix="/api/projects/{project_id}/issues/{issue_id}/review",
 
 
 def _get_storage(project_id: str) -> ProjectStorage:
-    from server.app import get_harness_root
-    project_dir = get_harness_root() / "projects" / project_id
-    if not project_dir.exists():
-        raise HTTPException(404, f"Project {project_id} not found")
-    return ProjectStorage(project_dir)
+    from server.app import get_project_storage
+    return get_project_storage(project_id)
 
 
 class ReviewRequest(BaseModel):

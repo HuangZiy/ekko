@@ -13,6 +13,7 @@ from claude_agent_sdk import (
     ClaudeSDKClient, ClaudeAgentOptions, ResultMessage,
     AssistantMessage, SystemMessage, TextBlock, ToolUseBlock, ToolResultBlock,
 )
+from claude_agent_sdk.types import StreamEvent
 from config import MODEL, MAX_TURNS_PER_LOOP, MAX_BUDGET_PER_LOOP
 from core.models import Issue
 from core.storage import ProjectStorage
@@ -55,7 +56,29 @@ def _message_to_events(issue_id: str, message) -> list[dict]:
     ts = int(time.time())
     events: list[dict] = []
 
-    if isinstance(message, AssistantMessage):
+    if isinstance(message, StreamEvent):
+        evt = message.event
+        evt_type = evt.get("type", "")
+        if evt_type == "content_block_delta":
+            delta = evt.get("delta", {})
+            if delta.get("type") == "text_delta":
+                text = delta.get("text", "")
+                if text:
+                    events.append({
+                        "ts": ts, "type": "agent_token", "issue_id": issue_id,
+                        "data": {"text": text},
+                    })
+            elif delta.get("type") == "input_json_delta":
+                # Partial tool input — skip to avoid noise
+                pass
+        elif evt_type == "content_block_start":
+            cb = evt.get("content_block", {})
+            if cb.get("type") == "tool_use":
+                events.append({
+                    "ts": ts, "type": "agent_tool_call", "issue_id": issue_id,
+                    "data": {"tool": cb.get("name", ""), "input": cb.get("input", {})},
+                })
+    elif isinstance(message, AssistantMessage):
         for block in message.content:
             if isinstance(block, TextBlock):
                 events.append({

@@ -52,11 +52,10 @@ Master of Time for Long-Running Harness
 ## 安装
 
 ```bash
-# One-line 安装（需要 uv）
-uv pip install -e git+https://github.com/your-repo/ekko.git#egg=ekko
+# 克隆仓库
+git clone https://github.com/HuangZiy/ekko.git && cd ekko
 
-# 或者本地安装
-git clone <repo-url> && cd ekko
+# 安装 Python 依赖
 uv pip install -e .
 
 # 安装前端依赖（Web UI）

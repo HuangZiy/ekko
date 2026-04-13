@@ -167,16 +167,17 @@ async def run_issue_loop(
 
         # === 5. State: → Agent Done ===
         issue = storage.load_issue(issue.id)
-        if issue.status == IssueStatus.IN_PROGRESS:
-            issue.move_to(IssueStatus.AGENT_DONE)
+        if issue.status != IssueStatus.AGENT_DONE:
+            issue.status = IssueStatus.AGENT_DONE
+            issue.updated_at = datetime.now(timezone.utc).isoformat()
             storage.save_issue(issue)
             await _sync_board(issue, storage, on_event)
-            if passed:
-                _log("State", C_GREEN, f"{issue.id}: → agent_done (PASSED, awaiting human review)")
-                await _emit_harness(on_event, issue.id, "state", "→ agent_done (PASSED)", "success")
-            else:
-                _log("State", C_YELLOW, f"{issue.id}: → agent_done (max retries, needs human review)")
-                await _emit_harness(on_event, issue.id, "state", "→ agent_done (max retries)", "warning")
+        if passed:
+            _log("State", C_GREEN, f"{issue.id}: → agent_done (PASSED, awaiting human review)")
+            await _emit_harness(on_event, issue.id, "state", "→ agent_done (PASSED)", "success")
+        else:
+            _log("State", C_YELLOW, f"{issue.id}: → agent_done (max retries, needs human review)")
+            await _emit_harness(on_event, issue.id, "state", "→ agent_done (max retries)", "warning")
 
     # Aggregate stats
     total_cost = sum(s.get("cost_usd", 0) for s in all_stats)

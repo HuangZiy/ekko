@@ -26,6 +26,7 @@ class CreateProjectRequest(BaseModel):
 class UpdateProjectRequest(BaseModel):
     name: str | None = None
     workspace_path: str | None = None
+    key: str | None = None
 
 
 class SwitchProjectRequest(BaseModel):
@@ -144,6 +145,11 @@ def update_project(project_id: str, req: UpdateProjectRequest):
         project.name = req.name
     if req.workspace_path is not None:
         project.workspaces = [req.workspace_path]
+    if req.key is not None:
+        new_key = req.key.strip().upper()
+        if not new_key:
+            raise HTTPException(400, "Issue key prefix cannot be empty")
+        project.key = new_key
 
     store.save_project_meta(project)
     from dataclasses import asdict

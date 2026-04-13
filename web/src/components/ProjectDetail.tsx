@@ -32,6 +32,7 @@ export function ProjectDetail({ project, onClose }: ProjectDetailProps) {
   const [editing, setEditing] = useState(false)
   const [editName, setEditName] = useState(project.name)
   const [editWorkspace, setEditWorkspace] = useState(project.workspaces?.[0] || '')
+  const [editKey, setEditKey] = useState(project.key || 'ISS')
   const [saving, setSaving] = useState(false)
   const [projectStats, setProjectStats] = useState<{ total_runs: number; total_cost_usd: number; total_duration_ms: number } | null>(null)
 
@@ -41,6 +42,7 @@ export function ProjectDetail({ project, onClose }: ProjectDetailProps) {
   useEffect(() => {
     setEditName(project.name)
     setEditWorkspace(project.workspaces?.[0] || '')
+    setEditKey(project.key || 'ISS')
     fetch(`/api/projects/${project.id}`)
       .then(r => r.json())
       .then(data => {
@@ -61,9 +63,11 @@ export function ProjectDetail({ project, onClose }: ProjectDetailProps) {
 
   const handleSave = async () => {
     setSaving(true)
-    const patch: { name?: string; workspace_path?: string } = {}
+    const patch: { name?: string; workspace_path?: string; key?: string } = {}
     if (editName !== project.name) patch.name = editName
     if (editWorkspace !== (project.workspaces?.[0] || '')) patch.workspace_path = editWorkspace
+    const normalizedKey = editKey.trim().toUpperCase()
+    if (normalizedKey && normalizedKey !== (project.key || 'ISS')) patch.key = normalizedKey
     if (Object.keys(patch).length > 0) {
       await updateProject(project.id, patch)
     }
@@ -75,6 +79,7 @@ export function ProjectDetail({ project, onClose }: ProjectDetailProps) {
     setEditing(false)
     setEditName(project.name)
     setEditWorkspace(project.workspaces?.[0] || '')
+    setEditKey(project.key || 'ISS')
   }
 
   return (
@@ -148,7 +153,17 @@ export function ProjectDetail({ project, onClose }: ProjectDetailProps) {
             <div className="flex items-center gap-2 text-sm">
               <Tag size={14} className="text-[var(--text-secondary)]" />
               <span className="text-[var(--text-secondary)]">Issue Key:</span>
-              <span className="font-mono text-[var(--text-primary)]">{project.key || 'ISS'}</span>
+              {editing ? (
+                <input
+                  value={editKey}
+                  onChange={e => setEditKey(e.target.value.toUpperCase())}
+                  className="w-20 px-2 py-0.5 border border-[var(--border)] rounded-md font-mono text-sm bg-[var(--input-bg)] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
+                  placeholder="ISS"
+                  maxLength={10}
+                />
+              ) : (
+                <span className="font-mono text-[var(--text-primary)]">{project.key || 'ISS'}</span>
+              )}
             </div>
           </div>
 

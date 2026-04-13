@@ -85,6 +85,38 @@ def _project_show(args: argparse.Namespace) -> None:
         print(f"  {status:<15} {len(items)}")
 
 
+def _project_update(args: argparse.Namespace) -> None:
+    platform = _get_platform()
+    project_id = args.project_id or platform.get_active_project_id()
+    if not project_id:
+        print("No active project. Specify --project-id or create one first.", file=sys.stderr)
+        sys.exit(1)
+    store = platform.get_project_storage(project_id)
+    project = store.load_project_meta()
+    if not project:
+        print(f"Project not found: {project_id}", file=sys.stderr)
+        sys.exit(1)
+
+    changed = False
+    if args.name is not None:
+        project.name = args.name
+        changed = True
+    if args.key is not None:
+        new_key = args.key.strip().upper()
+        if not new_key:
+            print("Error: --key cannot be empty.", file=sys.stderr)
+            sys.exit(1)
+        project.key = new_key
+        changed = True
+
+    if not changed:
+        print("Nothing to update. Use --name or --key to specify changes.")
+        return
+
+    store.save_project_meta(project)
+    print(f"Updated project {project.id}: {project.name}  (issue prefix: {project.key})")
+
+
 def _project_delete(args: argparse.Namespace) -> None:
     import shutil
     platform = _get_platform()
@@ -467,6 +499,12 @@ def build_parser() -> argparse.ArgumentParser:
     p = project_sub.add_parser("show", help="Show project details")
     p.add_argument("project_id", nargs="?", default=None, help="Project ID (default: active)")
     p.set_defaults(func=_project_show)
+
+    p = project_sub.add_parser("update", help="Update project settings")
+    p.add_argument("project_id", nargs="?", default=None, help="Project ID (default: active)")
+    p.add_argument("--name", default=None, help="New project name")
+    p.add_argument("--key", default=None, help="New issue ID prefix (e.g. BLOG → BLOG-1, BLOG-2)")
+    p.set_defaults(func=_project_update)
 
     p = project_sub.add_parser("delete", help="Delete a project")
     p.add_argument("project_id", help="Project ID to delete")

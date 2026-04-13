@@ -19,7 +19,7 @@ interface ProjectState {
   createProject: (name: string, workspacePath: string) => Promise<void>
   switchProject: (projectId: string) => Promise<void>
   deleteProject: (projectId: string) => Promise<void>
-  updateProject: (projectId: string, patch: { name?: string; workspace_path?: string }) => Promise<void>
+  updateProject: (projectId: string, patch: { name?: string; workspace_path?: string; key?: string }) => Promise<void>
 }
 
 export const useProjectStore = create<ProjectState>((set, get) => ({

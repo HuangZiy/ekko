@@ -1,7 +1,7 @@
 import { useRef, useEffect, useState, useMemo } from 'react'
 import { useBoardStore } from '../stores/boardStore'
 import type { AgentLogEntry } from '../stores/boardStore'
-import { Terminal, Square, History } from 'lucide-react'
+import { Terminal, Square, History, Maximize2, Minimize2 } from 'lucide-react'
 
 interface AgentLogPanelProps {
   issueId: string
@@ -55,6 +55,7 @@ export function AgentLogPanel({ issueId, onCancel }: AgentLogPanelProps) {
   const [selectedRun, setSelectedRun] = useState<string | null>(null)
   const [historyEntries, setHistoryEntries] = useState<AgentLogEntry[]>([])
   const [showHistory, setShowHistory] = useState(false)
+  const [expanded, setExpanded] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
   const projectId = useBoardStore(s => s.projectId)
 
@@ -111,6 +112,14 @@ export function AgentLogPanel({ issueId, onCancel }: AgentLogPanelProps) {
             <Square size={12} /> Cancel
           </button>
         )}
+
+        <button
+          onClick={() => setExpanded(!expanded)}
+          className="p-1 rounded text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card)] transition-colors"
+          title={expanded ? 'Collapse' : 'Expand'}
+        >
+          {expanded ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
+        </button>
       </div>
 
       {showHistory && historyRuns.length > 0 && (
@@ -127,7 +136,7 @@ export function AgentLogPanel({ issueId, onCancel }: AgentLogPanelProps) {
         </div>
       )}
 
-      <div ref={scrollRef} className="h-[240px] overflow-y-auto px-4 py-2 font-mono text-xs space-y-0.5">
+      <div ref={scrollRef} className={`${expanded ? 'h-[600px]' : 'h-[240px]'} overflow-y-auto px-4 py-2 font-mono text-xs space-y-0.5 transition-[height] duration-200`}>
         {entries.length === 0 && (
           <div className="text-[var(--text-secondary)] py-8 text-center">
             {showHistory ? 'No entries in this run.' : 'No agent activity yet. Run the issue to see live output.'}

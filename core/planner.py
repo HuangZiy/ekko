@@ -56,7 +56,7 @@ def _log_message(message, issue_id: str = "") -> None:
         cost = f"${message.total_cost_usd:.2f}" if message.total_cost_usd else "?"
         _log("Planner", C_GREEN, f"{tag}Done. turns={message.num_turns} cost={cost} duration={message.duration_ms // 1000}s")
         if message.is_error:
-            _log("Planner", C_RED, f"{tag}ERROR: {message.result}")
+            _log("Planner", C_RED, f"{tag}ERROR: {message.result or 'max turns reached'}")
 
 
 def _message_to_events(issue_id: str, message) -> list[dict]:

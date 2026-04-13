@@ -1,0 +1,37 @@
+{
+  "header": {
+    "runAll": "Run All",
+    "newIssue": "New Issue",
+    "switchToDark": "Switch to dark mode",
+    "switchToLight": "Switch to light mode"
+  },
+  "board": {
+    "selectProject": "Select a project or create one from the sidebar"
+  },
+  "issue": {
+    "create": {
+      "title": "New Issue",
+      "titleLabel": "Title",
+      "titlePlaceholder": "Issue title...",
+      "priorityLabel": "Priority",
+      "priority": {
+        "low": "Low",
+        "medium": "Medium",
+        "high": "High",
+        "urgent": "Urgent"
+      },
+      "labelsLabel": "Labels (comma-separated)",
+      "labelsPlaceholder": "bug, frontend, api",
+      "descriptionLabel": "Description (markdown)",
+      "descriptionPlaceholder": "Describe the issue...",
+      "blockedByLabel": "Blocked by (comma-separated issue IDs)",
+      "blockedByPlaceholder": "ISSUE-001, ISSUE-002",
+      "cancel": "Cancel",
+      "submit": "Create"
+    }
+  },
+  "error": {
+    "uiError": "UI Error",
+    "dismiss": "Dismiss"
+  }
+}

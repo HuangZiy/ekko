@@ -1,0 +1,37 @@
+{
+  "header": {
+    "runAll": "全部运行",
+    "newIssue": "新建问题",
+    "switchToDark": "切换到深色模式",
+    "switchToLight": "切换到浅色模式"
+  },
+  "board": {
+    "selectProject": "请从侧边栏选择或创建一个项目"
+  },
+  "issue": {
+    "create": {
+      "title": "新建问题",
+      "titleLabel": "标题",
+      "titlePlaceholder": "问题标题...",
+      "priorityLabel": "优先级",
+      "priority": {
+        "low": "低",
+        "medium": "中",
+        "high": "高",
+        "urgent": "紧急"
+      },
+      "labelsLabel": "标签（逗号分隔）",
+      "labelsPlaceholder": "缺陷, 前端, 接口",
+      "descriptionLabel": "描述（支持 Markdown）",
+      "descriptionPlaceholder": "描述该问题...",
+      "blockedByLabel": "被阻塞（逗号分隔的问题 ID）",
+      "blockedByPlaceholder": "ISSUE-001, ISSUE-002",
+      "cancel": "取消",
+      "submit": "创建"
+    }
+  },
+  "error": {
+    "uiError": "界面错误",
+    "dismiss": "关闭"
+  }
+}

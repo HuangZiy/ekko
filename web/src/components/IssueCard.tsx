@@ -1,6 +1,6 @@
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { GripVertical, AlertCircle, Clock, Tag, Play, Loader2 } from 'lucide-react'
+import { GripVertical, AlertCircle, Clock, Tag, Play, Square, Bot } from 'lucide-react'
 import type { Issue } from '../stores/boardStore'
 import { useBoardStore } from '../stores/boardStore'
 
@@ -21,6 +21,7 @@ export function IssueCard({ issue, onClick }: IssueCardProps) {
     id: issue.id,
   })
   const runSingleIssue = useBoardStore(s => s.runSingleIssue)
+  const wsSend = useBoardStore(s => s.wsSend)
   const isRunning = useBoardStore(s => s.runningIssueIds.includes(issue.id))
 
   const style = {
@@ -34,6 +35,11 @@ export function IssueCard({ issue, onClick }: IssueCardProps) {
   const handleRun = (e: React.MouseEvent) => {
     e.stopPropagation()
     runSingleIssue(issue.id)
+  }
+
+  const handleStop = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    if (wsSend) wsSend({ type: 'cancel_agent', issue_id: issue.id })
   }
 
   return (
@@ -50,16 +56,20 @@ export function IssueCard({ issue, onClick }: IssueCardProps) {
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1">
             <span className="text-xs text-gray-400 mb-1">{issue.id}</span>
-            {(isRunning || issue.status === 'in_progress') && (
-              <span className="ml-auto flex items-center gap-1 text-xs text-amber-600">
-                <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
-                </span>
-                Running
-              </span>
+            {issue.source === 'agent' && (
+              <Bot size={12} className="text-violet-500 mb-1" title="Created by Agent" />
             )}
-            {canRun && !isRunning && (
+            {(isRunning || issue.status === 'in_progress') && (
+              <button
+                onClick={handleStop}
+                className="ml-auto flex items-center gap-1 p-1 rounded hover:bg-red-50 text-red-500 hover:text-red-600 transition-colors"
+                title="Stop this issue"
+              >
+                <Square size={10} fill="currentColor" />
+                <span className="text-xs">Stop</span>
+              </button>
+            )}
+            {canRun && !isRunning && issue.status !== 'in_progress' && (
               <button
                 onClick={handleRun}
                 className="ml-auto p-1 rounded hover:bg-green-50 text-green-600 hover:text-green-700 transition-colors"

@@ -6,7 +6,7 @@ import type { Issue } from '../stores/boardStore'
 import { useBoardStore } from '../stores/boardStore'
 import {
   Clock, Tag, AlertCircle, CheckCircle2, XCircle, GitBranch,
-  Pencil, Save, X, Image, FileCode, FlaskConical, ShieldCheck, Play, ChevronDown, Trash2, Loader2
+  Pencil, Save, X, Image, FileCode, FlaskConical, ShieldCheck, Play, ChevronDown, Trash2, Loader2, Square, Bot, ArrowUpRight
 } from 'lucide-react'
 import { VALID_TRANSITIONS, STATUS_LABELS } from '../constants/transitions'
 import { AgentLogPanel } from './AgentLogPanel'
@@ -321,27 +321,28 @@ export function IssueDetail({ issue, onClose, onApprove, onReject, onRun, onDele
             </div>
           )}
 
-          {/* Run Action */}
-          {onRun && ['todo', 'backlog', 'rejected'].includes(issue.status) && (
+          {/* Run / Stop Action */}
+          {onRun && ['todo', 'backlog', 'rejected', 'failed'].includes(issue.status) && !isRunning && (
             <div className="border-t border-[var(--border)] pt-4">
               <button
                 onClick={onRun}
-                disabled={isRunning}
-                className="flex items-center gap-1.5 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-medium disabled:opacity-60 disabled:cursor-not-allowed"
+                className="flex items-center gap-1.5 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-medium"
               >
-                {isRunning ? (
-                  <><Loader2 size={16} className="animate-spin" /> Running...</>
-                ) : (
-                  <><Play size={16} /> Run</>
-                )}
+                <Play size={16} /> {issue.status === 'failed' ? 'Resume' : 'Run'}
               </button>
             </div>
           )}
-          {isRunning && !['todo', 'backlog', 'rejected'].includes(issue.status) && (
+          {(isRunning || issue.status === 'in_progress') && (
             <div className="border-t border-[var(--border)] pt-4">
-              <span className="flex items-center gap-1.5 text-sm text-amber-600">
-                <Loader2 size={16} className="animate-spin" /> Running...
-              </span>
+              <button
+                onClick={() => {
+                  const wsSend = useBoardStore.getState().wsSend
+                  if (wsSend) wsSend({ type: 'cancel_agent', issue_id: issue.id })
+                }}
+                className="flex items-center gap-1.5 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm font-medium"
+              >
+                <Square size={16} fill="currentColor" /> Stop
+              </button>
             </div>
           )}
 

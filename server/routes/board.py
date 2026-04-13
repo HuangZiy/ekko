@@ -29,6 +29,15 @@ def get_board(project_id: str):
     else:
         data = json.loads(board_file.read_text())
 
+    # Auto-heal: ensure all standard columns exist
+    from core.models import BOARD_COLUMNS
+    existing_col_ids = {col["id"] for col in data["columns"]}
+    for col_id, col_name in BOARD_COLUMNS:
+        if col_id not in existing_col_ids:
+            # Insert in correct position
+            target_idx = next((i for i, (cid, _) in enumerate(BOARD_COLUMNS) if cid == col_id), len(data["columns"]))
+            data["columns"].insert(target_idx, {"id": col_id, "name": col_name, "issues": []})
+
     # Auto-heal: ensure every issue appears on the board
     storage = ProjectStorage(project_dir)
     all_issues = storage.list_issues()

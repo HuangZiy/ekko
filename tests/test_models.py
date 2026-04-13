@@ -70,7 +70,7 @@ def test_project_create_default_key():
 
 def test_board_columns():
     board = Board.create()
-    assert len(board.columns) == 6
+    assert len(board.columns) == 7
     assert board.columns[0].id == "backlog"
     assert board.columns[-1].id == "human_done"
 

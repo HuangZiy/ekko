@@ -87,6 +87,9 @@ def build_issue_prompt(issue: Issue, storage: ProjectStorage, workspace: Path) -
     except FileNotFoundError:
         content = ""
 
+    plan = storage.load_issue_plan(issue.id)
+    plan_path = storage.issues_dir / issue.id / "plan.md"
+
     agent_md_path = workspace / "AGENT.md"
     agent_md = agent_md_path.read_text() if agent_md_path.exists() else ""
 
@@ -112,6 +115,13 @@ ID: {issue.id}
 ## 任务详情
 
 {content if content else '（无详细描述，请根据标题完成任务）'}
+
+## 执行计划 (plan.md)
+路径: {plan_path}
+
+{plan if plan else '（尚无计划，请先制定计划再实现）'}
+
+如需更新计划，直接 Write/Edit 上述路径。
 
 ## 项目构建指南 (AGENT.md)
 {agent_md}

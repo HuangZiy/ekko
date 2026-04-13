@@ -117,7 +117,6 @@ async def run_issue_loop(
         if not gen_stats.get("success"):
             _log("Generator", C_RED, f"Generator failed on attempt #{attempt}")
             await _emit_harness(on_event, issue.id, "generator", f"Failed on attempt #{attempt}", "error")
-            _append_log(issue, storage, "Generator Failed", f"Attempt #{attempt}")
             continue
 
         # Check cancellation before evaluator
@@ -141,7 +140,6 @@ async def run_issue_loop(
         # Evaluator found problems with current Issue → continue loop
         _log("Evaluator", C_YELLOW, f"Issue {issue.id} not passed, feedback appended")
         await _emit_harness(on_event, issue.id, "evaluator", "Not passed, feedback appended", "warning")
-        _append_log(issue, storage, f"Eval Feedback (attempt #{attempt})", eval_result.get("feedback", ""))
 
         # Evaluator found OTHER problems → create new Issues
         for new_title in eval_result.get("new_issues", []):
@@ -154,7 +152,6 @@ async def run_issue_loop(
         if issue.status == IssueStatus.IN_PROGRESS:
             issue.move_to(IssueStatus.FAILED)
             storage.save_issue(issue)
-            _append_log(issue, storage, "Cancelled", "User cancelled the run")
             await _sync_board(issue, storage, on_event)
             _log("State", C_YELLOW, f"{issue.id}: → failed (cancelled)")
             await _emit_harness(on_event, issue.id, "state", "→ failed (cancelled)", "warning")

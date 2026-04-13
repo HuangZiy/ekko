@@ -37,8 +37,8 @@ async def project_websocket(project_id: str, ws: WebSocket):
             elif msg_type == "cancel_agent":
                 issue_id = data.get("issue_id")
                 if issue_id:
-                    from server.routes.run import cancel_agent
-                    cancel_agent(issue_id)
+                    from server.routes.run import request_cancel
+                    request_cancel(issue_id)
     except WebSocketDisconnect:
         pass
     except Exception:

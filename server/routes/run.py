@@ -1,7 +1,7 @@
 """Run API routes — trigger issue execution from the Web UI."""
 
 from __future__ import annotations
-from typing import Set
+import asyncio
 
 from fastapi import APIRouter, BackgroundTasks, HTTPException
 from pydantic import BaseModel
@@ -10,23 +10,27 @@ from core.storage import ProjectStorage
 
 router = APIRouter(prefix="/api/projects/{project_id}/run", tags=["run"])
 
-# Active cancellation flags — issue_ids that should be cancelled
-_cancel_flags: Set[str] = set()
+# Active cancellation events — issue_id → asyncio.Event
+_cancel_events: dict[str, asyncio.Event] = {}
 
 
-def cancel_agent(issue_id: str) -> None:
-    """Set cancellation flag for an issue. Called from WS route."""
-    _cancel_flags.add(issue_id)
+def request_cancel(issue_id: str) -> None:
+    """Signal cancellation for a running issue. Called from WS route."""
+    ev = _cancel_events.get(issue_id)
+    if ev:
+        ev.set()
 
 
-def is_cancelled(issue_id: str) -> bool:
-    """Check if an issue has been cancelled."""
-    return issue_id in _cancel_flags
+def get_cancel_event(issue_id: str) -> asyncio.Event:
+    """Get or create a cancel event for an issue run."""
+    if issue_id not in _cancel_events:
+        _cancel_events[issue_id] = asyncio.Event()
+    return _cancel_events[issue_id]
 
 
 def clear_cancel(issue_id: str) -> None:
-    """Clear cancellation flag after run completes."""
-    _cancel_flags.discard(issue_id)
+    """Clean up cancel event after run completes."""
+    _cancel_events.pop(issue_id, None)
 
 
 def _get_storage(project_id: str) -> ProjectStorage:
@@ -79,11 +83,12 @@ async def _run_in_background(project_id: str, issue_id: str | None) -> None:
             })
             return
 
+        cancel_event = get_cancel_event(issue_id)
         run_counter = len(storage.list_run_ids(issue_id)) + 1
         await ws_manager.broadcast(project_id, {
             "type": "agent_started", "data": {"issue_id": issue_id, "title": issue.title},
         })
-        stats = await run_issue_loop(issue, storage, workspace, on_event=on_event)
+        stats = await run_issue_loop(issue, storage, workspace, on_event=on_event, cancel_event=cancel_event)
         clear_cancel(issue_id)
         await ws_manager.broadcast(project_id, {
             "type": "agent_done", "data": {
@@ -100,11 +105,12 @@ async def _run_in_background(project_id: str, issue_id: str | None) -> None:
             return
 
         for issue in ready:
+            cancel_event = get_cancel_event(issue.id)
             run_counter = len(storage.list_run_ids(issue.id)) + 1
             await ws_manager.broadcast(project_id, {
                 "type": "agent_started", "data": {"issue_id": issue.id, "title": issue.title},
             })
-            stats = await run_issue_loop(issue, storage, workspace, on_event=on_event)
+            stats = await run_issue_loop(issue, storage, workspace, on_event=on_event, cancel_event=cancel_event)
             clear_cancel(issue.id)
             await ws_manager.broadcast(project_id, {
                 "type": "agent_done", "data": {

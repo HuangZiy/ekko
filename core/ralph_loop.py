@@ -71,6 +71,7 @@ async def run_issue_loop(
     workspace: Path,
     max_retries: int = 3,
     on_event: Callable[[dict], Awaitable[None]] | None = None,
+    cancel_event: asyncio.Event | None = None,
 ) -> dict:
     """Ralph Loop for a single Issue.
 
@@ -104,14 +105,26 @@ async def run_issue_loop(
         # --- Generator: Ralph writes code ---
         _log("Generator", C_CYAN, f"Starting: {issue.title}")
         await _emit_harness(on_event, issue.id, "generator", f"Starting: {issue.title}")
-        gen_stats = await _run_generator(issue, storage, workspace, on_event)
+        gen_stats = await _run_generator(issue, storage, workspace, on_event, cancel_event)
         all_stats.append({"phase": "generator", "attempt": attempt, **gen_stats})
+
+        # Check cancellation after generator
+        if gen_stats.get("cancelled") or (cancel_event and cancel_event.is_set()):
+            _log("Cancel", C_YELLOW, f"{issue.id}: cancelled by user")
+            await _emit_harness(on_event, issue.id, "state", "Cancelled by user", "warning")
+            break
 
         if not gen_stats.get("success"):
             _log("Generator", C_RED, f"Generator failed on attempt #{attempt}")
             await _emit_harness(on_event, issue.id, "generator", f"Failed on attempt #{attempt}", "error")
             _append_log(issue, storage, "Generator Failed", f"Attempt #{attempt}")
             continue
+
+        # Check cancellation before evaluator
+        if cancel_event and cancel_event.is_set():
+            _log("Cancel", C_YELLOW, f"{issue.id}: cancelled by user")
+            await _emit_harness(on_event, issue.id, "state", "Cancelled by user", "warning")
+            break
 
         # --- Evaluator: verify THIS Issue only ---
         _log("Evaluator", C_MAGENTA, f"Verifying: {issue.title}")
@@ -132,25 +145,37 @@ async def run_issue_loop(
 
         # Evaluator found OTHER problems → create new Issues
         for new_title in eval_result.get("new_issues", []):
-            _create_side_issue(new_title, storage)
+            _create_side_issue(new_title, storage, parent_issue_id=issue.id)
 
-    # === 3. Collect evidence ===
-    _log("Evidence", C_CYAN, f"Collecting evidence for {issue.id}")
-    await _emit_harness(on_event, issue.id, "evidence", "Collecting evidence")
-    collect_evidence(issue.id, storage, workspace, run_build=True)
+    # === 3. Handle cancellation → FAILED ===
+    cancelled = cancel_event and cancel_event.is_set()
+    if cancelled:
+        issue = storage.load_issue(issue.id)
+        if issue.status == IssueStatus.IN_PROGRESS:
+            issue.move_to(IssueStatus.FAILED)
+            storage.save_issue(issue)
+            _append_log(issue, storage, "Cancelled", "User cancelled the run")
+            await _sync_board(issue, storage, on_event)
+            _log("State", C_YELLOW, f"{issue.id}: → failed (cancelled)")
+            await _emit_harness(on_event, issue.id, "state", "→ failed (cancelled)", "warning")
+    else:
+        # === 4. Collect evidence ===
+        _log("Evidence", C_CYAN, f"Collecting evidence for {issue.id}")
+        await _emit_harness(on_event, issue.id, "evidence", "Collecting evidence")
+        collect_evidence(issue.id, storage, workspace, run_build=True)
 
-    # === 4. State: → Agent Done ===
-    issue = storage.load_issue(issue.id)
-    if issue.status == IssueStatus.IN_PROGRESS:
-        issue.move_to(IssueStatus.AGENT_DONE)
-        storage.save_issue(issue)
-        await _sync_board(issue, storage, on_event)
-        if passed:
-            _log("State", C_GREEN, f"{issue.id}: → agent_done (PASSED, awaiting human review)")
-            await _emit_harness(on_event, issue.id, "state", "→ agent_done (PASSED)", "success")
-        else:
-            _log("State", C_YELLOW, f"{issue.id}: → agent_done (max retries, needs human review)")
-            await _emit_harness(on_event, issue.id, "state", "→ agent_done (max retries)", "warning")
+        # === 5. State: → Agent Done ===
+        issue = storage.load_issue(issue.id)
+        if issue.status == IssueStatus.IN_PROGRESS:
+            issue.move_to(IssueStatus.AGENT_DONE)
+            storage.save_issue(issue)
+            await _sync_board(issue, storage, on_event)
+            if passed:
+                _log("State", C_GREEN, f"{issue.id}: → agent_done (PASSED, awaiting human review)")
+                await _emit_harness(on_event, issue.id, "state", "→ agent_done (PASSED)", "success")
+            else:
+                _log("State", C_YELLOW, f"{issue.id}: → agent_done (max retries, needs human review)")
+                await _emit_harness(on_event, issue.id, "state", "→ agent_done (max retries)", "warning")
 
     # Aggregate stats
     total_cost = sum(s.get("cost_usd", 0) for s in all_stats)
@@ -175,10 +200,11 @@ async def _run_generator(
     storage: ProjectStorage,
     workspace: Path,
     on_event: Callable[[dict], Awaitable[None]] | None = None,
+    cancel_event: asyncio.Event | None = None,
 ) -> dict:
     """Call Ralph to implement the Issue. Returns stats dict."""
     from core.executor import execute_issue
-    return await execute_issue(issue, storage, workspace, on_event=on_event)
+    return await execute_issue(issue, storage, workspace, on_event=on_event, cancel_event=cancel_event)
 
 
 # ---------------------------------------------------------------------------
@@ -237,12 +263,15 @@ async def _run_evaluator(issue: Issue, storage: ProjectStorage, workspace: Path)
 # Helpers
 # ---------------------------------------------------------------------------
 
-def _create_side_issue(title: str, storage: ProjectStorage) -> None:
+def _create_side_issue(title: str, storage: ProjectStorage, parent_issue_id: str | None = None) -> None:
     """Create a new Issue from Evaluator findings and add to board."""
     project = storage.load_project_meta()
     prefix = project.key if project else "ISS"
     issue_id = storage.next_issue_id(prefix)
     new_issue = Issue.create(id=issue_id, title=title, labels=["eval-finding"])
+    new_issue.source = "agent"
+    if parent_issue_id:
+        new_issue.parent_id = parent_issue_id
     new_issue.move_to(IssueStatus.TODO)
     storage.save_issue(new_issue)
 

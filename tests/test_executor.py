@@ -1,5 +1,5 @@
 import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch, MagicMock, AsyncMock
 from claude_agent_sdk import ResultMessage
 from core.models import Issue, IssueStatus
 from core.storage import ProjectStorage
@@ -46,10 +46,15 @@ async def test_execute_issue_success(tmp_path):
     mock_result.usage = {"input_tokens": 100, "output_tokens": 50}
     mock_result.result = "Done"
 
-    async def mock_query(*args, **kwargs):
+    async def mock_receive():
         yield mock_result
 
-    with patch("core.executor.query", mock_query):
+    mock_client = AsyncMock()
+    mock_client.connect = AsyncMock()
+    mock_client.disconnect = AsyncMock()
+    mock_client.receive_messages = mock_receive
+
+    with patch("core.executor.ClaudeSDKClient", return_value=mock_client):
         stats = await execute_issue(issue, store, tmp_path / "ws")
 
     assert stats["success"] is True
@@ -76,10 +81,15 @@ async def test_execute_issue_failure(tmp_path):
     mock_result.usage = {}
     mock_result.result = "Error occurred"
 
-    async def mock_query(*args, **kwargs):
+    async def mock_receive():
         yield mock_result
 
-    with patch("core.executor.query", mock_query):
+    mock_client = AsyncMock()
+    mock_client.connect = AsyncMock()
+    mock_client.disconnect = AsyncMock()
+    mock_client.receive_messages = mock_receive
+
+    with patch("core.executor.ClaudeSDKClient", return_value=mock_client):
         stats = await execute_issue(issue, store, tmp_path / "ws")
 
     assert stats["success"] is False

@@ -4,12 +4,13 @@ Does NOT manage state transitions. That's the scheduler's job.
 """
 
 from __future__ import annotations
+import asyncio
 import time
 from pathlib import Path
 from typing import Awaitable, Callable
 
 from claude_agent_sdk import (
-    query, ClaudeAgentOptions, ResultMessage,
+    ClaudeSDKClient, ClaudeAgentOptions, ResultMessage,
     AssistantMessage, SystemMessage, TextBlock, ToolUseBlock, ToolResultBlock,
 )
 from config import MODEL, MAX_TURNS_PER_LOOP, MAX_BUDGET_PER_LOOP
@@ -129,11 +130,13 @@ async def execute_issue(
     storage: ProjectStorage,
     workspace: Path,
     on_event: Callable[[dict], Awaitable[None]] | None = None,
+    cancel_event: asyncio.Event | None = None,
 ) -> dict:
     """Execute a single Issue via Ralph. Returns stats dict.
 
     Does NOT change issue status — caller (scheduler) handles that.
     on_event: optional async callback for streaming events to WebSocket/logs.
+    cancel_event: if set, interrupt the agent and return early with cancelled=True.
     """
     _log("Task", C_CYAN, f"{issue.id}: {issue.title}")
 
@@ -147,30 +150,52 @@ async def execute_issue(
             "data": {"status": "thinking"},
         })
 
-    async for message in query(
-        prompt=prompt,
-        options=ClaudeAgentOptions(
-            model=MODEL,
-            allowed_tools=["Read", "Write", "Edit", "Bash", "Glob", "Grep", "Agent"],
-            cwd=str(workspace),
-            max_turns=MAX_TURNS_PER_LOOP,
-            max_budget_usd=MAX_BUDGET_PER_LOOP,
-            permission_mode="bypassPermissions",
-        ),
-    ):
-        _log_message(message)
+    client = ClaudeSDKClient(options=ClaudeAgentOptions(
+        model=MODEL,
+        allowed_tools=["Read", "Write", "Edit", "Bash", "Glob", "Grep", "Agent"],
+        cwd=str(workspace),
+        max_turns=MAX_TURNS_PER_LOOP,
+        max_budget_usd=MAX_BUDGET_PER_LOOP,
+        permission_mode="bypassPermissions",
+    ))
 
-        if on_event:
-            for event in _message_to_events(issue.id, message):
-                await on_event(event)
+    try:
+        await client.connect(prompt)
 
-        if isinstance(message, ResultMessage):
-            stats.update({
-                "success": not message.is_error,
-                "cost_usd": message.total_cost_usd or 0,
-                "duration_ms": message.duration_ms,
-                "num_turns": message.num_turns,
-                "usage": message.usage or {},
-            })
+        async for message in client.receive_messages():
+            _log_message(message)
+
+            if on_event:
+                for event in _message_to_events(issue.id, message):
+                    await on_event(event)
+
+            if isinstance(message, ResultMessage):
+                stats.update({
+                    "success": not message.is_error,
+                    "cost_usd": message.total_cost_usd or 0,
+                    "duration_ms": message.duration_ms,
+                    "num_turns": message.num_turns,
+                    "usage": message.usage or {},
+                })
+
+            # Check cancellation after each message
+            if cancel_event and cancel_event.is_set():
+                _log("Cancel", C_YELLOW, f"{issue.id}: interrupted by user")
+                try:
+                    await client.interrupt()
+                except Exception:
+                    pass
+                stats["cancelled"] = True
+                if on_event:
+                    await on_event({
+                        "ts": int(time.time()), "type": "agent_status", "issue_id": issue.id,
+                        "data": {"status": "cancelled"},
+                    })
+                break
+    finally:
+        try:
+            await client.disconnect()
+        except Exception:
+            pass
 
     return stats

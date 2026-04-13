@@ -12,6 +12,7 @@ import { IssueDetail } from './components/IssueDetail'
 import { ProjectSidebar } from './components/ProjectSidebar'
 import { ProjectDetail } from './components/ProjectDetail'
 import { RunLogPanel } from './components/RunLogPanel'
+import { MarkdownEditor } from './components/MarkdownEditor'
 import { LayoutDashboard, Plus, Play, Sun, Moon } from 'lucide-react'
 import { AnimatePresence } from 'framer-motion'
 import './index.css'
@@ -63,7 +64,7 @@ function App() {
   const activeProjectId = useProjectStore(s => s.activeProjectId)
   const activeProject = useProjectStore(s => s.projects.find(p => p.id === s.activeProjectId))
 
-  const { sendMessage } = useWebSocket()
+  useWebSocket()
 
   useEffect(() => {
     fetchProjects()
@@ -255,12 +256,11 @@ function App() {
               {/* Description */}
               <div>
                 <label className="text-xs font-medium text-[var(--text-secondary)] mb-1 block">Description (markdown)</label>
-                <textarea
+                <MarkdownEditor
                   value={newDescription}
-                  onChange={e => setNewDescription(e.target.value)}
+                  onChange={setNewDescription}
                   placeholder="Describe the issue..."
-                  rows={4}
-                  className="w-full px-3 py-2 border border-[var(--border)] rounded-lg text-sm bg-[var(--input-bg)] text-[var(--text-primary)] resize-y focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
+                  rows={6}
                 />
               </div>
 

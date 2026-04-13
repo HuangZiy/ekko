@@ -57,7 +57,7 @@ export function IssueCard({ issue, onClick }: IssueCardProps) {
           <div className="flex items-center gap-1">
             <span className="text-xs text-gray-400 mb-1">{issue.id}</span>
             {issue.source === 'agent' && (
-              <Bot size={12} className="text-violet-500 mb-1" title="Created by Agent" />
+              <Bot size={12} className="text-violet-500 mb-1" />
             )}
             {(isRunning || issue.status === 'in_progress') && (
               <button

@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState, useMemo } from 'react'
+import { useRef, useEffect, useState } from 'react'
 import { useBoardStore } from '../stores/boardStore'
 import type { AgentLogEntry } from '../stores/boardStore'
 import { Terminal, Square, History, Maximize2, Minimize2 } from 'lucide-react'

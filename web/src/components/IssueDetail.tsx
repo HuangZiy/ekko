@@ -4,9 +4,10 @@ import remarkGfm from 'remark-gfm'
 import { motion } from 'framer-motion'
 import type { Issue } from '../stores/boardStore'
 import { useBoardStore } from '../stores/boardStore'
+import { MarkdownEditor } from './MarkdownEditor'
 import {
   Clock, Tag, AlertCircle, CheckCircle2, XCircle, GitBranch,
-  Pencil, Save, X, Image, FileCode, FlaskConical, ShieldCheck, Play, ChevronDown, Trash2, Loader2, Square, Bot, ArrowUpRight
+  Pencil, Save, X, Image, FileCode, FlaskConical, ShieldCheck, Play, ChevronDown, Trash2, Square, Bot, ArrowUpRight
 } from 'lucide-react'
 import { VALID_TRANSITIONS, STATUS_LABELS } from '../constants/transitions'
 import { AgentLogPanel } from './AgentLogPanel'
@@ -494,11 +495,13 @@ export function IssueDetail({ issue, onClose, onApprove, onReject, onRun, onDele
               )}
             </div>
             {editingPlan ? (
-              <textarea
+              <MarkdownEditor
                 value={editPlan}
-                onChange={e => setEditPlan(e.target.value)}
-                className="w-full h-64 p-3 border border-[var(--border)] rounded-lg text-sm font-mono resize-y bg-[var(--input-bg)] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
+                onChange={setEditPlan}
                 placeholder="Execution plan (markdown)..."
+                rows={10}
+                projectId={useBoardStore.getState().projectId}
+                issueId={issue.id}
               />
             ) : (
               <div className="prose prose-sm max-w-none">
@@ -541,11 +544,13 @@ export function IssueDetail({ issue, onClose, onApprove, onReject, onRun, onDele
               )}
             </div>
             {editingContent ? (
-              <textarea
+              <MarkdownEditor
                 value={editContent}
-                onChange={e => setEditContent(e.target.value)}
-                className="w-full h-64 p-3 border border-[var(--border)] rounded-lg text-sm font-mono resize-y bg-[var(--input-bg)] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
+                onChange={setEditContent}
                 placeholder="Markdown content..."
+                rows={10}
+                projectId={useBoardStore.getState().projectId}
+                issueId={issue.id}
               />
             ) : (
               <div className="prose prose-sm max-w-none">

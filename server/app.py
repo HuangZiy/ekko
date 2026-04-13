@@ -8,7 +8,7 @@ from pathlib import Path
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from server.routes import issues, board, projects, reviews, run, fs
+from server.routes import issues, board, projects, reviews, run, fs, uploads
 from server.routes import ws as ws_route
 
 _harness_root: Path | None = None
@@ -85,6 +85,7 @@ def create_app(harness_root: Path | None = None) -> FastAPI:
     app.include_router(reviews.router)
     app.include_router(run.router)
     app.include_router(fs.router)
+    app.include_router(uploads.router)
     app.include_router(ws_route.router)
 
     @app.on_event("startup")

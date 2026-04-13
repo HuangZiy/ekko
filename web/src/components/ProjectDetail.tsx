@@ -43,16 +43,25 @@ export function ProjectDetail({ project: projectProp, onClose }: ProjectDetailPr
   const updateProject = useProjectStore(s => s.updateProject)
   const issues = useBoardStore(s => s.issues)
 
+  // Sync edit fields when project data changes (use primitives for stable deps)
+  const projectKey = project.key
+  const projectName = project.name
+  const projectWorkspace = project.workspaces?.[0] || ''
   useEffect(() => {
-    setEditName(project.name)
-    setEditWorkspace(project.workspaces?.[0] || '')
-    setEditKey(project.key || 'ISS')
-    fetch(`/api/projects/${project.id}`)
+    setEditName(projectName)
+    setEditWorkspace(projectWorkspace)
+    setEditKey(projectKey || 'ISS')
+  }, [projectKey, projectName, projectWorkspace])
+
+  // Fetch run stats separately
+  const projectId = project.id
+  useEffect(() => {
+    fetch(`/api/projects/${projectId}`)
       .then(r => r.json())
       .then(data => {
         if (data.run_stats) setProjectStats(data.run_stats)
       })
-  }, [project])
+  }, [projectId])
 
   // Compute issue stats from boardStore for live data
   const issueStats: Record<string, number> = {}

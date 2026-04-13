@@ -64,11 +64,20 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   },
 
   updateProject: async (projectId, patch) => {
-    await fetch(`/api/projects/${projectId}`, {
+    const res = await fetch(`/api/projects/${projectId}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(patch),
     })
+    if (res.ok) {
+      const updated = await res.json()
+      // Immediately update the specific project in the store so UI reflects changes
+      set(state => ({
+        projects: state.projects.map(p =>
+          p.id === projectId ? { ...p, ...updated } : p
+        ),
+      }))
+    }
     await get().fetchProjects()
   },
 }))

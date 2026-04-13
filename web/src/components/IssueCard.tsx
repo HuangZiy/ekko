@@ -22,7 +22,7 @@ export function IssueCard({ issue, onClick }: IssueCardProps) {
   })
   const runSingleIssue = useBoardStore(s => s.runSingleIssue)
   const stopIssue = useBoardStore(s => s.stopIssue)
-  const isRunning = useBoardStore(s => s.runningIssueIds.includes(issue.id))
+  const isRunning = useBoardStore(s => s.runningIssueIds.includes(issue.id)) || issue.status === 'in_progress'
 
   const style = {
     transform: CSS.Transform.toString(transform),

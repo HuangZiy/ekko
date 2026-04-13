@@ -108,12 +108,22 @@ def create_app(harness_root: Path | None = None) -> FastAPI:
                     from server.ws import ws_manager
                     from core.models import IssueStatus
                     from core.storage import PlatformStorage
+                    from datetime import datetime, timezone
                     root = get_harness_root()
                     platform = PlatformStorage(root)
+                    now = datetime.now(timezone.utc)
                     for pid, _ in platform.list_projects():
                         storage = platform.get_project_storage(pid)
                         for issue in storage.list_issues():
                             if issue.status == IssueStatus.IN_PROGRESS and issue.id not in _cancel_events:
+                                # Only reset if stuck for > 60s
+                                try:
+                                    updated = datetime.fromisoformat(issue.updated_at)
+                                    age = (now - updated).total_seconds()
+                                except Exception:
+                                    age = 999
+                                if age < 60:
+                                    continue
                                 issue.move_to(IssueStatus.TODO)
                                 storage.save_issue(issue)
                                 _move_board_column(storage, issue.id, "todo")

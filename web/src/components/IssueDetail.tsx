@@ -120,7 +120,7 @@ export function IssueDetail({ issue, onClose, onApprove, onReject, onRun, onDele
   const updateIssue = useBoardStore(s => s.updateIssue)
   const updateIssueContent = useBoardStore(s => s.updateIssueContent)
   const updateIssuePlan = useBoardStore(s => s.updateIssuePlan)
-  const isRunning = useBoardStore(s => s.runningIssueIds.includes(issue.id))
+  const isRunning = useBoardStore(s => s.runningIssueIds.includes(issue.id)) || issue.status === 'in_progress'
   const fetchBoard = useBoardStore(s => s.fetchBoard)
   const fetchIssues = useBoardStore(s => s.fetchIssues)
 

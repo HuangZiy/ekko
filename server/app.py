@@ -135,7 +135,7 @@ def create_app(harness_root: Path | None = None) -> FastAPI:
         unblocked issues are picked up without any manual trigger.
         """
         try:
-            from core.scheduler import scheduler
+            from core.scheduler import scheduler, _slog
             from core.storage import PlatformStorage
             from server.ws import ws_manager
 
@@ -143,16 +143,24 @@ def create_app(harness_root: Path | None = None) -> FastAPI:
             platform = PlatformStorage(root)
             projects = platform.list_projects()
 
-            for pid,project in projects:
-                async def _make_on_event(project_id: str):
-                    async def on_event(event: dict) -> None:
-                        await ws_manager.broadcast(project_id, event)
-                    return on_event
+            _slog(f"auto_start_schedulers: found {len(projects)} project(s)")
 
-                on_event = await _make_on_event(pid)
-                await scheduler.start(pid, on_event=on_event)
+            for pid, project in projects:
+                try:
+                    def _make_on_event(project_id: str):
+                        async def on_event(event: dict) -> None:
+                            await ws_manager.broadcast(project_id, event)
+                        return on_event
+
+                    on_event = _make_on_event(pid)
+                    await scheduler.start(pid, on_event=on_event)
+                    _slog(f"auto_start_schedulers: {pid} — OK")
+                except Exception:
+                    import traceback
+                    _slog(f"auto_start_schedulers: {pid} — FAILED: {traceback.format_exc()}")
         except Exception:
-            import logging
+            import logging, traceback
+            print(f"[Scheduler] FATAL: auto_start_schedulers crashed: {traceback.format_exc()}", flush=True)
             logging.getLogger("ekko.scheduler").exception(
                 "Failed to auto-start schedulers on startup"
             )

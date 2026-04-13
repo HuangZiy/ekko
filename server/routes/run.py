@@ -85,19 +85,23 @@ async def _run_in_background(project_id: str, issue_id: str | None) -> None:
         try:
             stats = await run_issue_loop(issue, storage, workspace, on_event=on_event, cancel_event=cancel_event)
             run_id = f"run-{run_counter:03d}"
-            storage.save_run_stats(issue_id, run_id, stats)
-            await ws_manager.broadcast(project_id, {
-                "type": "agent_done", "data": {
-                    "issue_id": issue_id, "success": stats["success"],
-                    "cost_usd": stats.get("cost_usd", 0),
-                },
-            })
+            try:
+                storage.save_run_stats(issue_id, run_id, stats)
+            except Exception:
+                pass
         except Exception as e:
+            stats = {"success": False, "cost_usd": 0}
             await ws_manager.broadcast(project_id, {
                 "type": "run_error", "data": {"issue_id": issue_id, "error": str(e)},
             })
         finally:
             clear_cancel(issue_id)
+            await ws_manager.broadcast(project_id, {
+                "type": "agent_done", "data": {
+                    "issue_id": issue_id, "success": stats.get("success", False),
+                    "cost_usd": stats.get("cost_usd", 0),
+                },
+            })
     else:
         ready = find_ready_issues(storage)
         if not ready:
@@ -115,19 +119,23 @@ async def _run_in_background(project_id: str, issue_id: str | None) -> None:
             try:
                 stats = await run_issue_loop(issue, storage, workspace, on_event=on_event, cancel_event=cancel_event)
                 run_id = f"run-{run_counter:03d}"
-                storage.save_run_stats(issue.id, run_id, stats)
-                await ws_manager.broadcast(project_id, {
-                    "type": "agent_done", "data": {
-                        "issue_id": issue.id, "success": stats["success"],
-                        "cost_usd": stats.get("cost_usd", 0),
-                    },
-                })
+                try:
+                    storage.save_run_stats(issue.id, run_id, stats)
+                except Exception:
+                    pass
             except Exception as e:
+                stats = {"success": False, "cost_usd": 0}
                 await ws_manager.broadcast(project_id, {
                     "type": "run_error", "data": {"issue_id": issue.id, "error": str(e)},
                 })
             finally:
                 clear_cancel(issue.id)
+                await ws_manager.broadcast(project_id, {
+                    "type": "agent_done", "data": {
+                        "issue_id": issue.id, "success": stats.get("success", False),
+                        "cost_usd": stats.get("cost_usd", 0),
+                    },
+                })
 
 
 @router.post("")

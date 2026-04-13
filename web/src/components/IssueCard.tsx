@@ -21,7 +21,7 @@ export function IssueCard({ issue, onClick }: IssueCardProps) {
     id: issue.id,
   })
   const runSingleIssue = useBoardStore(s => s.runSingleIssue)
-  const wsSend = useBoardStore(s => s.wsSend)
+  const stopIssue = useBoardStore(s => s.stopIssue)
   const isRunning = useBoardStore(s => s.runningIssueIds.includes(issue.id))
 
   const style = {
@@ -39,7 +39,7 @@ export function IssueCard({ issue, onClick }: IssueCardProps) {
 
   const handleStop = (e: React.MouseEvent) => {
     e.stopPropagation()
-    if (wsSend) wsSend({ type: 'cancel_agent', issue_id: issue.id })
+    stopIssue(issue.id)
   }
 
   return (

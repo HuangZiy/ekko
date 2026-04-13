@@ -370,10 +370,7 @@ export function IssueDetail({ issue, onClose, onApprove, onReject, onRun, onDele
           {(isRunning || issue.status === 'in_progress') && (
             <div className="border-t border-[var(--border)] pt-4">
               <button
-                onClick={() => {
-                  const wsSend = useBoardStore.getState().wsSend
-                  if (wsSend) wsSend({ type: 'cancel_agent', issue_id: issue.id })
-                }}
+                onClick={() => useBoardStore.getState().stopIssue(issue.id)}
                 className="flex items-center gap-1.5 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm font-medium"
               >
                 <Square size={16} fill="currentColor" /> Stop

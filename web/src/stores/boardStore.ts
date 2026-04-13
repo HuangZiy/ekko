@@ -70,6 +70,7 @@ interface BoardState {
   deleteIssue: (issueId: string) => Promise<void>
   runAllIssues: () => Promise<void>
   runSingleIssue: (issueId: string) => Promise<void>
+  stopIssue: (issueId: string) => Promise<void>
   addSSELog: (entry: SSELogEntry) => void
   clearSSELog: () => void
   appendAgentLog: (issueId: string, entry: AgentLogEntry) => void
@@ -230,6 +231,20 @@ export const useBoardStore = create<BoardState>((set, get) => ({
     if (!projectId) return
     get().addRunningIssue(issueId)
     await fetch(`/api/projects/${projectId}/run`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ issue_id: issueId }),
+    })
+  },
+
+  stopIssue: async (issueId) => {
+    const { projectId, wsSend } = get()
+    if (!projectId) return
+    // Try WS first, then fallback to REST
+    if (wsSend) {
+      wsSend({ type: 'cancel_agent', issue_id: issueId })
+    }
+    await fetch(`/api/projects/${projectId}/run/cancel`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ issue_id: issueId }),

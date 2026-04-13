@@ -125,3 +125,14 @@ async def run_issues(project_id: str, req: RunRequest, background_tasks: Backgro
     _get_storage(project_id)  # validate project exists
     background_tasks.add_task(_run_in_background, project_id, req.issue_id)
     return {"ok": True, "issue_id": req.issue_id}
+
+
+class CancelRequest(BaseModel):
+    issue_id: str
+
+
+@router.post("/cancel")
+async def cancel_issue(project_id: str, req: CancelRequest):
+    _get_storage(project_id)  # validate project exists
+    request_cancel(req.issue_id)
+    return {"ok": True, "issue_id": req.issue_id}

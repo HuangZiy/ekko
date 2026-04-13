@@ -22,9 +22,8 @@ def request_cancel(issue_id: str) -> None:
 
 
 def get_cancel_event(issue_id: str) -> asyncio.Event:
-    """Get or create a cancel event for an issue run."""
-    if issue_id not in _cancel_events:
-        _cancel_events[issue_id] = asyncio.Event()
+    """Create a fresh cancel event for a new run. Replaces any stale event."""
+    _cancel_events[issue_id] = asyncio.Event()
     return _cancel_events[issue_id]
 
 

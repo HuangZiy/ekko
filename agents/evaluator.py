@@ -10,6 +10,7 @@ import os
 import subprocess
 import time
 from pathlib import Path
+from typing import Awaitable, Callable
 
 from claude_agent_sdk import (
     query, ClaudeAgentOptions, ResultMessage,
@@ -80,7 +81,11 @@ def _stop_dev_server(server):
     server.wait()
 
 
-async def _run_eval_query(prompt: str, ss_dir: Path, workspace: Path, max_turns: int = 40) -> tuple[str, dict]:
+async def _run_eval_query(
+    prompt: str, ss_dir: Path, workspace: Path, max_turns: int = 40,
+    on_event: Callable[[dict], Awaitable[None]] | None = None,
+    issue_id: str = "",
+) -> tuple[str, dict]:
     system_prompt_path = PROMPTS_DIR / "evaluator_system.md"
     system_prompt = system_prompt_path.read_text() if system_prompt_path.exists() else ""
 
@@ -103,6 +108,12 @@ async def _run_eval_query(prompt: str, ss_dir: Path, workspace: Path, max_turns:
         ),
     ):
         _log_message(message)
+
+        if on_event and issue_id:
+            from core.executor import _message_to_events
+            for event in _message_to_events(issue_id, message):
+                await on_event(event)
+
         if isinstance(message, ResultMessage):
             result = message.result
             stats = {
@@ -125,6 +136,7 @@ async def run_issue_eval(
     issue_content: str,
     screenshots_dir: Path | None = None,
     workspace: Path | None = None,
+    on_event: Callable[[dict], Awaitable[None]] | None = None,
 ) -> tuple[str, dict]:
     """Evaluate a specific Issue's completion. Returns (report, stats).
 
@@ -178,7 +190,7 @@ async def run_issue_eval(
 - 格式 JPEG quality 50
 - 保存到 {ss_dir}"""
 
-        return await _run_eval_query(prompt, ss_dir, ws, max_turns=30)
+        return await _run_eval_query(prompt, ss_dir, ws, max_turns=30, on_event=on_event, issue_id=issue_id)
     finally:
         _stop_dev_server(server)
 

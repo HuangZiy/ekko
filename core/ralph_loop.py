@@ -128,7 +128,7 @@ async def run_issue_loop(
         # --- Evaluator: verify THIS Issue only ---
         _log("Evaluator", C_MAGENTA, f"Verifying: {issue.title}")
         await _emit_harness(on_event, issue.id, "evaluator", f"Verifying: {issue.title}")
-        eval_result = await _run_evaluator(issue, storage, workspace)
+        eval_result = await _run_evaluator(issue, storage, workspace, on_event)
         all_stats.append({"phase": "evaluator", "attempt": attempt, **eval_result.get("stats", {})})
 
         if eval_result["passed"]:
@@ -208,7 +208,10 @@ async def _run_generator(
 # Evaluator
 # ---------------------------------------------------------------------------
 
-async def _run_evaluator(issue: Issue, storage: ProjectStorage, workspace: Path) -> dict:
+async def _run_evaluator(
+    issue: Issue, storage: ProjectStorage, workspace: Path,
+    on_event: Callable[[dict], Awaitable[None]] | None = None,
+) -> dict:
     """Run Evaluator to verify THIS Issue. Returns {passed, feedback, new_issues, stats}."""
     from agents.evaluator import run_issue_eval
 
@@ -227,6 +230,7 @@ async def _run_evaluator(issue: Issue, storage: ProjectStorage, workspace: Path)
             issue_content=content,
             screenshots_dir=screenshots_dir,
             workspace=workspace,
+            on_event=on_event,
         )
     except Exception as e:
         _log("Evaluator", C_RED, f"Eval error: {e}")

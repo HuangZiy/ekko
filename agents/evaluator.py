@@ -16,7 +16,7 @@ from claude_agent_sdk import (
     query, ClaudeAgentOptions, ResultMessage,
     AssistantMessage, SystemMessage, TextBlock, ToolUseBlock, ToolResultBlock,
 )
-from config import MODEL, WORKSPACE_DIR
+from config import MODEL
 
 
 PROMPTS_DIR = Path("prompts")
@@ -156,7 +156,9 @@ async def run_issue_eval(
     - [NEW_ISSUE] title — unrelated problem found (harness creates a new Issue)
     """
     from config import SCREENSHOTS_DIR as DEFAULT_SCREENSHOTS_DIR
-    ws = workspace or WORKSPACE_DIR
+    ws = workspace
+    if not ws:
+        raise ValueError("workspace is required for run_issue_eval")
     ss_dir = screenshots_dir or DEFAULT_SCREENSHOTS_DIR
     ss_dir.mkdir(parents=True, exist_ok=True)
 
@@ -229,7 +231,9 @@ async def run_incremental_eval(
 async def run_full_eval(screenshots_dir: Path | None = None, workspace: Path | None = None) -> tuple[str, dict]:
     """Full four-dimension evaluation with Playwright."""
     from config import SCREENSHOTS_DIR as DEFAULT_SCREENSHOTS_DIR
-    ws = workspace or WORKSPACE_DIR
+    ws = workspace
+    if not ws:
+        raise ValueError("workspace is required for run_issue_eval")
     ss_dir = screenshots_dir or DEFAULT_SCREENSHOTS_DIR
     ss_dir.mkdir(parents=True, exist_ok=True)
 

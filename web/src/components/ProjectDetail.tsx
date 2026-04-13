@@ -28,7 +28,11 @@ const statusLabels: Record<string, string> = {
   human_done: 'Human Done',
 }
 
-export function ProjectDetail({ project, onClose }: ProjectDetailProps) {
+export function ProjectDetail({ project: projectProp, onClose }: ProjectDetailProps) {
+  // Subscribe to store for live updates after save
+  const storeProject = useProjectStore(s => s.projects.find(p => p.id === projectProp.id))
+  const project = storeProject ?? projectProp
+
   const [editing, setEditing] = useState(false)
   const [editName, setEditName] = useState(project.name)
   const [editWorkspace, setEditWorkspace] = useState(project.workspaces?.[0] || '')

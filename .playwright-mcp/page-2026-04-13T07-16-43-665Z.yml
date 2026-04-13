@@ -1,0 +1,16 @@
+- generic [ref=e1]:
+  - button "切换语言" [ref=e4] [cursor=pointer]:
+    - generic [ref=e5]: 
+    - generic [ref=e6]: 中文
+  - generic [ref=e7]:
+    - generic [ref=e8]:
+      - img "Logo" [ref=e9]
+      - heading "AIClient2API" [level=1] [ref=e10]
+      - paragraph [ref=e11]: 请登录以继续
+    - generic [ref=e12]:
+      - generic [ref=e13]:
+        - generic [ref=e14]: 密码
+        - textbox "密码" [active] [ref=e15]:
+          - /placeholder: 请输入密码
+      - button "登录" [ref=e16] [cursor=pointer]
+    - paragraph [ref=e18]: © 2077 AIClient2API. All rights reserved.

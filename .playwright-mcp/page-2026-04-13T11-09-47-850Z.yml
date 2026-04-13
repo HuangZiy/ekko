@@ -1,0 +1,150 @@
+- generic [ref=e3]:
+  - generic [ref=e4]:
+    - generic [ref=e6]: Ekko
+    - generic [ref=e7] [cursor=pointer]:
+      - img [ref=e8]
+      - generic [ref=e10]: Projects
+      - img [ref=e11]
+    - generic [ref=e15] [cursor=pointer]:
+      - generic [ref=e16]:
+        - img [ref=e17]
+        - generic [ref=e19]: ekko
+      - generic [ref=e20]: 0/2 done
+    - button "New Project" [ref=e22]:
+      - img [ref=e23]
+      - text: New Project
+  - generic [ref=e24]:
+    - banner [ref=e25]:
+      - img [ref=e26]
+      - heading "ekko" [level=1] [ref=e31]
+      - generic [ref=e32]: PRJ-1
+      - generic [ref=e33]:
+        - button "Switch to dark mode" [ref=e34]:
+          - img [ref=e35]
+        - button "Run All" [ref=e37]:
+          - img [ref=e38]
+          - text: Run All
+        - button "New Issue" [ref=e40]:
+          - img [ref=e41]
+          - text: New Issue
+    - generic [ref=e43]:
+      - generic [ref=e44]: 2 issues
+      - generic [ref=e45]:
+        - generic [ref=e46]: "Backlog: 1"
+        - generic [ref=e47]: "To Do: 1"
+      - generic [ref=e51]: 0/2 done (0%)
+    - main [ref=e52]:
+      - generic [ref=e53]:
+        - generic [ref=e54]:
+          - generic [ref=e55]:
+            - heading "Backlog" [level=3] [ref=e57]
+            - generic [ref=e58]: "1"
+          - generic [ref=e61] [cursor=pointer]:
+            - button [ref=e62]:
+              - img [ref=e63]
+            - generic [ref=e70]:
+              - generic [ref=e71]:
+                - generic [ref=e72]: ISS-2
+                - button "Run this issue" [ref=e73]:
+                  - img [ref=e74]
+              - generic [ref=e76]: Markdown Test Issue
+        - generic [ref=e77]:
+          - generic [ref=e78]:
+            - heading "Todo" [level=3] [ref=e80]
+            - generic [ref=e81]: "1"
+          - generic [ref=e84] [cursor=pointer]:
+            - button [ref=e85]:
+              - img [ref=e86]
+            - generic [ref=e93]:
+              - generic [ref=e94]:
+                - generic [ref=e95]: ISS-1
+                - button "Run this issue" [ref=e96]:
+                  - img [ref=e97]
+              - generic [ref=e99]: Issue 创建时 Description需支持 markdown格式
+        - generic [ref=e100]:
+          - generic [ref=e101]:
+            - heading "In Progress" [level=3] [ref=e103]
+            - generic [ref=e104]: "0"
+          - generic [ref=e106]: Drop issues here
+        - generic [ref=e107]:
+          - generic [ref=e108]:
+            - heading "Agent Done" [level=3] [ref=e110]
+            - generic [ref=e111]: "0"
+          - generic [ref=e113]: Drop issues here
+        - generic [ref=e114]:
+          - generic [ref=e115]:
+            - heading "Rejected" [level=3] [ref=e117]
+            - generic [ref=e118]: "0"
+          - generic [ref=e120]: Drop issues here
+        - generic [ref=e121]:
+          - generic [ref=e122]:
+            - heading "Human Done" [level=3] [ref=e124]
+            - generic [ref=e125]: "0"
+          - generic [ref=e127]: Drop issues here
+      - status [ref=e128]
+  - generic [ref=e138]:
+    - heading "New Issue" [level=2] [ref=e139]
+    - generic [ref=e140]:
+      - generic [ref=e141]:
+        - generic [ref=e142]: Title
+        - textbox "Issue title..." [ref=e143]
+      - generic [ref=e144]:
+        - generic [ref=e145]: Priority
+        - combobox [ref=e146]:
+          - option "Low"
+          - option "Medium" [selected]
+          - option "High"
+          - option "Urgent"
+      - generic [ref=e147]:
+        - generic [ref=e148]: Labels (comma-separated)
+        - textbox "bug, frontend, api" [ref=e149]
+      - generic [ref=e150]:
+        - generic [ref=e151]: Description (markdown)
+        - generic [ref=e152]:
+          - generic [ref=e153]:
+            - button "Write" [ref=e154]:
+              - img [ref=e155]
+              - text: Write
+            - button "Preview" [active] [ref=e158]:
+              - img [ref=e159]
+              - text: Preview
+          - generic [ref=e203]:
+            - heading "Heading 1" [level=1] [ref=e212]
+            - heading "Heading 2" [level=2] [ref=e213]
+            - paragraph [ref=e214]:
+              - text: This is
+              - strong [ref=e215]: bold
+              - text: and
+              - emphasis [ref=e216]: italic
+              - text: text.
+            - list [ref=e217]:
+              - listitem [ref=e218]: bullet item 1
+              - listitem [ref=e219]: bullet item 2
+            - list [ref=e220]:
+              - listitem [ref=e221]: numbered item
+              - listitem [ref=e222]: numbered item
+            - code [ref=e224]: const hello = "world"; console.log(hello);
+            - blockquote [ref=e225]:
+              - paragraph [ref=e226]: This is a blockquote
+            - paragraph [ref=e227]:
+              - link "Link text" [ref=e228] [cursor=pointer]:
+                - /url: https://example.com
+            - table [ref=e229]:
+              - rowgroup [ref=e230]:
+                - row "Column A Column B" [ref=e231]:
+                  - columnheader "Column A" [ref=e232]
+                  - columnheader "Column B" [ref=e233]
+              - rowgroup [ref=e234]:
+                - row "Cell 1 Cell 2" [ref=e235]:
+                  - cell "Cell 1" [ref=e236]
+                  - cell "Cell 2" [ref=e237]
+      - generic [ref=e206]:
+        - generic [ref=e207]: Blocked by (comma-separated issue IDs)
+        - textbox "ISSUE-001, ISSUE-002" [ref=e208]
+    - generic [ref=e209]:
+      - button "Cancel" [ref=e210]
+      - button "Create" [ref=e211]
+  - button "Event Log" [ref=e130]:
+    - img [ref=e131]
+    - generic [ref=e133]: Event Log
+    - img [ref=e134]

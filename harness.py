@@ -515,7 +515,7 @@ async def run_harness(user_prompt: str) -> None:
             _log_file = None
 
 
-_CLI_SUBCOMMANDS = {"issue", "review", "project", "board", "plan", "run", "serve"}
+_CLI_SUBCOMMANDS = {"issue", "review", "project", "board", "plan", "plan-issue", "run", "serve"}
 
 if __name__ == "__main__":
     # Delegate to new CLI if a known subcommand is used

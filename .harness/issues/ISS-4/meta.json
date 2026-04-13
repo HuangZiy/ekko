@@ -1,0 +1,19 @@
+{
+  "id": "ISS-4",
+  "title": "harness 增加 planning agent",
+  "status": "todo",
+  "priority": "medium",
+  "assignee": null,
+  "workspace": "default",
+  "blocks": [],
+  "blocked_by": [],
+  "labels": [],
+  "created_at": "2026-04-13T17:25:21.993787+00:00",
+  "updated_at": "2026-04-13T17:29:57.070124+00:00",
+  "spec_ref": null,
+  "run_ids": [],
+  "retry_count": 0,
+  "max_retries": 3,
+  "source": "human",
+  "parent_id": null
+}

@@ -61,6 +61,10 @@ def _reset_stuck_issues() -> None:
                     issue.move_to(IssueStatus.TODO)
                     storage.save_issue(issue)
                     _move_board_column(storage, issue.id, "todo")
+                elif issue.status == IssueStatus.PLANNING:
+                    issue.move_to(IssueStatus.BACKLOG)
+                    storage.save_issue(issue)
+                    _move_board_column(storage, issue.id, "backlog")
     except Exception:
         pass
 

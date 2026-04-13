@@ -1,0 +1,155 @@
+- generic [ref=e3]:
+  - generic [ref=e4]:
+    - generic [ref=e6]: Ekko
+    - generic [ref=e7] [cursor=pointer]:
+      - img [ref=e8]
+      - generic [ref=e10]: Projects
+      - img [ref=e11]
+    - generic [ref=e15] [cursor=pointer]:
+      - generic [ref=e16]:
+        - img [ref=e17]
+        - generic [ref=e19]: ekko
+      - generic [ref=e20]: 0/1 done
+    - button "New Project" [ref=e22]:
+      - img [ref=e23]
+      - text: New Project
+  - generic [ref=e24]:
+    - banner [ref=e25]:
+      - img [ref=e26]
+      - heading "ekko" [level=1] [ref=e31]
+      - generic [ref=e32]: PRJ-1
+      - generic [ref=e33]:
+        - button "Switch to dark mode" [ref=e34]:
+          - img [ref=e35]
+        - button "Run All" [ref=e37]:
+          - img [ref=e38]
+          - text: Run All
+        - button "New Issue" [ref=e40]:
+          - img [ref=e41]
+          - text: New Issue
+    - generic [ref=e43]:
+      - generic [ref=e44]: 2 issues
+      - generic [ref=e45]:
+        - generic [ref=e253]: "Backlog: 1"
+        - generic [ref=e46]: "To Do: 1"
+      - generic [ref=e50]: 0/2 done (0%)
+    - main [ref=e51]:
+      - generic [ref=e52]:
+        - generic [ref=e53]:
+          - generic [ref=e54]:
+            - heading "Backlog" [level=3] [ref=e56]
+            - generic [ref=e57]: "1"
+          - generic [ref=e255] [cursor=pointer]:
+            - button [ref=e256]:
+              - img [ref=e257]
+            - generic [ref=e264]:
+              - generic [ref=e265]:
+                - generic [ref=e266]: ISS-2
+                - button "Run this issue" [ref=e267]:
+                  - img [ref=e268]
+              - generic [ref=e270]: Markdown Test Issue
+        - generic [ref=e60]:
+          - generic [ref=e61]:
+            - heading "Todo" [level=3] [ref=e63]
+            - generic [ref=e64]: "1"
+          - generic [ref=e67] [cursor=pointer]:
+            - button [ref=e68]:
+              - img [ref=e69]
+            - generic [ref=e76]:
+              - generic [ref=e77]:
+                - generic [ref=e78]: ISS-1
+                - button "Run this issue" [ref=e79]:
+                  - img [ref=e80]
+              - generic [ref=e82]: Issue 创建时 Description需支持 markdown格式
+        - generic [ref=e83]:
+          - generic [ref=e84]:
+            - heading "In Progress" [level=3] [ref=e86]
+            - generic [ref=e87]: "0"
+          - generic [ref=e89]: Drop issues here
+        - generic [ref=e90]:
+          - generic [ref=e91]:
+            - heading "Agent Done" [level=3] [ref=e93]
+            - generic [ref=e94]: "0"
+          - generic [ref=e96]: Drop issues here
+        - generic [ref=e97]:
+          - generic [ref=e98]:
+            - heading "Rejected" [level=3] [ref=e100]
+            - generic [ref=e101]: "0"
+          - generic [ref=e103]: Drop issues here
+        - generic [ref=e104]:
+          - generic [ref=e105]:
+            - heading "Human Done" [level=3] [ref=e107]
+            - generic [ref=e108]: "0"
+          - generic [ref=e110]: Drop issues here
+      - status [ref=e111]
+  - generic [ref=e273]:
+    - generic [ref=e274]:
+      - generic [ref=e275]: ISS-2
+      - heading "Markdown Test Issue" [level=2] [ref=e276]
+      - button "Edit issue" [ref=e277]:
+        - img [ref=e278]
+      - button "Delete issue" [ref=e281]:
+        - img [ref=e282]
+      - button "×" [ref=e285]
+    - generic [ref=e286]:
+      - generic [ref=e287]:
+        - button "backlog" [ref=e289] [cursor=pointer]:
+          - text: backlog
+          - img [ref=e290]
+        - generic [ref=e292]: medium
+      - button "Run" [ref=e294]:
+        - img [ref=e295]
+        - text: Run
+      - generic [ref=e297]:
+        - generic [ref=e298]:
+          - heading "Plan" [level=3] [ref=e299]
+          - button "Edit" [ref=e300]:
+            - img [ref=e301]
+            - text: Edit
+        - paragraph [ref=e305]: No plan yet
+      - generic [ref=e306]:
+        - generic [ref=e307]:
+          - heading "Content" [level=3] [ref=e308]
+          - generic [ref=e331]:
+            - button "Save" [ref=e332]:
+              - img [ref=e333]
+              - text: Save
+            - button "Cancel" [ref=e337]:
+              - img [ref=e338]
+              - text: Cancel
+        - generic [ref=e341]:
+          - generic [ref=e342]:
+            - button "Write" [ref=e343]:
+              - img [ref=e344]
+              - text: Write
+            - button "Preview" [ref=e347]:
+              - img [ref=e348]
+              - text: Preview
+            - button "Bold" [ref=e352]:
+              - img [ref=e353]
+            - button "Italic" [ref=e355]:
+              - img [ref=e356]
+            - button "Heading 1" [ref=e358]:
+              - img [ref=e359]
+            - button "Heading 2" [ref=e361]:
+              - img [ref=e362]
+            - button "Heading 3" [ref=e364]:
+              - img [ref=e365]
+            - button "Code" [ref=e368]:
+              - img [ref=e369]
+            - button "Link" [ref=e372]:
+              - img [ref=e373]
+            - button "Bullet List" [ref=e376]:
+              - img [ref=e377]
+            - button "Numbered List" [ref=e378]:
+              - img [ref=e379]
+            - button "Quote" [ref=e382]:
+              - img [ref=e383]
+            - button "Upload image" [ref=e387]:
+              - img [ref=e395]
+          - textbox "Markdown content..." [active] [ref=e393]: "![test-upload.png](/api/projects/PRJ-1/issues/ISS-2/uploads/12747ca426b6.png) # ISS-2: Markdown Test Issue ## 描述 # Test Heading This is **bold** and *italic* text. ## Code Example ```javascript const hello = \"world\"; console.log(hello); ``` - Item 1 - Item 2 - Item 3 > This is a blockquote [Link text](https://example.com)"
+          - generic [ref=e394]: Markdown supported. Paste or drag images to upload.
+  - button "Event Log" [ref=e113]:
+    - img [ref=e114]
+    - generic [ref=e116]: Event Log
+    - img [ref=e117]

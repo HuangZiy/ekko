@@ -1,0 +1,88 @@
+- generic [ref=e3]:
+  - generic [ref=e4]:
+    - generic [ref=e6]: Ekko
+    - generic [ref=e7] [cursor=pointer]:
+      - img [ref=e8]
+      - generic [ref=e10]: Projects
+      - img [ref=e11]
+    - generic [ref=e15] [cursor=pointer]:
+      - generic [ref=e16]:
+        - img [ref=e17]
+        - generic [ref=e19]: ekko
+      - generic [ref=e20]: 0/2 done
+    - button "New Project" [ref=e22]:
+      - img [ref=e23]
+      - text: New Project
+  - generic [ref=e24]:
+    - banner [ref=e25]:
+      - img [ref=e26]
+      - heading "ekko" [level=1] [ref=e31]
+      - generic [ref=e32]: PRJ-1
+      - generic [ref=e33]:
+        - button "Switch to dark mode" [ref=e34]:
+          - img [ref=e35]
+        - button "Run All" [ref=e37]:
+          - img [ref=e38]
+          - text: Run All
+        - button "New Issue" [ref=e40]:
+          - img [ref=e41]
+          - text: New Issue
+    - generic [ref=e43]:
+      - generic [ref=e44]: 2 issues
+      - generic [ref=e45]:
+        - generic [ref=e46]: "Backlog: 1"
+        - generic [ref=e47]: "To Do: 1"
+      - generic [ref=e51]: 0/2 done (0%)
+    - main [ref=e52]:
+      - generic [ref=e53]:
+        - generic [ref=e54]:
+          - generic [ref=e55]:
+            - heading "Backlog" [level=3] [ref=e57]
+            - generic [ref=e58]: "1"
+          - generic [ref=e61] [cursor=pointer]:
+            - button [ref=e62]:
+              - img [ref=e63]
+            - generic [ref=e70]:
+              - generic [ref=e71]:
+                - generic [ref=e72]: ISS-2
+                - button "Run this issue" [ref=e73]:
+                  - img [ref=e74]
+              - generic [ref=e76]: Markdown Test Issue
+        - generic [ref=e77]:
+          - generic [ref=e78]:
+            - heading "Todo" [level=3] [ref=e80]
+            - generic [ref=e81]: "1"
+          - generic [ref=e84] [cursor=pointer]:
+            - button [ref=e85]:
+              - img [ref=e86]
+            - generic [ref=e93]:
+              - generic [ref=e94]:
+                - generic [ref=e95]: ISS-1
+                - button "Run this issue" [ref=e96]:
+                  - img [ref=e97]
+              - generic [ref=e99]: Issue 创建时 Description需支持 markdown格式
+        - generic [ref=e100]:
+          - generic [ref=e101]:
+            - heading "In Progress" [level=3] [ref=e103]
+            - generic [ref=e104]: "0"
+          - generic [ref=e106]: Drop issues here
+        - generic [ref=e107]:
+          - generic [ref=e108]:
+            - heading "Agent Done" [level=3] [ref=e110]
+            - generic [ref=e111]: "0"
+          - generic [ref=e113]: Drop issues here
+        - generic [ref=e114]:
+          - generic [ref=e115]:
+            - heading "Rejected" [level=3] [ref=e117]
+            - generic [ref=e118]: "0"
+          - generic [ref=e120]: Drop issues here
+        - generic [ref=e121]:
+          - generic [ref=e122]:
+            - heading "Human Done" [level=3] [ref=e124]
+            - generic [ref=e125]: "0"
+          - generic [ref=e127]: Drop issues here
+      - status [ref=e128]
+  - button "Event Log" [ref=e130]:
+    - img [ref=e131]
+    - generic [ref=e133]: Event Log
+    - img [ref=e134]

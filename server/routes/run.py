@@ -67,11 +67,9 @@ async def _run_in_background(project_id: str, issue_id: str | None) -> None:
 
     async def on_event(event: dict) -> None:
         """Broadcast event via WebSocket and persist to JSONL log."""
+        await ws_manager.broadcast(project_id, event)
         evt_type = event.get("type", "")
         evt_issue_id = event.get("issue_id")
-        print(f"[WS-Debug] broadcasting {evt_type} for {evt_issue_id}, connections={len(ws_manager._connections.get(project_id, []))}", flush=True)
-        await ws_manager.broadcast(project_id, event)
-        # Persist agent events to run log
         if evt_issue_id and evt_type.startswith("agent_"):
             storage.append_run_log(evt_issue_id, f"run-{run_counter:03d}", event)
 

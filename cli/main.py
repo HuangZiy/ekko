@@ -297,20 +297,30 @@ def _review(args: argparse.Namespace) -> None:
 def _serve(args: argparse.Namespace) -> None:
     import subprocess
     import os
+    import socket
 
-    port = args.port
+    def _find_free_port(preferred: int) -> int:
+        """Try preferred port, fallback to OS-assigned."""
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            try:
+                s.bind(("127.0.0.1", preferred))
+                return preferred
+            except OSError:
+                s.bind(("127.0.0.1", 0))
+                return s.getsockname()[1]
+
+    port = _find_free_port(args.port)
     harness_root = ARTIFACTS_DIR
     harness_root.mkdir(parents=True, exist_ok=True)
 
     web_dir = Path(__file__).resolve().parent.parent / "web"
 
     if args.dev and web_dir.exists():
-        # Dev mode: start Vite dev server in background + FastAPI
         print(f"Starting Vite dev server (web/) + FastAPI on :{port}...", flush=True)
         vite_proc = subprocess.Popen(
-            ["npx", "vite", "--port", "5173"],
+            ["npx", "vite"],
             cwd=str(web_dir),
-            env={**os.environ, "BROWSER": "none"},
+            env={**os.environ, "BROWSER": "none", "VITE_API_PORT": str(port)},
         )
         try:
             from server.app import run_server

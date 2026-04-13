@@ -162,7 +162,47 @@ async def execute_issue(
     try:
         await client.connect(prompt)
 
-        async for message in client.receive_messages():
+        msg_iter = client.receive_messages().__aiter__()
+
+        while True:
+            # Race: next message vs cancel event
+            msg_future = asyncio.ensure_future(msg_iter.__anext__())
+
+            if cancel_event:
+                cancel_future = asyncio.ensure_future(cancel_event.wait())
+                done, pending = await asyncio.wait(
+                    {msg_future, cancel_future},
+                    return_when=asyncio.FIRST_COMPLETED,
+                )
+                for p in pending:
+                    p.cancel()
+
+                if cancel_future in done:
+                    # Cancel arrived — interrupt agent
+                    _log("Cancel", C_YELLOW, f"{issue.id}: interrupted by user")
+                    try:
+                        await client.interrupt()
+                    except Exception:
+                        pass
+                    stats["cancelled"] = True
+                    if on_event:
+                        await on_event({
+                            "ts": int(time.time()), "type": "agent_status", "issue_id": issue.id,
+                            "data": {"status": "cancelled"},
+                        })
+                    break
+
+                # Message arrived — extract it
+                try:
+                    message = msg_future.result()
+                except StopAsyncIteration:
+                    break
+            else:
+                try:
+                    message = await msg_future
+                except StopAsyncIteration:
+                    break
+
             _log_message(message)
 
             if on_event:
@@ -177,21 +217,6 @@ async def execute_issue(
                     "num_turns": message.num_turns,
                     "usage": message.usage or {},
                 })
-
-            # Check cancellation after each message
-            if cancel_event and cancel_event.is_set():
-                _log("Cancel", C_YELLOW, f"{issue.id}: interrupted by user")
-                try:
-                    await client.interrupt()
-                except Exception:
-                    pass
-                stats["cancelled"] = True
-                if on_event:
-                    await on_event({
-                        "ts": int(time.time()), "type": "agent_status", "issue_id": issue.id,
-                        "data": {"status": "cancelled"},
-                    })
-                break
     finally:
         try:
             await client.disconnect()

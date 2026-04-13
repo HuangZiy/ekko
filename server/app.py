@@ -41,6 +41,36 @@ def create_app(harness_root: Path | None = None) -> FastAPI:
     app.include_router(fs.router)
     app.include_router(ws_route.router)
 
+    @app.on_event("startup")
+    def reset_stuck_issues():
+        """Reset any in_progress issues back to todo on server start."""
+        try:
+            from core.models import IssueStatus
+            from core.storage import PlatformStorage
+            import json
+            root = get_harness_root()
+            platform = PlatformStorage(root)
+            for pid, _ in platform.list_projects():
+                storage = platform.get_project_storage(pid)
+                for issue in storage.list_issues():
+                    if issue.status == IssueStatus.IN_PROGRESS:
+                        issue.move_to(IssueStatus.TODO)
+                        storage.save_issue(issue)
+                        # Fix board column
+                        board_file = storage.root / "board.json"
+                        if board_file.exists():
+                            data = json.loads(board_file.read_text())
+                            for col in data["columns"]:
+                                if issue.id in col["issues"]:
+                                    col["issues"].remove(issue.id)
+                            for col in data["columns"]:
+                                if col["id"] == "todo":
+                                    col["issues"].append(issue.id)
+                                    break
+                            board_file.write_text(json.dumps(data, indent=2, ensure_ascii=False))
+        except Exception:
+            pass  # best-effort on startup
+
     @app.get("/api/health")
     def health():
         return {"status": "ok"}

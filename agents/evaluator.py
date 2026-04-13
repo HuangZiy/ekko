@@ -16,7 +16,7 @@ from claude_agent_sdk import (
     query, ClaudeAgentOptions, ResultMessage,
     AssistantMessage, SystemMessage, TextBlock, ToolUseBlock, ToolResultBlock,
 )
-from config import MODEL, WORKSPACE_DIR, EVAL_PORT
+from config import MODEL, WORKSPACE_DIR
 
 
 PROMPTS_DIR = Path("prompts")
@@ -65,15 +65,25 @@ def _get_git_diff(workspace: Path) -> str:
         return "(unable to get git diff)"
 
 
-def _start_dev_server(workspace: Path):
-    env = {**os.environ, "PORT": str(EVAL_PORT)}
+def _find_free_port() -> int:
+    """Find an available port."""
+    import socket
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.bind(("127.0.0.1", 0))
+        return s.getsockname()[1]
+
+
+def _start_dev_server(workspace: Path) -> tuple:
+    """Start dev server on a free port. Returns (process, port)."""
+    port = _find_free_port()
+    env = {**os.environ, "PORT": str(port)}
     server = subprocess.Popen(
-        ["npm", "run", "dev", "--", "-p", str(EVAL_PORT)],
+        ["npm", "run", "dev", "--", "-p", str(port)],
         cwd=str(workspace), env=env,
         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
     )
     time.sleep(10)
-    return server
+    return server, port
 
 
 def _stop_dev_server(server):
@@ -154,7 +164,7 @@ async def run_issue_eval(
 
     git_diff = _get_git_diff(ws)
 
-    server = _start_dev_server(ws)
+    server, port = _start_dev_server(ws)
     try:
         prompt = f"""增量评估：验证以下 Issue 是否正确完成。
 
@@ -171,7 +181,7 @@ async def run_issue_eval(
 
 ## 评估要求
 
-1. 用 Playwright 打开 http://localhost:{EVAL_PORT}，验证与此 Issue 相关的页面和功能
+1. 用 Playwright 打开 http://localhost:{port}，验证与此 Issue 相关的页面和功能
 2. 对照 Issue 的验收标准逐项检查
 3. 运行 `npm run build` 确认构建通过
 4. 只关注此 Issue 的完成情况，不做全量评估
@@ -223,14 +233,14 @@ async def run_full_eval(screenshots_dir: Path | None = None, workspace: Path | N
     ss_dir = screenshots_dir or DEFAULT_SCREENSHOTS_DIR
     ss_dir.mkdir(parents=True, exist_ok=True)
 
-    _log("Eval", C_MAGENTA, f"Full evaluation on port {EVAL_PORT}...")
+    _log("Eval", C_MAGENTA, "Full evaluation starting...")
 
     eval_criteria_path = PROMPTS_DIR / "eval_criteria.md"
     eval_criteria = eval_criteria_path.read_text() if eval_criteria_path.exists() else ""
 
-    server = _start_dev_server(ws)
+    server, port = _start_dev_server(ws)
     try:
-        prompt = f"""全量评估当前运行在 http://localhost:{EVAL_PORT} 的应用。
+        prompt = f"""全量评估当前运行在 http://localhost:{port} 的应用。
 
 {eval_criteria}
 

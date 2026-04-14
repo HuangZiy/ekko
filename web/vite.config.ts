@@ -15,4 +15,17 @@ export default defineConfig({
       },
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id: string) {
+          if (id.includes('node_modules/framer-motion')) return 'vendor-motion'
+          if (id.includes('node_modules/react-markdown') || id.includes('node_modules/remark-gfm')) return 'vendor-markdown'
+          if (id.includes('node_modules/@dnd-kit')) return 'vendor-dnd'
+          if (id.includes('node_modules/i18next') || id.includes('node_modules/react-i18next') || id.includes('node_modules/i18next-browser-languagedetector')) return 'vendor-i18n'
+          if (id.includes('node_modules/@radix-ui')) return 'vendor-radix'
+        },
+      },
+    },
+  },
 })

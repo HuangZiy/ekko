@@ -265,3 +265,5 @@ export function ProjectDetail({ project: projectProp, onClose }: ProjectDetailPr
     </div>
   )
 }
+
+export default ProjectDetail

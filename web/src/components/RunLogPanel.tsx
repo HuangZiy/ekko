@@ -90,3 +90,5 @@ export function RunLogPanel() {
     </div>
   )
 }
+
+export default RunLogPanel

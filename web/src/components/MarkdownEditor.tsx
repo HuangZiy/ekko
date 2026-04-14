@@ -416,3 +416,5 @@ export function MarkdownEditor({
     </div>
   )
 }
+
+export default MarkdownEditor

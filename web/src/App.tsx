@@ -1,4 +1,4 @@
-import { useState, useEffect, Component } from 'react'
+import { useState, useEffect, Component, lazy, Suspense } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { Issue } from './stores/boardStore'
 import type { ReactNode } from 'react'
@@ -10,15 +10,17 @@ import { useTheme } from './hooks/useTheme'
 import { useLanguage } from './hooks/useLanguage'
 import { Board } from './components/Board'
 import { BoardStats } from './components/BoardStats'
-import { IssueDetail } from './components/IssueDetail'
 import { ProjectSidebar } from './components/ProjectSidebar'
-import { ProjectDetail } from './components/ProjectDetail'
-import { RunLogPanel } from './components/RunLogPanel'
-import { MarkdownEditor } from './components/MarkdownEditor'
 import { LayoutDashboard, Plus, Play, Sun, Moon, Languages } from 'lucide-react'
 import { AnimatePresence } from 'framer-motion'
 import i18n from './i18n'
 import './index.css'
+
+// Lazy-loaded components for code-splitting
+const IssueDetail = lazy(() => import('./components/IssueDetail'))
+const ProjectDetail = lazy(() => import('./components/ProjectDetail'))
+const MarkdownEditor = lazy(() => import('./components/MarkdownEditor'))
+const RunLogPanel = lazy(() => import('./components/RunLogPanel'))
 
 class ErrorBoundary extends Component<{ children: ReactNode }, { error: Error | null }> {
   state = { error: null as Error | null }
@@ -189,33 +191,37 @@ function App() {
       {/* Issue Detail Slide-over */}
       <AnimatePresence>
         {selectedIssue && (
-          <ErrorBoundary>
-          <IssueDetail
-            issue={selectedIssue}
-            onClose={() => setSelectedIssue(null)}
-            onApprove={() => {
-              reviewIssue(selectedIssue.id, true)
-              setSelectedIssue(null)
-            }}
-            onReject={(comment) => {
-              reviewIssue(selectedIssue.id, false, comment)
-              setSelectedIssue(null)
-            }}
-            onRun={() => runSingleIssue(selectedIssue.id)}
-            onDelete={() => {
-              deleteIssue(selectedIssue.id)
-              setSelectedIssue(null)
-            }}
-          />
-          </ErrorBoundary>
+          <Suspense fallback={null}>
+            <ErrorBoundary>
+              <IssueDetail
+                issue={selectedIssue}
+                onClose={() => setSelectedIssue(null)}
+                onApprove={() => {
+                  reviewIssue(selectedIssue.id, true)
+                  setSelectedIssue(null)
+                }}
+                onReject={(comment) => {
+                  reviewIssue(selectedIssue.id, false, comment)
+                  setSelectedIssue(null)
+                }}
+                onRun={() => runSingleIssue(selectedIssue.id)}
+                onDelete={() => {
+                  deleteIssue(selectedIssue.id)
+                  setSelectedIssue(null)
+                }}
+              />
+            </ErrorBoundary>
+          </Suspense>
         )}
       </AnimatePresence>
       <AnimatePresence>
         {selectedProject && (
-          <ProjectDetail
-            project={selectedProject}
-            onClose={() => setSelectedProject(null)}
-          />
+          <Suspense fallback={null}>
+            <ProjectDetail
+              project={selectedProject}
+              onClose={() => setSelectedProject(null)}
+            />
+          </Suspense>
         )}
       </AnimatePresence>
 
@@ -269,13 +275,15 @@ function App() {
               {/* Description */}
               <div>
                 <label className="text-xs font-medium text-[var(--text-secondary)] mb-1 block">{t('issue.create.descriptionLabel')}</label>
-                <MarkdownEditor
-                  value={newDescription}
-                  onChange={setNewDescription}
-                  placeholder={t('issue.create.descriptionPlaceholder')}
-                  rows={6}
-                  uploadUrl={projectId ? `/api/projects/${projectId}/uploads` : null}
-                />
+                <Suspense fallback={null}>
+                  <MarkdownEditor
+                    value={newDescription}
+                    onChange={setNewDescription}
+                    placeholder={t('issue.create.descriptionPlaceholder')}
+                    rows={6}
+                    uploadUrl={projectId ? `/api/projects/${projectId}/uploads` : null}
+                  />
+                </Suspense>
               </div>
 
               {/* Blocked By */}
@@ -309,7 +317,9 @@ function App() {
       )}
 
       {/* Run Log Panel */}
-      <RunLogPanel />
+      <Suspense fallback={null}>
+        <RunLogPanel />
+      </Suspense>
     </div>
   )
 }

@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { useBoardStore } from '../stores/boardStore'
 
 const statusColors: Record<string, string> = {
@@ -9,16 +10,8 @@ const statusColors: Record<string, string> = {
   human_done: 'bg-green-500',
 }
 
-const statusLabels: Record<string, string> = {
-  backlog: 'Backlog',
-  todo: 'To Do',
-  in_progress: 'In Progress',
-  agent_done: 'Agent Done',
-  rejected: 'Rejected',
-  human_done: 'Done',
-}
-
 export function BoardStats() {
+  const { t } = useTranslation()
   const issues = useBoardStore(s => s.issues)
   const columns = useBoardStore(s => s.columns)
 
@@ -41,7 +34,7 @@ export function BoardStats() {
     <div className="px-6 py-3 border-b border-[var(--border)] bg-[var(--bg-card)]">
       <div className="flex items-center gap-4 flex-wrap">
         <span className="text-sm font-medium text-[var(--text-primary)]">
-          {total} issues
+          {t('boardStats.issueCount', { count: total })}
         </span>
 
         <div className="flex items-center gap-2 flex-wrap">
@@ -53,7 +46,7 @@ export function BoardStats() {
                 key={col.id}
                 className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium text-white ${statusColors[col.id] || 'bg-gray-400'}`}
               >
-                {statusLabels[col.id] || col.name}: {count}
+                {t(`status.${col.id}`, col.name)}: {count}
               </span>
             )
           })}
@@ -62,7 +55,7 @@ export function BoardStats() {
         <div className="flex items-center gap-2 ml-auto">
           {totalCost > 0 && (
             <span className="text-xs text-[var(--text-secondary)]">
-              Cost: ${totalCost.toFixed(2)}
+              {t('boardStats.cost', { amount: totalCost.toFixed(2) })}
             </span>
           )}
           <div className="flex items-center gap-2">
@@ -73,7 +66,7 @@ export function BoardStats() {
               />
             </div>
             <span className="text-xs text-[var(--text-secondary)] whitespace-nowrap">
-              {doneCount}/{total} done ({progressPercent}%)
+              {t('boardStats.progress', { done: doneCount, total, pct: progressPercent })}
             </span>
           </div>
         </div>

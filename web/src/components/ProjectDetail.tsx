@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { motion } from 'framer-motion'
 import { Pencil, Save, X, FolderOpen, Hash, Calendar, Tag, BarChart3, FlaskConical } from 'lucide-react'
 import type { ProjectInfo } from '../stores/projectStore'
@@ -19,16 +20,8 @@ const statusColors: Record<string, string> = {
   human_done: 'bg-green-500',
 }
 
-const statusLabels: Record<string, string> = {
-  backlog: 'Backlog',
-  todo: 'Todo',
-  in_progress: 'In Progress',
-  agent_done: 'Agent Done',
-  rejected: 'Rejected',
-  human_done: 'Human Done',
-}
-
 export function ProjectDetail({ project: projectProp, onClose }: ProjectDetailProps) {
+  const { t } = useTranslation()
   // Subscribe to store for live updates after save
   const storeProject = useProjectStore(s => s.projects.find(p => p.id === projectProp.id))
   const project = storeProject ?? projectProp
@@ -121,7 +114,7 @@ export function ProjectDetail({ project: projectProp, onClose }: ProjectDetailPr
             <button
               onClick={() => setEditing(true)}
               className="p-1.5 rounded-lg hover:bg-[var(--bg-secondary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
-              title="Edit project"
+              title={t('projectDetail.editProject')}
             >
               <Pencil size={16} />
             </button>
@@ -132,14 +125,14 @@ export function ProjectDetail({ project: projectProp, onClose }: ProjectDetailPr
                 onClick={handleSave}
                 disabled={saving}
                 className="p-1.5 rounded-lg hover:bg-green-50 text-green-600 hover:text-green-700 transition-colors disabled:opacity-50"
-                title="Save changes"
+                title={t('projectDetail.saveChanges')}
               >
                 <Save size={16} />
               </button>
               <button
                 onClick={handleCancel}
                 className="p-1.5 rounded-lg hover:bg-red-50 text-red-500 hover:text-red-600 transition-colors"
-                title="Cancel"
+                title={t('projectDetail.cancel')}
               >
                 <X size={16} />
               </button>
@@ -153,19 +146,19 @@ export function ProjectDetail({ project: projectProp, onClose }: ProjectDetailPr
           <div className="space-y-3">
             <div className="flex items-center gap-2 text-sm">
               <Hash size={14} className="text-[var(--text-secondary)]" />
-              <span className="text-[var(--text-secondary)]">ID:</span>
+              <span className="text-[var(--text-secondary)]">{t('projectDetail.id')}</span>
               <span className="font-mono text-[var(--text-primary)]">{project.id}</span>
             </div>
             <div className="flex items-center gap-2 text-sm">
               <Calendar size={14} className="text-[var(--text-secondary)]" />
-              <span className="text-[var(--text-secondary)]">Created:</span>
+              <span className="text-[var(--text-secondary)]">{t('projectDetail.created')}</span>
               <span className="text-[var(--text-primary)]">
                 {project.created_at ? new Date(project.created_at).toLocaleString() : '-'}
               </span>
             </div>
             <div className="flex items-center gap-2 text-sm">
               <Tag size={14} className="text-[var(--text-secondary)]" />
-              <span className="text-[var(--text-secondary)]">Issue Key:</span>
+              <span className="text-[var(--text-secondary)]">{t('projectDetail.issueKey')}</span>
               {editing ? (
                 <input
                   value={editKey}
@@ -183,14 +176,14 @@ export function ProjectDetail({ project: projectProp, onClose }: ProjectDetailPr
           {/* Workspace */}
           <div>
             <div className="flex items-center gap-1.5 text-sm font-semibold text-[var(--text-primary)] mb-2">
-              <FolderOpen size={14} /> Workspace
+              <FolderOpen size={14} /> {t('projectDetail.workspace')}
             </div>
             {editing ? (
               <input
                 value={editWorkspace}
                 onChange={e => setEditWorkspace(e.target.value)}
                 className="w-full px-3 py-2 border border-[var(--border)] rounded-lg text-sm font-mono bg-[var(--input-bg)] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
-                placeholder="/path/to/workspace"
+                placeholder={t('projectDetail.workspacePlaceholder')}
               />
             ) : (
               <div className="px-3 py-2 bg-[var(--bg-secondary)] rounded-lg text-sm font-mono text-[var(--text-primary)] break-all">
@@ -202,9 +195,9 @@ export function ProjectDetail({ project: projectProp, onClose }: ProjectDetailPr
           {/* Issue Stats */}
           <div>
             <div className="flex items-center gap-1.5 text-sm font-semibold text-[var(--text-primary)] mb-3">
-              <BarChart3 size={14} /> Issue Statistics
+              <BarChart3 size={14} /> {t('projectDetail.issueStatistics')}
               {total > 0 && (
-                <span className="ml-auto text-xs font-normal text-[var(--text-secondary)]">{total} total</span>
+                <span className="ml-auto text-xs font-normal text-[var(--text-secondary)]">{t('projectDetail.total', { count: total })}</span>
               )}
             </div>
             {total > 0 ? (
@@ -220,7 +213,7 @@ export function ProjectDetail({ project: projectProp, onClose }: ProjectDetailPr
                         key={status}
                         className={`${color} transition-all`}
                         style={{ width: `${pct}%` }}
-                        title={`${statusLabels[status]}: ${count}`}
+                        title={`${t(`status.${status}`)}: ${count}`}
                       />
                     )
                   })}
@@ -233,7 +226,7 @@ export function ProjectDetail({ project: projectProp, onClose }: ProjectDetailPr
                     return (
                       <div key={status} className="flex items-center gap-1.5 text-xs">
                         <span className={`w-2.5 h-2.5 rounded-full ${color}`} />
-                        <span className="text-[var(--text-secondary)]">{statusLabels[status]}</span>
+                        <span className="text-[var(--text-secondary)]">{t(`status.${status}`)}</span>
                         <span className="font-medium text-[var(--text-primary)]">{count}</span>
                       </div>
                     )
@@ -241,7 +234,7 @@ export function ProjectDetail({ project: projectProp, onClose }: ProjectDetailPr
                 </div>
               </div>
             ) : (
-              <div className="text-sm text-[var(--text-secondary)] py-2">No issues yet</div>
+              <div className="text-sm text-[var(--text-secondary)] py-2">{t('projectDetail.noIssues')}</div>
             )}
           </div>
 
@@ -249,20 +242,20 @@ export function ProjectDetail({ project: projectProp, onClose }: ProjectDetailPr
           {projectStats && projectStats.total_runs > 0 && (
             <div>
               <div className="flex items-center gap-1.5 text-sm font-semibold text-[var(--text-primary)] mb-2">
-                <FlaskConical size={14} /> Agent Runs
+                <FlaskConical size={14} /> {t('projectDetail.agentRuns')}
               </div>
               <div className="grid grid-cols-3 gap-3">
                 <div className="px-3 py-2 bg-[var(--bg-secondary)] rounded-lg text-center">
                   <div className="text-lg font-semibold text-[var(--text-primary)]">{projectStats.total_runs}</div>
-                  <div className="text-xs text-[var(--text-secondary)]">Runs</div>
+                  <div className="text-xs text-[var(--text-secondary)]">{t('projectDetail.runs')}</div>
                 </div>
                 <div className="px-3 py-2 bg-[var(--bg-secondary)] rounded-lg text-center">
                   <div className="text-lg font-semibold text-[var(--text-primary)]">${projectStats.total_cost_usd.toFixed(2)}</div>
-                  <div className="text-xs text-[var(--text-secondary)]">Cost</div>
+                  <div className="text-xs text-[var(--text-secondary)]">{t('projectDetail.cost')}</div>
                 </div>
                 <div className="px-3 py-2 bg-[var(--bg-secondary)] rounded-lg text-center">
                   <div className="text-lg font-semibold text-[var(--text-primary)]">{Math.round(projectStats.total_duration_ms / 1000)}s</div>
-                  <div className="text-xs text-[var(--text-secondary)]">Duration</div>
+                  <div className="text-xs text-[var(--text-secondary)]">{t('projectDetail.duration')}</div>
                 </div>
               </div>
             </div>

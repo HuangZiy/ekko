@@ -1,5 +1,6 @@
 import { useDroppable } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
+import { useTranslation } from 'react-i18next'
 import type { BoardColumn as BoardColumnType, Issue } from '../stores/boardStore'
 import { IssueCard } from './IssueCard'
 
@@ -20,6 +21,7 @@ interface ColumnProps {
 
 export function Column({ column, issues, onIssueClick }: ColumnProps) {
   const { setNodeRef, isOver } = useDroppable({ id: column.id })
+  const { t } = useTranslation()
 
   return (
     <div className="flex flex-col w-72 min-w-[288px] shrink-0">
@@ -43,7 +45,7 @@ export function Column({ column, issues, onIssueClick }: ColumnProps) {
 
         {issues.length === 0 && (
           <div className="flex-1 flex items-center justify-center text-xs text-gray-400">
-            Drop issues here
+            {t('column.dropHere')}
           </div>
         )}
       </div>

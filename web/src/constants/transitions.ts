@@ -8,14 +8,3 @@ export const VALID_TRANSITIONS: Record<string, string[]> = {
   rejected: ['todo'],
   human_done: [],
 }
-
-export const STATUS_LABELS: Record<string, string> = {
-  backlog: 'Backlog',
-  planning: 'Planning',
-  todo: 'Todo',
-  in_progress: 'In Progress',
-  agent_done: 'Agent Done',
-  failed: 'Failed',
-  rejected: 'Rejected',
-  human_done: 'Human Done',
-}

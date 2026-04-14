@@ -1,4 +1,5 @@
 import { useRef, useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Terminal, ChevronDown, ChevronUp, Trash2 } from 'lucide-react'
 import { useBoardStore } from '../stores/boardStore'
@@ -20,6 +21,7 @@ function formatTime(iso: string): string {
 }
 
 export function RunLogPanel() {
+  const { t } = useTranslation()
   const [open, setOpen] = useState(false)
   const sseLog = useBoardStore(s => s.sseLog)
   const clearSSELog = useBoardStore(s => s.clearSSELog)
@@ -39,7 +41,7 @@ export function RunLogPanel() {
         className="flex items-center gap-2 px-4 py-1.5 bg-[var(--bg-card)] border-t border-x border-[var(--border)] rounded-t-lg ml-4 text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
       >
         <Terminal size={14} />
-        <span>Event Log</span>
+        <span>{t('runLog.eventLog')}</span>
         {sseLog.length > 0 && (
           <span className="px-1.5 py-0.5 text-xs rounded-full bg-[var(--accent)] text-white">
             {sseLog.length}
@@ -58,18 +60,18 @@ export function RunLogPanel() {
             className="overflow-hidden bg-[var(--bg-card)] border-t border-[var(--border)]"
           >
             <div className="flex items-center justify-between px-4 py-1.5 border-b border-[var(--border)]">
-              <span className="text-xs font-medium text-[var(--text-secondary)]">Events</span>
+              <span className="text-xs font-medium text-[var(--text-secondary)]">{t('runLog.events')}</span>
               <button
                 onClick={clearSSELog}
                 className="text-xs text-[var(--text-secondary)] hover:text-[var(--danger)] flex items-center gap-1"
               >
-                <Trash2 size={12} /> Clear
+                <Trash2 size={12} /> {t('runLog.clear')}
               </button>
             </div>
             <div ref={scrollRef} className="h-[180px] overflow-y-auto px-4 py-2 font-mono text-xs space-y-0.5">
               {sseLog.length === 0 && (
                 <div className="text-[var(--text-secondary)] py-4 text-center">
-                  No events yet. Events will appear here as they arrive.
+                  {t('runLog.noEvents')}
                 </div>
               )}
               {sseLog.map((entry: SSELogEntry) => (

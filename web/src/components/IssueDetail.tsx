@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { motion } from 'framer-motion'
@@ -10,7 +11,7 @@ import {
   Clock, Tag, AlertCircle, CheckCircle2, XCircle, GitBranch,
   Pencil, Save, X, Image, FileCode, FlaskConical, ShieldCheck, Play, ChevronDown, Trash2, Square, Bot, ArrowUpRight
 } from 'lucide-react'
-import { VALID_TRANSITIONS, STATUS_LABELS } from '../constants/transitions'
+import { VALID_TRANSITIONS } from '../constants/transitions'
 import { AgentLogPanel } from './AgentLogPanel'
 
 const markdownComponents: Components = {
@@ -98,6 +99,7 @@ function parseEvidence(content: string): EvidenceData {
 }
 
 export function IssueDetail({ issue, onClose, onApprove, onReject, onRun, onDelete }: IssueDetailProps) {
+  const { t } = useTranslation()
   const [rejectComment, setRejectComment] = useState('')
   const [showRejectForm, setShowRejectForm] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
@@ -240,7 +242,7 @@ export function IssueDetail({ issue, onClose, onApprove, onReject, onRun, onDele
             <button
               onClick={() => setEditing(true)}
               className="p-1.5 rounded-lg hover:bg-[var(--bg-secondary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
-              title="Edit issue"
+              title={t('issueDetail.editIssue')}
             >
               <Pencil size={16} />
             </button>
@@ -251,7 +253,7 @@ export function IssueDetail({ issue, onClose, onApprove, onReject, onRun, onDele
                 onClick={handleSaveFields}
                 disabled={saving}
                 className="p-1.5 rounded-lg hover:bg-green-50 text-green-600 hover:text-green-700 transition-colors disabled:opacity-50"
-                title="Save changes"
+                title={t('issueDetail.saveChanges')}
               >
                 <Save size={16} />
               </button>
@@ -263,7 +265,7 @@ export function IssueDetail({ issue, onClose, onApprove, onReject, onRun, onDele
                   setEditLabels(issue.labels.join(', '))
                 }}
                 className="p-1.5 rounded-lg hover:bg-red-50 text-red-500 hover:text-red-600 transition-colors"
-                title="Cancel"
+                title={t('issueDetail.cancel')}
               >
                 <X size={16} />
               </button>
@@ -273,7 +275,7 @@ export function IssueDetail({ issue, onClose, onApprove, onReject, onRun, onDele
             <button
               onClick={() => setShowDeleteConfirm(true)}
               className="p-1.5 rounded-lg hover:bg-red-50 text-[var(--text-secondary)] hover:text-red-500 transition-colors"
-              title="Delete issue"
+              title={t('issueDetail.deleteIssue')}
             >
               <Trash2 size={16} />
             </button>
@@ -301,7 +303,7 @@ export function IssueDetail({ issue, onClose, onApprove, onReject, onRun, onDele
                       className="w-full text-left px-3 py-1.5 text-xs hover:bg-[var(--bg-secondary)] text-[var(--text-primary)] flex items-center gap-2"
                     >
                       <span className={`w-2 h-2 rounded-full ${statusColor(status)}`} />
-                      {STATUS_LABELS[status] || status}
+                      {t(`status.${status}`, status)}
                     </button>
                   ))}
                 </div>
@@ -336,12 +338,12 @@ export function IssueDetail({ issue, onClose, onApprove, onReject, onRun, onDele
           {/* Labels */}
           {editing ? (
             <div>
-              <label className="text-xs font-medium text-[var(--text-secondary)] mb-1 block">Labels (comma-separated)</label>
+              <label className="text-xs font-medium text-[var(--text-secondary)] mb-1 block">{t('issueDetail.labelsLabel')}</label>
               <input
                 value={editLabels}
                 onChange={e => setEditLabels(e.target.value)}
                 className="w-full px-3 py-2 border border-[var(--border)] rounded-lg text-sm bg-[var(--input-bg)] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
-                placeholder="bug, frontend, urgent"
+                placeholder={t('issueDetail.labelsPlaceholder')}
               />
             </div>
           ) : (
@@ -361,12 +363,12 @@ export function IssueDetail({ issue, onClose, onApprove, onReject, onRun, onDele
             <div className="space-y-1 text-sm">
               {issue.blocked_by.length > 0 && (
                 <div className="flex items-center gap-1 text-orange-600">
-                  <AlertCircle size={14} /> Blocked by: {issue.blocked_by.join(', ')}
+                  <AlertCircle size={14} /> {t('issueDetail.blockedBy')} {issue.blocked_by.join(', ')}
                 </div>
               )}
               {issue.blocks.length > 0 && (
                 <div className="flex items-center gap-1 text-gray-500">
-                  <GitBranch size={14} /> Blocks: {issue.blocks.join(', ')}
+                  <GitBranch size={14} /> {t('issueDetail.blocks')} {issue.blocks.join(', ')}
                 </div>
               )}
             </div>
@@ -376,7 +378,7 @@ export function IssueDetail({ issue, onClose, onApprove, onReject, onRun, onDele
           {issue.parent_id && (
             <div className="flex items-center gap-1.5 text-sm text-violet-600">
               <ArrowUpRight size={14} />
-              <span>来源于</span>
+              <span>{t('issueDetail.parentIssue')}</span>
               <span className="font-mono font-medium">{issue.parent_id}</span>
               {issue.source === 'agent' && (
                 <span className="inline-flex items-center gap-0.5 text-xs px-1.5 py-0.5 rounded-full bg-violet-50 text-violet-600">
@@ -388,7 +390,7 @@ export function IssueDetail({ issue, onClose, onApprove, onReject, onRun, onDele
           {children.length > 0 && (
             <div>
               <div className="flex items-center gap-1.5 text-sm font-semibold text-[var(--text-primary)] mb-2">
-                <Bot size={14} className="text-violet-500" /> 子 Issue ({children.length})
+                <Bot size={14} className="text-violet-500" /> {t('issueDetail.childIssues', { count: children.length })}
               </div>
               <div className="space-y-1.5">
                 {children.map(child => (
@@ -407,21 +409,21 @@ export function IssueDetail({ issue, onClose, onApprove, onReject, onRun, onDele
           {runStats && runStats.total_runs > 0 && (
             <div>
               <div className="flex items-center gap-1.5 text-sm font-semibold text-[var(--text-primary)] mb-2">
-                <FlaskConical size={14} /> Agent Runs ({runStats.total_runs})
+                <FlaskConical size={14} /> {t('issueDetail.agentRuns', { count: runStats.total_runs })}
                 <span className="ml-auto text-xs font-normal text-[var(--text-secondary)]">
-                  Total: ${runStats.total_cost_usd.toFixed(2)} · {Math.round(runStats.total_duration_ms / 1000)}s
+                  {t('issueDetail.total', { cost: runStats.total_cost_usd.toFixed(2), duration: Math.round(runStats.total_duration_ms / 1000) })}
                 </span>
               </div>
               <div className="border border-[var(--border)] rounded-lg overflow-hidden">
                 <table className="w-full text-xs">
                   <thead>
                     <tr className="bg-[var(--bg-secondary)] text-[var(--text-secondary)]">
-                      <th className="px-3 py-1.5 text-left font-medium">Run</th>
-                      <th className="px-3 py-1.5 text-right font-medium">Turns</th>
-                      <th className="px-3 py-1.5 text-right font-medium">Tokens</th>
-                      <th className="px-3 py-1.5 text-right font-medium">Cost</th>
-                      <th className="px-3 py-1.5 text-right font-medium">Duration</th>
-                      <th className="px-3 py-1.5 text-center font-medium">Result</th>
+                      <th className="px-3 py-1.5 text-left font-medium">{t('issueDetail.run')}</th>
+                      <th className="px-3 py-1.5 text-right font-medium">{t('issueDetail.turns')}</th>
+                      <th className="px-3 py-1.5 text-right font-medium">{t('issueDetail.tokens')}</th>
+                      <th className="px-3 py-1.5 text-right font-medium">{t('issueDetail.cost')}</th>
+                      <th className="px-3 py-1.5 text-right font-medium">{t('issueDetail.duration')}</th>
+                      <th className="px-3 py-1.5 text-center font-medium">{t('issueDetail.result')}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -438,8 +440,8 @@ export function IssueDetail({ issue, onClose, onApprove, onReject, onRun, onDele
                         <td className="px-3 py-1.5 text-right text-[var(--text-primary)]">{Math.round(run.duration_ms / 1000)}s</td>
                         <td className="px-3 py-1.5 text-center">
                           {run.success
-                            ? <span className="text-green-600">Pass</span>
-                            : <span className="text-red-500">Fail</span>}
+                            ? <span className="text-green-600">{t('issueDetail.pass')}</span>
+                            : <span className="text-red-500">{t('issueDetail.fail')}</span>}
                         </td>
                       </tr>
                     ))}
@@ -456,7 +458,7 @@ export function IssueDetail({ issue, onClose, onApprove, onReject, onRun, onDele
                 onClick={onRun}
                 className="flex items-center gap-1.5 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-medium"
               >
-                <Play size={16} /> {issue.status === 'failed' ? 'Resume' : 'Run'}
+                <Play size={16} /> {issue.status === 'failed' ? t('issueDetail.resume') : t('issueDetail.runAction')}
               </button>
             </div>
           )}
@@ -466,7 +468,7 @@ export function IssueDetail({ issue, onClose, onApprove, onReject, onRun, onDele
                 onClick={() => useBoardStore.getState().stopIssue(issue.id)}
                 className="flex items-center gap-1.5 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm font-medium"
               >
-                <Square size={16} fill="currentColor" /> Stop
+                <Square size={16} fill="currentColor" /> {t('issueDetail.stop')}
               </button>
             </div>
           )}
@@ -492,13 +494,13 @@ export function IssueDetail({ issue, onClose, onApprove, onReject, onRun, onDele
           {/* Plan */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <h3 className="text-sm font-semibold text-[var(--text-primary)]">Plan</h3>
+              <h3 className="text-sm font-semibold text-[var(--text-primary)]">{t('issueDetail.plan')}</h3>
               {!editingPlan ? (
                 <button
                   onClick={startEditPlan}
                   className="text-xs text-[var(--accent)] hover:underline flex items-center gap-1"
                 >
-                  <Pencil size={12} /> Edit
+                  <Pencil size={12} /> {t('issueDetail.edit')}
                 </button>
               ) : (
                 <div className="flex gap-2">
@@ -507,13 +509,13 @@ export function IssueDetail({ issue, onClose, onApprove, onReject, onRun, onDele
                     disabled={saving}
                     className="text-xs text-green-600 hover:underline flex items-center gap-1 disabled:opacity-50"
                   >
-                    <Save size={12} /> Save
+                    <Save size={12} /> {t('issueDetail.save')}
                   </button>
                   <button
                     onClick={() => setEditingPlan(false)}
                     className="text-xs text-red-500 hover:underline flex items-center gap-1"
                   >
-                    <X size={12} /> Cancel
+                    <X size={12} /> {t('issueDetail.cancel')}
                   </button>
                 </div>
               )}
@@ -522,7 +524,7 @@ export function IssueDetail({ issue, onClose, onApprove, onReject, onRun, onDele
               <MarkdownEditor
                 value={editPlan}
                 onChange={setEditPlan}
-                placeholder="Execution plan (markdown)..."
+                placeholder={t('issueDetail.planPlaceholder')}
                 rows={10}
                 projectId={useBoardStore.getState().projectId}
                 issueId={issue.id}
@@ -535,7 +537,7 @@ export function IssueDetail({ issue, onClose, onApprove, onReject, onRun, onDele
                     components={markdownComponents}
                   >{plan}</ReactMarkdown>
                 ) : (
-                  <p className="text-[var(--text-secondary)] text-sm italic">No plan yet</p>
+                  <p className="text-[var(--text-secondary)] text-sm italic">{t('issueDetail.noPlan')}</p>
                 )}
               </div>
             )}
@@ -544,13 +546,13 @@ export function IssueDetail({ issue, onClose, onApprove, onReject, onRun, onDele
           {/* Content */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <h3 className="text-sm font-semibold text-[var(--text-primary)]">Content</h3>
+              <h3 className="text-sm font-semibold text-[var(--text-primary)]">{t('issueDetail.content')}</h3>
               {!editingContent ? (
                 <button
                   onClick={startEditContent}
                   className="text-xs text-[var(--accent)] hover:underline flex items-center gap-1"
                 >
-                  <Pencil size={12} /> Edit
+                  <Pencil size={12} /> {t('issueDetail.edit')}
                 </button>
               ) : (
                 <div className="flex gap-2">
@@ -559,13 +561,13 @@ export function IssueDetail({ issue, onClose, onApprove, onReject, onRun, onDele
                     disabled={saving}
                     className="text-xs text-green-600 hover:underline flex items-center gap-1 disabled:opacity-50"
                   >
-                    <Save size={12} /> Save
+                    <Save size={12} /> {t('issueDetail.save')}
                   </button>
                   <button
                     onClick={() => setEditingContent(false)}
                     className="text-xs text-red-500 hover:underline flex items-center gap-1"
                   >
-                    <X size={12} /> Cancel
+                    <X size={12} /> {t('issueDetail.cancel')}
                   </button>
                 </div>
               )}
@@ -574,7 +576,7 @@ export function IssueDetail({ issue, onClose, onApprove, onReject, onRun, onDele
               <MarkdownEditor
                 value={editContent}
                 onChange={setEditContent}
-                placeholder="Markdown content..."
+                placeholder={t('issueDetail.contentPlaceholder')}
                 rows={10}
                 projectId={useBoardStore.getState().projectId}
                 issueId={issue.id}
@@ -592,19 +594,19 @@ export function IssueDetail({ issue, onClose, onApprove, onReject, onRun, onDele
           {/* Human Review */}
           {issue.status === 'agent_done' && (
             <div className="border-t border-[var(--border)] pt-4 space-y-3">
-              <h3 className="text-sm font-semibold text-[var(--text-primary)]">Human Review</h3>
+              <h3 className="text-sm font-semibold text-[var(--text-primary)]">{t('issueDetail.humanReview')}</h3>
               <div className="flex gap-2">
                 <button
                   onClick={onApprove}
                   className="flex items-center gap-1.5 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-medium"
                 >
-                  <CheckCircle2 size={16} /> Approve
+                  <CheckCircle2 size={16} /> {t('issueDetail.approve')}
                 </button>
                 <button
                   onClick={() => setShowRejectForm(!showRejectForm)}
                   className="flex items-center gap-1.5 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm font-medium"
                 >
-                  <XCircle size={16} /> Reject
+                  <XCircle size={16} /> {t('issueDetail.reject')}
                 </button>
               </div>
               {showRejectForm && (
@@ -612,14 +614,14 @@ export function IssueDetail({ issue, onClose, onApprove, onReject, onRun, onDele
                   <textarea
                     value={rejectComment}
                     onChange={e => setRejectComment(e.target.value)}
-                    placeholder="缺陷描述、优化建议..."
+                    placeholder={t('issueDetail.rejectPlaceholder')}
                     className="w-full h-32 p-3 border border-[var(--border)] rounded-lg text-sm resize-none bg-[var(--input-bg)] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-red-300"
                   />
                   <button
                     onClick={() => { onReject(rejectComment); setRejectComment(''); setShowRejectForm(false) }}
                     className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm"
                   >
-                    Submit Rejection
+                    {t('issueDetail.submitRejection')}
                   </button>
                 </div>
               )}
@@ -632,20 +634,20 @@ export function IssueDetail({ issue, onClose, onApprove, onReject, onRun, onDele
           <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/20">
             <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-xl shadow-xl p-5 mx-6 max-w-sm">
               <p className="text-sm text-[var(--text-primary)] mb-4">
-                Delete <span className="font-semibold">{issue.id}</span>? This cannot be undone.
+                {t('issueDetail.deleteConfirm', { id: issue.id })}
               </p>
               <div className="flex justify-end gap-2">
                 <button
                   onClick={() => setShowDeleteConfirm(false)}
                   className="px-3 py-1.5 text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
                 >
-                  Cancel
+                  {t('issueDetail.cancel')}
                 </button>
                 <button
                   onClick={() => { onDelete?.(); setShowDeleteConfirm(false) }}
                   className="px-3 py-1.5 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700"
                 >
-                  Delete
+                  {t('issueDetail.delete')}
                 </button>
               </div>
             </div>
@@ -657,6 +659,7 @@ export function IssueDetail({ issue, onClose, onApprove, onReject, onRun, onDele
 }
 
 function EvidencePanel({ evidence }: { evidence: EvidenceData }) {
+  const { t } = useTranslation()
   const [galleryIndex, setGalleryIndex] = useState(0)
   const hasAny = evidence.gitDiff || evidence.buildResult || evidence.screenshots.length > 0 || evidence.evalSummary
 
@@ -667,7 +670,7 @@ function EvidencePanel({ evidence }: { evidence: EvidenceData }) {
       <div className="px-4 py-2.5 bg-[var(--bg-secondary)] border-b border-[var(--border)]">
         <h3 className="text-sm font-semibold text-[var(--text-primary)] flex items-center gap-2">
           <ShieldCheck size={16} className="text-violet-500" />
-          Agent Done 证据
+          {t('issueDetail.evidence')}
         </h3>
       </div>
       <div className="p-4 space-y-4">
@@ -675,7 +678,7 @@ function EvidencePanel({ evidence }: { evidence: EvidenceData }) {
         {evidence.gitDiff && (
           <div>
             <div className="flex items-center gap-1.5 text-xs font-medium text-[var(--text-secondary)] mb-2">
-              <FileCode size={14} /> Git Diff
+              <FileCode size={14} /> {t('issueDetail.gitDiff')}
             </div>
             <pre className="bg-[#0d1117] text-[#c9d1d9] p-3 rounded-lg text-xs overflow-x-auto max-h-48 overflow-y-auto">
               <code>{evidence.gitDiff}</code>
@@ -687,12 +690,12 @@ function EvidencePanel({ evidence }: { evidence: EvidenceData }) {
         {evidence.buildResult && (
           <div>
             <div className="flex items-center gap-1.5 text-xs font-medium text-[var(--text-secondary)] mb-2">
-              <FlaskConical size={14} /> Build Result
+              <FlaskConical size={14} /> {t('issueDetail.buildResult')}
             </div>
             <div className="flex items-center gap-2">
               <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium text-white ${evidence.buildResult.passed ? 'bg-green-500' : 'bg-red-500'}`}>
                 {evidence.buildResult.passed ? <CheckCircle2 size={12} /> : <XCircle size={12} />}
-                {evidence.buildResult.passed ? 'PASS' : 'FAIL'}
+                {evidence.buildResult.passed ? t('issueDetail.buildPass') : t('issueDetail.buildFail')}
               </span>
               <span className="text-xs text-[var(--text-secondary)]">{evidence.buildResult.output}</span>
             </div>
@@ -703,7 +706,7 @@ function EvidencePanel({ evidence }: { evidence: EvidenceData }) {
         {evidence.screenshots.length > 0 && (
           <div>
             <div className="flex items-center gap-1.5 text-xs font-medium text-[var(--text-secondary)] mb-2">
-              <Image size={14} /> Screenshots ({evidence.screenshots.length})
+              <Image size={14} /> {t('issueDetail.screenshots', { count: evidence.screenshots.length })}
             </div>
             <div className="flex gap-2 overflow-x-auto pb-2">
               {evidence.screenshots.map((src, i) => (
@@ -723,7 +726,7 @@ function EvidencePanel({ evidence }: { evidence: EvidenceData }) {
         {evidence.evalSummary && (
           <div>
             <div className="flex items-center gap-1.5 text-xs font-medium text-[var(--text-secondary)] mb-2">
-              <FlaskConical size={14} /> Eval Result
+              <FlaskConical size={14} /> {t('issueDetail.evalResult')}
             </div>
             <p className="text-sm text-[var(--text-primary)]">{evidence.evalSummary}</p>
           </div>

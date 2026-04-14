@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Folder, ArrowLeft, FolderOpen } from 'lucide-react'
 
 interface DirectoryPickerProps {
@@ -14,6 +15,7 @@ interface BrowseResponse {
 }
 
 export function DirectoryPicker({ open, onSelect, onClose }: DirectoryPickerProps) {
+  const { t } = useTranslation()
   const [data, setData] = useState<BrowseResponse | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -26,16 +28,16 @@ export function DirectoryPicker({ open, onSelect, onClose }: DirectoryPickerProp
       const res = await fetch(url)
       if (!res.ok) {
         const err = await res.json()
-        setError(err.detail || 'Failed to browse directory')
+        setError(err.detail || t('directoryPicker.browseFailed'))
         return
       }
       setData(await res.json())
     } catch {
-      setError('Failed to connect to server')
+      setError(t('directoryPicker.connectFailed'))
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [t])
 
   useEffect(() => {
     if (open) browse()
@@ -50,7 +52,7 @@ export function DirectoryPicker({ open, onSelect, onClose }: DirectoryPickerProp
         {/* Header */}
         <div className="flex items-center gap-2 px-4 py-3 border-b border-[var(--border)]">
           <FolderOpen size={16} className="text-[var(--accent)] shrink-0" />
-          <span className="text-sm font-semibold">Select Directory</span>
+          <span className="text-sm font-semibold">{t('directoryPicker.selectDirectory')}</span>
         </div>
 
         {/* Current path + back */}
@@ -71,13 +73,13 @@ export function DirectoryPicker({ open, onSelect, onClose }: DirectoryPickerProp
         {/* Directory list */}
         <div className="flex-1 overflow-y-auto px-2 py-1">
           {loading && (
-            <div className="text-xs text-gray-400 text-center py-8">Loading...</div>
+            <div className="text-xs text-gray-400 text-center py-8">{t('directoryPicker.loading')}</div>
           )}
           {error && (
             <div className="text-xs text-red-500 text-center py-8">{error}</div>
           )}
           {data && !loading && data.entries.length === 0 && (
-            <div className="text-xs text-gray-400 text-center py-8">No subdirectories</div>
+            <div className="text-xs text-gray-400 text-center py-8">{t('directoryPicker.noSubdirectories')}</div>
           )}
           {data && !loading && data.entries.map(entry => (
             <button
@@ -97,14 +99,14 @@ export function DirectoryPicker({ open, onSelect, onClose }: DirectoryPickerProp
             onClick={onClose}
             className="px-3 py-1.5 text-xs text-gray-500 hover:text-gray-700 rounded"
           >
-            Cancel
+            {t('directoryPicker.cancel')}
           </button>
           <button
             onClick={() => data && onSelect(data.current)}
             disabled={!data}
             className="px-3 py-1.5 text-xs bg-[var(--accent)] text-white rounded hover:bg-[var(--accent-hover)] disabled:opacity-50"
           >
-            Select this directory
+            {t('directoryPicker.selectThis')}
           </button>
         </div>
       </div>

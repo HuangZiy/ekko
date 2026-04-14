@@ -1,4 +1,5 @@
 import { useRef, useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useBoardStore } from '../stores/boardStore'
 import type { AgentLogEntry } from '../stores/boardStore'
 import { Terminal, Square, History, Maximize2, Minimize2 } from 'lucide-react'
@@ -49,6 +50,7 @@ function formatEntry(entry: AgentLogEntry): { label: string; color: string; text
 const EMPTY_LOGS: AgentLogEntry[] = []
 
 export function AgentLogPanel({ issueId, onCancel }: AgentLogPanelProps) {
+  const { t } = useTranslation()
   const agentLogsRaw = useBoardStore(s => s.agentLogs[issueId])
   const agentLogs = agentLogsRaw ?? EMPTY_LOGS
   const [historyRuns, setHistoryRuns] = useState<string[]>([])
@@ -88,7 +90,7 @@ export function AgentLogPanel({ issueId, onCancel }: AgentLogPanelProps) {
     <div className="border border-[var(--border)] rounded-lg overflow-hidden">
       <div className="px-4 py-2.5 bg-[var(--bg-secondary)] border-b border-[var(--border)] flex items-center gap-2">
         <Terminal size={16} className="text-cyan-500" />
-        <h3 className="text-sm font-semibold text-[var(--text-primary)] flex-1">Agent Log</h3>
+        <h3 className="text-sm font-semibold text-[var(--text-primary)] flex-1">{t('agentLog.title')}</h3>
 
         {historyRuns.length > 0 && (
           <button
@@ -100,7 +102,7 @@ export function AgentLogPanel({ issueId, onCancel }: AgentLogPanelProps) {
             }}
             className={`flex items-center gap-1 text-xs px-2 py-1 rounded ${showHistory ? 'bg-[var(--accent)] text-white' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'}`}
           >
-            <History size={12} /> History
+            <History size={12} /> {t('agentLog.history')}
           </button>
         )}
 
@@ -109,14 +111,14 @@ export function AgentLogPanel({ issueId, onCancel }: AgentLogPanelProps) {
             onClick={onCancel}
             className="flex items-center gap-1 text-xs px-2 py-1 rounded bg-red-600 text-white hover:bg-red-700"
           >
-            <Square size={12} /> Cancel
+            <Square size={12} /> {t('agentLog.cancel')}
           </button>
         )}
 
         <button
           onClick={() => setExpanded(!expanded)}
           className="p-1 rounded text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card)] transition-colors"
-          title={expanded ? 'Collapse' : 'Expand'}
+          title={expanded ? t('agentLog.collapse') : t('agentLog.expand')}
         >
           {expanded ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
         </button>
@@ -139,7 +141,7 @@ export function AgentLogPanel({ issueId, onCancel }: AgentLogPanelProps) {
       <div ref={scrollRef} className={`${expanded ? 'h-[600px]' : 'h-[240px]'} overflow-y-auto px-4 py-2 font-mono text-xs space-y-0.5 transition-[height] duration-200`}>
         {entries.length === 0 && (
           <div className="text-[var(--text-secondary)] py-8 text-center">
-            {showHistory ? 'No entries in this run.' : 'No agent activity yet. Run the issue to see live output.'}
+            {showHistory ? t('agentLog.noEntries') : t('agentLog.noActivity')}
           </div>
         )}
         {entries.map((entry, i) => {

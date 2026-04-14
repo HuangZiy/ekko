@@ -1,4 +1,5 @@
 import { useState, useEffect, Component } from 'react'
+import { useTranslation } from 'react-i18next'
 import type { Issue } from './stores/boardStore'
 import type { ReactNode } from 'react'
 import { useBoardStore } from './stores/boardStore'
@@ -15,6 +16,7 @@ import { RunLogPanel } from './components/RunLogPanel'
 import { MarkdownEditor } from './components/MarkdownEditor'
 import { LayoutDashboard, Plus, Play, Sun, Moon } from 'lucide-react'
 import { AnimatePresence } from 'framer-motion'
+import i18n from './i18n'
 import './index.css'
 
 class ErrorBoundary extends Component<{ children: ReactNode }, { error: Error | null }> {
@@ -24,11 +26,11 @@ class ErrorBoundary extends Component<{ children: ReactNode }, { error: Error | 
     if (this.state.error) {
       return (
         <div style={{ padding: 32, color: 'red', fontFamily: 'monospace', whiteSpace: 'pre-wrap' }}>
-          <h2>UI Error</h2>
+          <h2>{i18n.t('error.uiError')}</h2>
           <p>{this.state.error.message}</p>
           <pre>{this.state.error.stack}</pre>
           <button onClick={() => this.setState({ error: null })} style={{ marginTop: 16, padding: '8px 16px' }}>
-            Dismiss
+            {i18n.t('error.dismiss')}
           </button>
         </div>
       )
@@ -38,6 +40,7 @@ class ErrorBoundary extends Component<{ children: ReactNode }, { error: Error | 
 }
 
 function App() {
+  const { t } = useTranslation()
   const [selectedIssue, setSelectedIssue] = useState<Issue | null>(null)
   const [selectedProject, setSelectedProject] = useState<ProjectInfo | null>(null)
   const [showCreateForm, setShowCreateForm] = useState(false)
@@ -135,7 +138,7 @@ function App() {
             <button
               onClick={toggleTheme}
               className="p-2 rounded-lg hover:bg-[var(--bg-secondary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
-              title={theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode'}
+              title={theme === 'light' ? t('header.switchToDark') : t('header.switchToLight')}
             >
               {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
             </button>
@@ -143,9 +146,9 @@ function App() {
               <button
                 onClick={() => runAllIssues()}
                 className="flex items-center gap-1.5 px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-medium"
-                title="Run all ready issues"
+                title={t('header.runAllTitle')}
               >
-                <Play size={16} /> Run All
+                <Play size={16} /> {t('header.runAll')}
               </button>
             )}
             <button
@@ -153,7 +156,7 @@ function App() {
               disabled={!projectId}
               className="flex items-center gap-1.5 px-3 py-1.5 bg-[var(--accent)] text-white rounded-lg hover:bg-[var(--accent-hover)] text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <Plus size={16} /> New Issue
+              <Plus size={16} /> {t('header.newIssue')}
             </button>
           </div>
         </header>
@@ -167,7 +170,7 @@ function App() {
             <Board onIssueClick={setSelectedIssue} />
           ) : (
             <div className="flex items-center justify-center h-full text-gray-400 text-sm">
-              Select a project or create one from the sidebar
+              {t('board.selectProject')}
             </div>
           )}
         </main>
@@ -211,55 +214,55 @@ function App() {
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div className="absolute inset-0 bg-black/30" onClick={resetCreateForm} />
           <div className="relative bg-[var(--bg-card)] rounded-xl shadow-xl p-6 w-full max-w-lg">
-            <h2 className="text-lg font-semibold mb-4 text-[var(--text-primary)]">New Issue</h2>
+            <h2 className="text-lg font-semibold mb-4 text-[var(--text-primary)]">{t('issue.create.title')}</h2>
 
             <div className="space-y-3">
               {/* Title */}
               <div>
-                <label className="text-xs font-medium text-[var(--text-secondary)] mb-1 block">Title</label>
+                <label className="text-xs font-medium text-[var(--text-secondary)] mb-1 block">{t('issue.create.titleLabel')}</label>
                 <input
                   autoFocus
                   value={newTitle}
                   onChange={e => setNewTitle(e.target.value)}
                   onKeyDown={e => e.key === 'Enter' && handleCreate()}
-                  placeholder="Issue title..."
+                  placeholder={t('issue.create.titlePlaceholder')}
                   className="w-full px-3 py-2 border border-[var(--border)] rounded-lg text-sm bg-[var(--input-bg)] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
                 />
               </div>
 
               {/* Priority */}
               <div>
-                <label className="text-xs font-medium text-[var(--text-secondary)] mb-1 block">Priority</label>
+                <label className="text-xs font-medium text-[var(--text-secondary)] mb-1 block">{t('issue.create.priorityLabel')}</label>
                 <select
                   value={newPriority}
                   onChange={e => setNewPriority(e.target.value)}
                   className="w-full px-3 py-2 border border-[var(--border)] rounded-lg text-sm bg-[var(--input-bg)] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
                 >
-                  <option value="low">Low</option>
-                  <option value="medium">Medium</option>
-                  <option value="high">High</option>
-                  <option value="urgent">Urgent</option>
+                  <option value="low">{t('issue.create.priority.low')}</option>
+                  <option value="medium">{t('issue.create.priority.medium')}</option>
+                  <option value="high">{t('issue.create.priority.high')}</option>
+                  <option value="urgent">{t('issue.create.priority.urgent')}</option>
                 </select>
               </div>
 
               {/* Labels */}
               <div>
-                <label className="text-xs font-medium text-[var(--text-secondary)] mb-1 block">Labels (comma-separated)</label>
+                <label className="text-xs font-medium text-[var(--text-secondary)] mb-1 block">{t('issue.create.labelsLabel')}</label>
                 <input
                   value={newLabels}
                   onChange={e => setNewLabels(e.target.value)}
-                  placeholder="bug, frontend, api"
+                  placeholder={t('issue.create.labelsPlaceholder')}
                   className="w-full px-3 py-2 border border-[var(--border)] rounded-lg text-sm bg-[var(--input-bg)] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
                 />
               </div>
 
               {/* Description */}
               <div>
-                <label className="text-xs font-medium text-[var(--text-secondary)] mb-1 block">Description (markdown)</label>
+                <label className="text-xs font-medium text-[var(--text-secondary)] mb-1 block">{t('issue.create.descriptionLabel')}</label>
                 <MarkdownEditor
                   value={newDescription}
                   onChange={setNewDescription}
-                  placeholder="Describe the issue..."
+                  placeholder={t('issue.create.descriptionPlaceholder')}
                   rows={6}
                   uploadUrl={projectId ? `/api/projects/${projectId}/uploads` : null}
                 />
@@ -267,11 +270,11 @@ function App() {
 
               {/* Blocked By */}
               <div>
-                <label className="text-xs font-medium text-[var(--text-secondary)] mb-1 block">Blocked by (comma-separated issue IDs)</label>
+                <label className="text-xs font-medium text-[var(--text-secondary)] mb-1 block">{t('issue.create.blockedByLabel')}</label>
                 <input
                   value={newBlockedBy}
                   onChange={e => setNewBlockedBy(e.target.value)}
-                  placeholder="ISSUE-001, ISSUE-002"
+                  placeholder={t('issue.create.blockedByPlaceholder')}
                   className="w-full px-3 py-2 border border-[var(--border)] rounded-lg text-sm bg-[var(--input-bg)] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
                 />
               </div>
@@ -280,15 +283,15 @@ function App() {
             <div className="flex justify-end gap-2 mt-5">
               <button
                 onClick={resetCreateForm}
-                className="px-4 py-2 text-sm text-[var(--text-secondary)] hover:text-text-primary)]"
+                className="px-4 py-2 text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
               >
-                Cancel
+                {t('issue.create.cancel')}
               </button>
               <button
                 onClick={handleCreate}
                 className="px-4 py-2 bg-[var(--accent)] text-white rounded-lg hover:bg-[var(--accent-hover)] text-sm font-medium"
               >
-                Create
+                {t('issue.create.submit')}
               </button>
             </div>
           </div>

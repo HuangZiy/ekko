@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { FolderKanban, FolderOpen, Plus, Check, Trash2, ChevronDown, Info } from 'lucide-react'
 import { useProjectStore } from '../stores/projectStore'
 import type { ProjectInfo } from '../stores/projectStore'
@@ -11,6 +12,7 @@ interface ProjectSidebarProps {
 }
 
 export function ProjectSidebar({ onProjectSwitch, onProjectDetail }: ProjectSidebarProps) {
+  const { t } = useTranslation()
   const projects = useProjectStore(s => s.projects)
   const activeProjectId = useProjectStore(s => s.activeProjectId)
   const switchProject = useProjectStore(s => s.switchProject)
@@ -48,7 +50,7 @@ export function ProjectSidebar({ onProjectSwitch, onProjectDetail }: ProjectSide
         onClick={() => setExpanded(!expanded)}
       >
         <FolderKanban size={14} className="text-[var(--text-secondary)]" />
-        <span className="text-xs font-semibold flex-1 text-[var(--text-secondary)] uppercase tracking-wider">Projects</span>
+        <span className="text-xs font-semibold flex-1 text-[var(--text-secondary)] uppercase tracking-wider">{t('projectSidebar.projects')}</span>
         <ChevronDown size={14} className={`text-gray-400 transition-transform ${expanded ? '' : '-rotate-90'}`} />
       </div>
 
@@ -67,7 +69,7 @@ export function ProjectSidebar({ onProjectSwitch, onProjectDetail }: ProjectSide
 
           {projects.length === 0 && (
             <div className="px-4 py-6 text-xs text-gray-400 text-center">
-              No projects yet
+              {t('projectSidebar.noProjects')}
             </div>
           )}
         </div>
@@ -80,20 +82,20 @@ export function ProjectSidebar({ onProjectSwitch, onProjectDetail }: ProjectSide
               autoFocus
               value={newName}
               onChange={e => setNewName(e.target.value)}
-              placeholder="Project name"
+              placeholder={t('projectSidebar.projectName')}
               className="w-full px-2 py-1.5 text-xs border border-[var(--border)] rounded focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
             />
             <div className="flex gap-1">
               <input
                 value={newPath}
                 onChange={e => setNewPath(e.target.value)}
-                placeholder="Workspace path"
+                placeholder={t('projectSidebar.workspacePath')}
                 className="flex-1 min-w-0 px-2 py-1.5 text-xs border border-[var(--border)] rounded focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
               />
               <button
                 onClick={() => setShowPicker(true)}
                 className="px-2 py-1.5 border border-[var(--border)] rounded hover:bg-blue-50 text-gray-500 hover:text-[var(--accent)]"
-                title="Browse directories"
+                title={t('projectSidebar.browseDirectories')}
               >
                 <FolderOpen size={14} />
               </button>
@@ -103,13 +105,13 @@ export function ProjectSidebar({ onProjectSwitch, onProjectDetail }: ProjectSide
                 onClick={handleCreate}
                 className="flex-1 px-2 py-1 text-xs bg-[var(--accent)] text-white rounded hover:bg-[var(--accent-hover)]"
               >
-                Create
+                {t('projectSidebar.create')}
               </button>
               <button
                 onClick={() => setShowCreate(false)}
                 className="px-2 py-1 text-xs text-gray-500 hover:text-gray-700"
               >
-                Cancel
+                {t('projectSidebar.cancel')}
               </button>
             </div>
           </div>
@@ -118,7 +120,7 @@ export function ProjectSidebar({ onProjectSwitch, onProjectDetail }: ProjectSide
             onClick={() => setShowCreate(true)}
             className="w-full flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-500 hover:text-[var(--accent)] hover:bg-blue-50 rounded"
           >
-            <Plus size={14} /> New Project
+            <Plus size={14} /> {t('projectSidebar.newProject')}
           </button>
         )}
       </div>
@@ -144,6 +146,7 @@ function ProjectItem({
   onDelete: () => void
   onDetail: () => void
 }) {
+  const { t } = useTranslation()
   const [showActions, setShowActions] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const total = project.total_issues || 0
@@ -169,7 +172,7 @@ function ProjectItem({
         </div>
         {total > 0 && (
           <div className="text-xs text-gray-400 mt-0.5 ml-5">
-            {done}/{total} done
+            {t('projectSidebar.progress', { done, total })}
           </div>
         )}
       </div>
@@ -178,7 +181,7 @@ function ProjectItem({
           <button
             onClick={e => { e.stopPropagation(); onDetail() }}
             className="text-gray-300 hover:text-[var(--accent)] shrink-0"
-            title="Project details"
+            title={t('projectSidebar.projectDetails')}
           >
             <Info size={14} />
           </button>
@@ -194,18 +197,18 @@ function ProjectItem({
       )}
       {showDeleteConfirm && (
         <div className="flex items-center gap-1 shrink-0" onClick={e => e.stopPropagation()}>
-          <span className="text-xs text-red-500">Delete?</span>
+          <span className="text-xs text-red-500">{t('projectSidebar.deleteConfirm')}</span>
           <button
             onClick={() => { onDelete(); setShowDeleteConfirm(false) }}
             className="text-xs px-1.5 py-0.5 bg-red-500 text-white rounded hover:bg-red-600"
           >
-            Yes
+            {t('projectSidebar.yes')}
           </button>
           <button
             onClick={() => setShowDeleteConfirm(false)}
             className="text-xs px-1.5 py-0.5 text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
           >
-            No
+            {t('projectSidebar.no')}
           </button>
         </div>
       )}

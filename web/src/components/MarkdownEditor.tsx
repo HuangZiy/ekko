@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback, type DragEvent, type ClipboardEvent, type ChangeEvent } from 'react'
+import { useTranslation } from 'react-i18next'
 import ReactMarkdown from 'react-markdown'
 import type { Components } from 'react-markdown'
 import remarkGfm from 'remark-gfm'
@@ -24,14 +25,14 @@ interface MarkdownEditorProps {
 
 type ToolbarAction = {
   icon: typeof Bold
-  label: string
+  labelKey: string
   action: (text: string, selStart: number, selEnd: number) => { text: string; cursor: number }
 }
 
 const toolbarActions: ToolbarAction[] = [
   {
     icon: Bold,
-    label: 'Bold',
+    labelKey: 'markdownEditor.bold',
     action: (text, s, e) => {
       const selected = text.slice(s, e)
       const replacement = `**${selected || 'bold text'}**`
@@ -40,7 +41,7 @@ const toolbarActions: ToolbarAction[] = [
   },
   {
     icon: Italic,
-    label: 'Italic',
+    labelKey: 'markdownEditor.italic',
     action: (text, s, e) => {
       const selected = text.slice(s, e)
       const replacement = `*${selected || 'italic text'}*`
@@ -49,7 +50,7 @@ const toolbarActions: ToolbarAction[] = [
   },
   {
     icon: Heading1,
-    label: 'Heading 1',
+    labelKey: 'markdownEditor.heading1',
     action: (text, s, e) => {
       const lineStart = text.lastIndexOf('\n', s - 1) + 1
       const selected = text.slice(s, e) || 'Heading'
@@ -61,7 +62,7 @@ const toolbarActions: ToolbarAction[] = [
   },
   {
     icon: Heading2,
-    label: 'Heading 2',
+    labelKey: 'markdownEditor.heading2',
     action: (text, s, e) => {
       const lineStart = text.lastIndexOf('\n', s - 1) + 1
       const selected = text.slice(s, e) || 'Heading'
@@ -73,7 +74,7 @@ const toolbarActions: ToolbarAction[] = [
   },
   {
     icon: Heading3,
-    label: 'Heading 3',
+    labelKey: 'markdownEditor.heading3',
     action: (text, s, e) => {
       const lineStart = text.lastIndexOf('\n', s - 1) + 1
       const selected = text.slice(s, e) || 'Heading'
@@ -85,7 +86,7 @@ const toolbarActions: ToolbarAction[] = [
   },
   {
     icon: Code,
-    label: 'Code',
+    labelKey: 'markdownEditor.code',
     action: (text, s, e) => {
       const selected = text.slice(s, e)
       if (selected.includes('\n')) {
@@ -98,7 +99,7 @@ const toolbarActions: ToolbarAction[] = [
   },
   {
     icon: Link,
-    label: 'Link',
+    labelKey: 'markdownEditor.link',
     action: (text, s, e) => {
       const selected = text.slice(s, e) || 'link text'
       const replacement = `[${selected}](url)`
@@ -107,7 +108,7 @@ const toolbarActions: ToolbarAction[] = [
   },
   {
     icon: List,
-    label: 'Bullet List',
+    labelKey: 'markdownEditor.bulletList',
     action: (text, s, e) => {
       const selected = text.slice(s, e)
       if (selected) {
@@ -120,7 +121,7 @@ const toolbarActions: ToolbarAction[] = [
   },
   {
     icon: ListOrdered,
-    label: 'Numbered List',
+    labelKey: 'markdownEditor.numberedList',
     action: (text, s, e) => {
       const selected = text.slice(s, e)
       if (selected) {
@@ -133,7 +134,7 @@ const toolbarActions: ToolbarAction[] = [
   },
   {
     icon: Quote,
-    label: 'Quote',
+    labelKey: 'markdownEditor.quote',
     action: (text, s, e) => {
       const selected = text.slice(s, e)
       if (selected) {
@@ -180,13 +181,14 @@ export function MarkdownEditor({
   className = '',
   autoFocus = false,
 }: MarkdownEditorProps) {
+  const { t } = useTranslation()
   const [mode, setMode] = useState<'write' | 'preview'>('write')
   const [uploading, setUploading] = useState(false)
   const [dragOver, setDragOver] = useState(false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  // Resolve the upload URL: explicit prop takes priority, then projectId+issueId combo
+  // Resolve the upload URL: explicit prop takes priority, then projeueId combo
   const resolvedUploadUrl = uploadUrlProp
     || (projectId && issueId ? `/api/projects/${projectId}/issues/${issueId}/uploads` : null)
   const canUpload = !!resolvedUploadUrl
@@ -310,17 +312,17 @@ export function MarkdownEditor({
               : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
           }`}
         >
-          <Pencil size={12} /> Write
+          <Pencil size={12} /> {t('markdownEditor.write')}
         </button>
         <button
           onClick={() => setMode('preview')}
           className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-medium transition-colors ${
             mode === 'preview'
-              ? 'bg-[var(--bg-card)] text-[var(--text-primary)] shadow-sm'
+          ? 'bg-[var(--bg-card)] text-[var(--text-primary)] shadow-sm'
               : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
           }`}
         >
-          <Eye size={12} /> Preview
+          <Eye size={12} /> {t('markdownEditor.preview')}
         </button>
 
         {mode === 'write' && (
@@ -331,7 +333,7 @@ export function MarkdownEditor({
                 key={i}
                 onClick={() => handleToolbarAction(item.action)}
                 className="p-1 rounded hover:bg-[var(--bg-card)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
-                title={item.label}
+                title={t(item.labelKey)}
               >
                 <item.icon size={14} />
               </button>
@@ -343,7 +345,7 @@ export function MarkdownEditor({
                   onClick={() => fileInputRef.current?.click()}
                   disabled={uploading}
                   className="p-1 rounded hover:bg-[var(--bg-card)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors disabled:opacity-50"
-                  title="Upload image"
+                  title={t('markdownEditor.uploadImage')}
                 >
                   {uploading ? <Loader2 size={14} className="animate-spin" /> : <ImageIcon size={14} />}
                 </button>
@@ -361,7 +363,7 @@ export function MarkdownEditor({
 
         {uploading && (
           <span className="ml-auto text-xs text-[var(--text-secondary)] flex items-center gap-1">
-            <Loader2 size={12} className="animate-spin" /> Uploading...
+            <Loader2 size={12} className="animate-spin" /> {t('markdownEditor.uploading')}
           </span>
         )}
       </div>
@@ -389,7 +391,7 @@ export function MarkdownEditor({
           {dragOver && (
             <div className="absolute inset-0 flex items-center justify-center bg-blue-50/80 dark:bg-blue-900/30 pointer-events-none rounded-b-lg">
               <div className="flex items-center gap-2 text-blue-600 text-sm font-medium">
-                <Upload size={20} /> Drop image here
+                <Upload size={20} /> {t('markdownEditor.dropImage')}
               </div>
             </div>
           )}
@@ -399,7 +401,7 @@ export function MarkdownEditor({
           {value ? (
             <ReactMarkdown remarkPlugins={[remarkGfm]} components={previewComponents}>{value}</ReactMarkdown>
           ) : (
-            <p className="text-[var(--text-secondary)] italic">Nothing to preview</p>
+            <p className="text-[var(--text-secondary)] italic">{t('markdownEditor.nothingToPreview')}</p>
           )}
         </div>
       )}
@@ -407,7 +409,7 @@ export function MarkdownEditor({
       {/* Footer hint */}
       {mode === 'write' && (
         <div className="px-3 py-1.5 bg-[var(--bg-secondary)] border-t border-[var(--border)] text-[10px] text-[var(--text-secondary)]">
-          Markdown supported.{canUpload ? ' Paste or drag images to upload.' : ''}
+          {canUpload ? t('markdownEditor.footerHintUpload') : t('markdownEditor.footerHint')}
         </div>
       )}
     </div>

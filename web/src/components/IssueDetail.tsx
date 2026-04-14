@@ -140,7 +140,7 @@ export function IssueDetail({ issue, onClose, onApprove, onReject, onRun, onDele
     })
     if (!res.ok) {
       const data = await res.json().catch(() => ({}))
-      setStatusError(data.detail || 'Status change failed')
+      setStatusError(data.detail || t('issueDetail.statusChangeFailed'))
       setTimeout(() => setStatusError(null), 3000)
       return
     }
@@ -318,10 +318,10 @@ export function IssueDetail({ issue, onClose, onApprove, onReject, onRun, onDele
                 onChange={e => setEditPriority(e.target.value)}
                 className="px-2 py-0.5 rounded text-xs font-medium border border-[var(--border)] bg-[var(--input-bg)] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
               >
-                <option value="low">low</option>
-                <option value="medium">medium</option>
-                <option value="high">high</option>
-                <option value="urgent">urgent</option>
+                <option value="low">{t('issue.create.priority.low')}</option>
+                <option value="medium">{t('issue.create.priority.medium')}</option>
+                <option value="high">{t('issue.create.priority.high')}</option>
+                <option value="urgent">{t('issue.create.priority.urgent')}</option>
               </select>
             ) : (
               <span className={`px-2 py-0.5 rounded text-xs font-medium ${priorityBg(issue.priority)}`}>
@@ -382,7 +382,7 @@ export function IssueDetail({ issue, onClose, onApprove, onReject, onRun, onDele
               <span className="font-mono font-medium">{issue.parent_id}</span>
               {issue.source === 'agent' && (
                 <span className="inline-flex items-center gap-0.5 text-xs px-1.5 py-0.5 rounded-full bg-violet-50 text-violet-600">
-                  <Bot size={10} /> Agent
+                  <Bot size={10} /> {t('issueDetail.agent')}
                 </span>
               )}
             </div>
@@ -713,7 +713,7 @@ function EvidencePanel({ evidence }: { evidence: EvidenceData }) {
                 <img
                   key={i}
                   src={src}
-                  alt={`Screenshot ${i + 1}`}
+                  alt={t('issueDetail.screenshot', { index: i + 1 })}
                   className={`h-32 rounded-lg border-2 cursor-pointer transition-all ${i === galleryIndex ? 'border-[var(--accent)]' : 'border-transparent'}`}
                   onClick={() => setGalleryIndex(i)}
                 />

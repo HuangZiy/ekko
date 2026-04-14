@@ -113,7 +113,10 @@
     "screenshots": "截图 ({{count}})",
     "evalResult": "评估结果",
     "buildPass": "通过",
-    "buildFail": "失败"
+    "buildFail": "失败",
+    "statusChangeFailed": "状态变更失败",
+    "agent": "Agent",
+    "screenshot": "截图 {{index}}"
   },
   "projectDetail": {
     "editProject": "编辑项目",
@@ -174,6 +177,7 @@
     "link": "链接",
     "bulletList": "无序列表",
     "numberedList": "有序列表",
-    "quote": "引用"
+    "quote": "引用",
+    "placeholder": "在此编写 Markdown..."
   }
 }

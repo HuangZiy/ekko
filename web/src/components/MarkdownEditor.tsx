@@ -173,7 +173,7 @@ const previewComponents: Components = {
 export function MarkdownEditor({
   value,
   onChange,
-  placeholder = 'Write markdown here...',
+  placeholder: placeholderProp,
   rows = 8,
   projectId,
   issueId,
@@ -182,6 +182,7 @@ export function MarkdownEditor({
   autoFocus = false,
 }: MarkdownEditorProps) {
   const { t } = useTranslation()
+  const placeholder = placeholderProp ?? t('markdownEditor.placeholder')
   const [mode, setMode] = useState<'write' | 'preview'>('write')
   const [uploading, setUploading] = useState(false)
   const [dragOver, setDragOver] = useState(false)

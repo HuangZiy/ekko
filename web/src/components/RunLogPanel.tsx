@@ -15,13 +15,13 @@ const typeColors: Record<string, string> = {
   run_error: 'text-red-600',
 }
 
-function formatTime(iso: string): string {
+function formatTime(iso: string, locale?: string): string {
   const d = new Date(iso)
-  return d.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' })
+  return d.toLocaleTimeString(locale || undefined, { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' })
 }
 
 export function RunLogPanel() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const [open, setOpen] = useState(false)
   const sseLog = useBoardStore(s => s.sseLog)
   const clearSSELog = useBoardStore(s => s.clearSSELog)
@@ -76,7 +76,7 @@ export function RunLogPanel() {
               )}
               {sseLog.map((entry: SSELogEntry) => (
                 <div key={entry.id} className="flex gap-2">
-                  <span className="text-[var(--text-secondary)] shrink-0">{formatTime(entry.timestamp)}</span>
+                  <span className="text-[var(--text-secondary)] shrink-0">{formatTime(entry.timestamp, i18n.language)}</span>
                   <span className={`shrink-0 ${typeColors[entry.type] || 'text-[var(--text-secondary)]'}`}>
                     [{entry.type}]
                   </span>

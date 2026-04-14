@@ -113,7 +113,10 @@
     "screenshots": "Screenshots ({{count}})",
     "evalResult": "Eval Result",
     "buildPass": "PASS",
-    "buildFail": "FAIL"
+    "buildFail": "FAIL",
+    "statusChangeFailed": "Status change failed",
+    "agent": "Agent",
+    "screenshot": "Screenshot {{index}}"
   },
   "projectDetail": {
     "editProject": "Edit project",
@@ -174,6 +177,7 @@
     "link": "Link",
     "bulletList": "Bullet List",
     "numberedList": "Numbered List",
-    "quote": "Quote"
+    "quote": "Quote",
+    "placeholder": "Write markdown here..."
   }
 }

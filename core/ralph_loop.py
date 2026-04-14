@@ -249,7 +249,10 @@ async def run_issue_loop(
         _log("Evidence", C_CYAN, f"Collecting evidence for {issue.id}")
         await _emit_harness(on_event, issue.id, "evidence", "Collecting evidence")
         try:
-            collect_evidence(issue.id, storage, workspace, run_build=True, base_sha=base_sha, agent_commits=agent_commits)
+            # Resolve project_id for screenshot URL construction
+            _project_meta = storage.load_project_meta()
+            _project_id = _project_meta.id if _project_meta and hasattr(_project_meta, 'id') else None
+            collect_evidence(issue.id, storage, workspace, run_build=True, base_sha=base_sha, agent_commits=agent_commits, project_id=_project_id)
         except Exception as e:
             _log("Evidence", C_RED, f"Evidence collection failed: {e}")
             await _emit_harness(on_event, issue.id, "evidence", f"Failed: {e}", "error")

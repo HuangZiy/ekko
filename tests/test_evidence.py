@@ -310,3 +310,169 @@ def test_collect_evidence_rev_parse_returns_empty(tmp_path):
     log_calls = [c for c in call_log if "log" in c and "rev-parse" not in c]
     assert len(diff_calls) == 0, f"Should not run git diff when rev-parse fails, but got: {diff_calls}"
     assert len(log_calls) == 0, f"Should not run git log when rev-parse fails, but got: {log_calls}"
+
+
+def test_collect_evidence_includes_screenshots_with_project_id(tmp_path):
+    """When screenshots exist and project_id is provided, evidence should contain markdown image links."""
+    store = ProjectStorage(tmp_path / "project")
+    ws = tmp_path / "workspace"
+    ws.mkdir()
+
+    issue = Issue.create(id="ISS-1", title="screenshot task")
+    store.save_issue(issue)
+    store.save_issue_content(issue.id, "# Task")
+
+    # Create fake screenshot files
+    screenshots_dir = store.root / "runs" / issue.id / "screenshots"
+    screenshots_dir.mkdir(parents=True, exist_ok=True)
+    (screenshots_dir / "step1.png").write_bytes(b"fake png")
+    (screenshots_dir / "step2.jpg").write_bytes(b"fake jpg")
+
+    with patch("core.evidence.subprocess.run") as mock_run:
+        mock_run.return_value = MagicMock(stdout="file.py | 10 ++++\n", returncode=0)
+        collect_evidence(issue.id, store, ws, project_id="proj-123")
+
+    content = store.load_issue_content(issue.id)
+    assert "### 截图" in content
+    assert "![step1](/api/projects/proj-123/issues/ISS-1/screenshots/step1.png)" in content
+    assert "![step2](/api/projects/proj-123/issues/ISS-1/screenshots/step2.jpg)" in content
+
+
+def test_collect_evidence_screenshots_without_project_id(tmp_path):
+    """When screenshots exist but no projecdence should use relative paths."""
+    store = ProjectStorage(tmp_path / "project")
+    ws = tmp_path / "workspace"
+    ws.mkdir()
+
+    issue = Issue.create(id="ISS-1", title="screenshot no pid")
+    store.save_issue(issue)
+    store.save_issue_content(issue.id, "# Task")
+
+    # Create fake screenshot
+    screenshots_dir = store.root / "runs" / issue.id / "screenshots"
+    screenshots_dir.mkdir(parents=True, exist_ok=True)
+    (screenshots_dir / "capture.png").write_bytes(b"fake png")
+
+    with patch("core.evidence.subprocess.run") as mock_run:
+        mock_run.return_value = MagicMock(stdout="file.py | 10 ++++\n", returncode=0)
+        collect_evidence(issue.id, store, ws)
+
+    content = store.load_issue_content(issue.id)
+    assert "### 截图" in content
+    assert "![capture](screenshots/capture.png)" in content
+
+
+def test_collect_evidence_no_screenshots_dir(tmp_path):
+    """When no screenshots directory exists, evidence should not contain screenshot section."""
+    store = ProjectStorage(tmp_path / "project")
+    ws = tmp_path / "workspace"
+    ws.mkdir()
+
+    issue = Issue.create(id="ISS-1", title="no screenshots")
+    store.save_issue(issue)
+    store.save_issue_content(issue.id, "# Task")
+
+    with patch("core.evidence.subprocess.run") as mock_run:
+        mock_run.return_value = MagicMock(stdout="file.py | 10 ++++\n", returncode=0)
+        collect_evidence(issue.id, store, ws, project_id="proj-123")
+
+    content = store.load_issue_content(issue.id)
+    assert "### 截图" not in content
+
+
+def test_collect_evidence_empty_screenshots_dir(tmp_path):
+    """When screenshots directory exists but is empty, evidence should not contain screenshot section."""
+    store = ProjectStorage(tmp_path / "project")
+    ws = tmp_path / "workspace"
+    ws.mkdir()
+
+    issue = Issue.create(id="ISS-1", title="empty screenshots")
+    store.save_issue(issue)
+    store.save_issue_content(issue.id, "# Task")
+
+    # Create empty screenshots dir
+    screenshots_dir = store.root / "runs" / issue.id / "screenshots"
+    screenshots_dir.mkdir(parents=True, exist_ok=True)
+
+    with patch("core.evidence.subprocess.run") as mock_run:
+        mock_run.return_value = MagicMock(stdout="file.py | 10 ++++\n", returncode=0)
+        collect_evidence(issue.id, store, ws, project_id="proj-123")
+
+    content = store.load_issue_content(issue.id)
+    assert "### 截图" not in content
+
+
+def test_collect_evidence_includes_change_summary(tmp_path):
+    """Evidence should include a 变更摘要 section with shortstat output."""
+    store = ProjectStorage(tmp_path / "project")
+    ws = tmp_path / "workspace"
+    ws.mkdir()
+
+    issue = Issue.create(id="ISS-1", title="change summary task")
+    store.save_issue(issue)
+    store.save_issue_content(issue.id, "# Task")
+
+    def mock_run_side_effect(cmd, **kwargs):
+        result = MagicMock(returncode=0)
+        cmd_str = " ".join(cmd)
+        if "rev-parse" in cmd_str:
+            result.stdout = "def5678"
+        elif "--shortstat" in cmd_str:
+            result.stdout = " 3 files changed, 45 insertions(+), 12 deletions(-)"
+        elif "diff" in cmd_str and "--stat" in cmd_str and "abc1234..HEAD" in cmd_str:
+            result.stdout = "file.py | 10 ++++\n"
+        elif "diff" in cmd_str and "--name-only" in cmd_str:
+            result.stdout = "file.py\n"
+        elif "diff" in cmd_str and "-- file.py" in cmd_str:
+            result.stdout = "+added line\n-removed line\n"
+        elif "log" in cmd_str and "abc1234..HEAD" in cmd_str:
+            result.stdout = "def5678 feat: add feature"
+        else:
+            result.stdout = ""
+        return result
+
+    with patch("core.evidence.subprocess.run", side_effect=mock_run_side_effect):
+        collect_evidence(issue.id, store, ws, base_sha="abc1234")
+
+    content = store.load_issue_content(issue.id)
+    assert "### 变更摘要" in content
+    assert "3 files changed" in content
+    assert "45 insertions" in content
+
+
+def test_collect_evidence_includes_file_diff_details(tmp_path):
+    """Evidence should include 修改文件详情 section with per-file diffs."""
+    store = ProjectStorage(tmp_path / "project")
+    ws = tmp_path / "workspace"
+    ws.mkdir()
+
+    issue = Issue.create(id="ISS-1", title="file diff details")
+    store.save_issue(issue)
+    store.save_issue_content(issue.id, "# Task")
+
+    def mock_run_side_effect(cmd, **kwargs):
+        result = MagicMock(returncode=0)
+        cmd_str = " ".join(cmd)
+        if "rev-parse" in cmd_str:
+            result.stdout = "def5678"
+        elif "--shortstat" in cmd_str:
+            result.stdout = " 1 file changed, 5 insertions(+)"
+        elif "diff" in cmd_str and "--stat" in cmd_str:
+            result.stdout = "core/evidence.py | 5 +++++"
+        elif "diff" in cmd_str and "--name-only" in cmd_str:
+            result.stdout = "core/evidence.py\n"
+        elif "diff" in cmd_str and "-- core/evidence.py" in cmd_str:
+            result.stdout = "diff --git a/core/evidence.py b/core/evidence.py\n+new line 1\n+new line 2"
+        elif "log" in cmd_str:
+            result.stdout = "def5678 feat: update evidence"
+        else:
+            result.stdout = ""
+        return result
+
+    with patch("core.evidence.subprocess.run", side_effect=mock_run_side_effect):
+        collect_evidence(issue.id, store, ws, base_sha="abc1234")
+
+    content = store.load_issue_content(issue.id)
+    assert "### 修改文件详情" in content
+    assert "#### core/evidence.py" in content
+    assert "+new line 1" in content

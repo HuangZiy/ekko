@@ -15,6 +15,28 @@ def _run_cmd(cmd: list[str], cwd: Path) -> str:
         return ""
 
 
+def _collect_file_diffs(base_sha: str, workspace: Path, max_lines_per_file: int = 30) -> str:
+    """Get per-file diff details, truncated to max_lines_per_file lines each."""
+    stat_output = _run_cmd(["git", "diff", f"{base_sha}..HEAD", "--name-only"], workspace)
+    if not stat_output:
+        return ""
+
+    parts: list[str] = []
+    for filename in stat_output.splitlines():
+        filename = filename.strip()
+        if not filename:
+            continue
+        file_diff = _run_cmd(["git", "diff", f"{base_sha}..HEAD", "--", filename], workspace)
+        if not file_diff:
+            continue
+        lines = file_diff.splitlines()
+        truncated = lines[:max_lines_per_file]
+        suffix = f"\n... ({len(lines) - max_lines_per_file} more lines)" if len(lines) > max_lines_per_file else ""
+        parts.append(f"#### {filename}\n\n```diff\n{chr(10).join(truncated)}{suffix}\n```\n")
+
+    return "\n".join(parts)
+
+
 def collect_evidence(
     issue_id: str,
     storage: ProjectStorage,
@@ -22,6 +44,9 @@ def collect_evidence(
     run_build: bool = False,
     base_sha: str | None = None,
     agent_commits: list[str] | None = None,
+    project_id: str | None = None,
+    eval_report: str | None = None,
+    screenshots_dir: Path | None = None,
 ) -> None:
     """Collect agent-done evidence and append to issue markdown.
 
@@ -34,10 +59,19 @@ def collect_evidence(
                        this run. When provided as an empty list, it means the agent
                        produced no commits (even if HEAD moved due to external commits).
                        When None, backward-compatible behavior is used.
+        project_id: Project ID used to construct screenshot API URLs. When None,
+                    screenshots are still referenced but with relative paths.
+        eval_report: Raw evaluator report text containing [PASS]/[FAIL]/[NEW_ISSUE] markers.
+        screenshots_dir: Directory containing evaluator screenshots. When None,
+                         falls back to storage.root / "runs" / issue_id / "screenshots".
     """
     sections = []
     now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
     sections.append(f"## Agent Done 证据\n\n收集时间: {now}\n")
+
+    # Track whether we have a valid diff range for file details later
+    _has_range_diff = False
+    _diff_base = base_sha
 
     if base_sha:
         # Range-based: capture all changes during this agent run
@@ -57,6 +91,13 @@ def collect_evidence(
             sections.append("### Commits\n\nNo commits by this agent\n")
         else:
             # agent_commits is either a non-empty list or None (backward compat)
+            _has_range_diff = True
+
+            # --- Change Summary (shortstat) ---
+            shortstat = _run_cmd(["git", "diff", f"{base_sha}..HEAD", "--shortstat"], workspace)
+            if shortstat:
+                sections.append(f"### 变更摘要\n\n{shortstat.strip()}\n")
+
             diff = _run_cmd(["git", "diff", f"{base_sha}..HEAD", "--stat"], workspace)
             if diff:
                 sections.append(f"### Git Diff\n\n```\n{diff}\n```\n")
@@ -68,8 +109,18 @@ def collect_evidence(
                 sections.append(f"### Commits\n\n```\n{log}\n```\n")
             else:
                 sections.append("### Commits\n\n(no commits)\n")
+
+            # --- File Diff Details ---
+            file_diffs = _collect_file_diffs(base_sha, workspace)
+            if file_diffs:
+                sections.append(f"### 修改文件详情\n\n{file_diffs}")
     else:
         # Legacy fallback: HEAD~1 snapshot (kept for backward compatibility)
+        # --- Change Summary for legacy mode ---
+        shortstat = _run_cmd(["git", "diff", "HEAD~1", "--shortstat"], workspace)
+        if shortstat:
+            sections.append(f"### 变更摘要\n\n{shortstat.strip()}\n")
+
         diff = _run_cmd(["git", "diff", "HEAD~1", "--stat"], workspace)
         if diff:
             sections.append(f"### Git Diff\n\n```\n{diff}\n```\n")
@@ -77,6 +128,45 @@ def collect_evidence(
         log = _run_cmd(["git", "log", "-1", "--oneline"], workspace)
         if log:
             sections.append(f"### Latest Commit\n\n`{log}`\n")
+
+    # --- Screenshots ---
+    if screenshots_dir is None:
+        screenshots_dir = storage.root / "runs" / issue_id / "screenshots"
+    if screenshots_dir.exists() and screenshots_dir.is_dir():
+        image_extensions = {".png", ".jpg", ".jpeg", ".gif", ".webp"}
+        screenshot_files = sorted(
+            f for f in screenshots_dir.iterdir()
+            if f.is_file() and f.suffix.lower() in image_extensions
+        )
+        if screenshot_files:
+            screenshot_lines = ["### 截图\n"]
+            for sf in screenshot_files:
+                if project_id:
+                    url = f"/api/projects/{project_id}/issues/{issue_id}/screenshots/{sf.name}"
+                else:
+                    url = f"screenshots/{sf.name}"
+                screenshot_lines.append(f"![{sf.stem}]({url})")
+            sections.append("\n".join(screenshot_lines) + "\n")
+
+    # --- Eval Summary ---
+    if eval_report:
+        pass_items = []
+        fail_items = []
+        for line in eval_report.splitlines():
+            stripped = line.strip()
+            if stripped.startswith("- [PASS]"):
+                text = stripped.removeprefix("- [PASS]").strip()
+                pass_items.append(f"- ✅ {text}" if text else "- ✅ PASS")
+            elif stripped.startswith("- [FAIL]"):
+                text = stripped.removeprefix("- [FAIL]").strip()
+                fail_items.append(f"- ❌ {text}" if text else "- ❌ FAIL")
+        if pass_items or fail_items:
+            eval_lines = ["### 评估摘要\n"]
+            eval_lines.extend(fail_items)
+            eval_lines.extend(pass_items)
+            total = len(pass_items) + len(fail_items)
+            eval_lines.append(f"\n评估结果: {len(pass_items)}/{total} 通过")
+            sections.append("\n".join(eval_lines) + "\n")
 
     # Build result
     if run_build:

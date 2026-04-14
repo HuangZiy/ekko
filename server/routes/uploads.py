@@ -104,3 +104,13 @@ def get_upload(project_id: str, issue_id: str, filename: str):
     storage = _get_storage(project_id)
     uploads_dir = storage.issues_dir / issue_id / "uploads"
     return _serve_file(uploads_dir, filename)
+
+
+# --- Evaluator screenshots (generated during agent runs) ---
+
+@router.get("/api/projects/{project_id}/issues/{issue_id}/screenshots/{filename}")
+def get_screenshot(project_id: str, issue_id: str, filename: str):
+    """Serve an evaluator screenshot from the runs directory."""
+    storage = _get_storage(project_id)
+    screenshots_dir = storage.root / "runs" / issue_id / "screenshots"
+    return _serve_file(screenshots_dir, filename)

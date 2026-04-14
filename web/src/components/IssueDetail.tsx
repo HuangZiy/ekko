@@ -47,6 +47,7 @@ interface IssueDetailProps {
 }
 
 interface EvidenceData {
+  changeSummary: string
   gitDiff: string
   buildResult: { passed: boolean; output: string } | null
   screenshots: string[]
@@ -55,6 +56,7 @@ interface EvidenceData {
 
 function parseEvidence(content: string): EvidenceData {
   const evidence: EvidenceData = {
+    changeSummary: '',
     gitDiff: '',
     buildResult: null,
     screenshots: [],
@@ -65,6 +67,12 @@ function parseEvidence(content: string): EvidenceData {
   if (!sectionMatch) return evidence
 
   const section = sectionMatch[1]
+
+  // Extract change summary (变更摘要)
+  const summaryMatch = section.match(/### 变更摘要\s*\n\s*([\s\S]*?)(?=\n### |$)/)
+  if (summaryMatch) {
+    evidence.changeSummary = summaryMatch[1].trim()
+  }
 
   // Extract git diff from code blocks
   const diffMatch = section.match(/```(?:diff)?\n([\s\S]*?)```/)
@@ -661,7 +669,7 @@ export function IssueDetail({ issue, onClose, onApprove, onReject, onRun, onDele
 function EvidencePanel({ evidence }: { evidence: EvidenceData }) {
   const { t } = useTranslation()
   const [galleryIndex, setGalleryIndex] = useState(0)
-  const hasAny = evidence.gitDiff || evidence.buildResult || evidence.screenshots.length > 0 || evidence.evalSummary
+  const hasAny = evidence.changeSummary || evidence.gitDiff || evidence.buildResult || evidence.screenshots.length > 0 || evidence.evalSummary
 
   if (!hasAny) return null
 
@@ -674,7 +682,13 @@ function EvidencePanel({ evidence }: { evidence: EvidenceData }) {
         </h3>
       </div>
       <div className="p-4 space-y-4">
-        {/* Git Diff */}
+        {/* Change Summary */}
+        {evidence.changeSummary && (
+          <div className="flex items-center gap-3 px-3 py-2 bg-[var(--bg-secondary)] rounded-lg">
+            <GitBranch size={14} className="text-violet-500 shrink-0" />
+            <span className="text-sm text-[var(--text-primary)]">{evidence.changeSummary}</span>
+          </div>
+        )}
         {evidence.gitDiff && (
           <div>
             <div className="flex items-center gap-1.5 text-xs font-medium text-[var(--text-secondary)] mb-2">

@@ -132,7 +132,9 @@
     "filesChanged": "Files Changed ({{count}})",
     "commitsCount": "{{count}} commits",
     "codeChanges": "Code Changes",
-    "changeSummary": "Change Summary"
+    "changeSummary": "Change Summary",
+    "clickToEnlarge": "Click to enlarge",
+    "buildLog": "Build Log"
   },
   "projectDetail": {
     "editProject": "Edit project",

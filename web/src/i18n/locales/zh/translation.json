@@ -132,7 +132,9 @@
     "filesChanged": "变更文件 ({{count}})",
     "commitsCount": "{{count}} 次提交",
     "codeChanges": "代码变更",
-    "changeSummary": "变更摘要"
+    "changeSummary": "变更摘要",
+    "clickToEnlarge": "点击放大查看",
+    "buildLog": "构建日志"
   },
   "projectDetail": {
     "editProject": "编辑项目",

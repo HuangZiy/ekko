@@ -62,7 +62,17 @@
     "collapse": "Collapse",
     "expand": "Expand",
     "noEntries": "No entries in this run.",
-    "noActivity": "No agent activity yet. Run the issue to see live output."
+    "noActivity": "No agent activity yet. Run the issue to see live output.",
+    "labelLLM": "LLM",
+    "labelTool": "Tool",
+    "labelStatus": "Status",
+    "labelHarness": "Harness",
+    "phaseState": "State",
+    "phaseLoop": "Loop",
+    "phaseGen": "Gen",
+    "phaseEval": "Eval",
+    "phaseEvidence": "Evidence",
+    "phaseNewIssue": "NewIssue"
   },
   "runLog": {
     "eventLog": "Event Log",

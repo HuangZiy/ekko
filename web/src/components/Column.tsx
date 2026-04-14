@@ -27,7 +27,7 @@ export function Column({ column, issues, onIssueClick }: ColumnProps) {
     <div className="flex flex-col w-72 min-w-[288px] shrink-0">
       <div className="flex items-center gap-2 px-3 py-2 mb-2">
         <div className={`w-2.5 h-2.5 rounded-full ${columnColors[column.id] || 'bg-gray-400'}`} />
-        <h3 className="text-sm font-semibold text-[var(--text-primary)]">{column.name}</h3>
+        <h3 className="text-sm font-semibold text-[var(--text-primary)]">{t(`status.${column.id}`, column.name)}</h3>
         <span className="text-xs text-gray-400 ml-auto">{issues.length}</span>
       </div>
 

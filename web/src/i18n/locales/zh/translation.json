@@ -62,7 +62,17 @@
     "collapse": "收起",
     "expand": "展开",
     "noEntries": "此次运行暂无记录。",
-    "noActivity": "暂无 Agent 活动。运行问题后可查看实时输出。"
+    "noActivity": "暂无 Agent 活动。运行问题后可查看实时输出。",
+    "labelLLM": "LLM",
+    "labelTool": "工具",
+    "labelStatus": "状态",
+    "labelHarness": "调度器",
+    "phaseState": "状态",
+    "phaseLoop": "循环",
+    "phaseGen": "生成",
+    "phaseEval": "评估",
+    "phaseEvidence": "证据",
+    "phaseNewIssue": "新问题"
   },
   "runLog": {
     "eventLog": "事件日志",

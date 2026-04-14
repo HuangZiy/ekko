@@ -2,6 +2,7 @@ import { useRef, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useBoardStore } from '../stores/boardStore'
 import type { AgentLogEntry } from '../stores/boardStore'
+import type { TFunction } from 'i18next'
 import { Terminal, Square, History, Maximize2, Minimize2 } from 'lucide-react'
 
 interface AgentLogPanelProps {
@@ -9,13 +10,13 @@ interface AgentLogPanelProps {
   onCancel?: () => void
 }
 
-function formatEntry(entry: AgentLogEntry): { label: string; color: string; text: string } {
+function formatEntry(entry: AgentLogEntry, t: TFunction): { label: string; color: string; text: string } {
   switch (entry.type) {
     case 'agent_token':
-      return { label: 'LLM', color: 'text-cyan-500', text: entry.data.text || '' }
+      return { label: t('agentLog.labelLLM', 'LLM'), color: 'text-cyan-500', text: entry.data.text || '' }
     case 'agent_tool_call':
       return {
-        label: 'Tool',
+        label: t('agentLog.labelTool', 'Tool'),
         color: 'text-yellow-500',
         text: `${entry.data.tool}(${JSON.stringify(entry.data.input).slice(0, 120)})`,
       }
@@ -23,7 +24,7 @@ function formatEntry(entry: AgentLogEntry): { label: string; color: string; text
       const s = entry.data.status
       const color = s === 'done' ? 'text-green-500' : s === 'failed' ? 'text-red-500' : 'text-blue-500'
       const text = s === 'failed' ? `${s}: ${entry.data.error || ''}` : s
-      return { label: 'Status', color, text }
+      return { label: t('agentLog.labelStatus', 'Status'), color, text }
     }
     case 'harness_log': {
       const level = entry.data.level || 'info'
@@ -33,11 +34,15 @@ function formatEntry(entry: AgentLogEntry): { label: string; color: string; text
         warning: 'text-amber-500', error: 'text-red-500',
       }
       const phaseLabel: Record<string, string> = {
-        state: 'State', loop: 'Loop', generator: 'Gen',
-        evaluator: 'Eval', evidence: 'Evidence', new_issue: 'NewIssue',
+        state: t('agentLog.phaseState', 'State'),
+        loop: t('agentLog.phaseLoop', 'Loop'),
+        generator: t('agentLog.phaseGen', 'Gen'),
+        evaluator: t('agentLog.phaseEval', 'Eval'),
+        evidence: t('agentLog.phaseEvidence', 'Evidence'),
+        new_issue: t('agentLog.phaseNewIssue', 'NewIssue'),
       }
       return {
-        label: phaseLabel[phase] || 'Harness',
+        label: phaseLabel[phase] || t('agentLog.labelHarness', 'Harness'),
         color: colorMap[level] || 'text-violet-500',
         text: entry.data.msg || '',
       }
@@ -145,7 +150,7 @@ export function AgentLogPanel({ issueId, onCancel }: AgentLogPanelProps) {
           </div>
         )}
         {entries.map((entry, i) => {
-          const { label, color, text } = formatEntry(entry)
+          const { label, color, text } = formatEntry(entry, t)
           return (
             <div key={i} className="flex gap-2">
               <span className={`shrink-0 ${color}`}>[{label}]</span>

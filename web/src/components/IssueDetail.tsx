@@ -291,7 +291,7 @@ export function IssueDetail({ issue, onClose, onApprove, onReject, onRun, onDele
                 onClick={() => allowedTransitions.length > 0 && setShowStatusMenu(!showStatusMenu)}
                 className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-white text-xs font-medium ${statusColor(issue.status)} ${allowedTransitions.length > 0 ? 'cursor-pointer hover:opacity-90' : 'cursor-default'}`}
               >
-                {issue.status.replace('_', ' ')}
+                {t(`status.${issue.status}`, issue.status.replace('_', ' '))}
                 {allowedTransitions.length > 0 && <ChevronDown size={12} />}
               </button>
               {showStatusMenu && (
@@ -398,7 +398,7 @@ export function IssueDetail({ issue, onClose, onApprove, onReject, onRun, onDele
                     <span className={`w-2 h-2 rounded-full shrink-0 ${statusDot(child.status)}`} />
                     <span className="font-mono text-xs text-gray-400">{child.id}</span>
                     <span className="text-[var(--text-primary)] truncate">{child.title}</span>
-                    <span className="ml-auto text-xs text-[var(--text-secondary)]">{child.status.replace('_', ' ')}</span>
+                    <span className="ml-auto text-xs text-[var(--text-secondary)]">{t(`status.${child.status}`, child.status.replace('_', ' '))}</span>
                   </div>
                 ))}
               </div>

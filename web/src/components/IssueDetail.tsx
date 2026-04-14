@@ -9,10 +9,11 @@ import { MarkdownEditor } from './MarkdownEditor'
 import type { Components } from 'react-markdown'
 import {
   Clock, Tag, AlertCircle, CheckCircle2, XCircle, GitBranch,
-  Pencil, Save, X, Image, FileCode, FlaskConical, ShieldCheck, Play, ChevronDown, Trash2, Square, Bot, ArrowUpRight
+  Pencil, Save, X, Image, FileCode, FlaskConical, ShieldCheck, Play, ChevronDown, ChevronRight, Trash2, Square, Bot, ArrowUpRight, FilePlus, FileMinus, FileEdit
 } from 'lucide-react'
 import { VALID_TRANSITIONS } from '../constants/transitions'
 import { AgentLogPanel } from './AgentLogPanel'
+import { Lightbox } from './Lightbox'
 
 const markdownComponents: Components = {
   img: ({ src, alt, ...props }) => (
@@ -53,6 +54,35 @@ interface EvidenceData {
   screenshots: string[]
   evalSummary: string
   evalItems: { passed: boolean; text: string }[]
+  // Structured fields from evidence.json
+  filesChanged: number
+  commitsCount: number
+  diffContent: string
+  changedFiles: { filename: string; additions: number; deletions: number; change_type: string }[]
+  evalChecks: { criterion: string; passed: boolean; detail: string }[]
+  isStructured: boolean
+}
+
+function parseStructuredEvidence(data: Record<string, unknown>): EvidenceData {
+  const screenshots = (data.screenshots as { url: string }[] || []).map(s => s.url)
+  const evalChecks = (data.eval_checks as { criterion: string; passed: boolean; detail: string }[] || [])
+  const changedFiles = (data.changed_files as { filename: string; additions: number; deletions: number; change_type: string }[] || [])
+  const buildResult = data.build_result as { passed: boolean; status: string; output: string } | null
+
+  return {
+    changeSummary: (data.change_summary as string) || '',
+    gitDiff: (data.git_diff_stat as string) || '',
+    buildResult: buildResult ? { passed: buildResult.passed, output: buildResult.output || '' } : null,
+    screenshots,
+    evalSummary: (data.eval_summary as string) || '',
+    evalItems: evalChecks.map(c => ({ passed: c.passed, text: c.criterion })),
+    filesChanged: (data.files_changed as number) || 0,
+    commitsCount: (data.commits_count as number) || 0,
+    diffContent: (data.git_diff_content as string) || '',
+    changedFiles,
+    evalChecks,
+    isStructured: true,
+  }
 }
 
 function parseEvidence(content: string): EvidenceData {
@@ -63,6 +93,12 @@ function parseEvidence(content: string): EvidenceData {
     screenshots: [],
     evalSummary: '',
     evalItems: [],
+    filesChanged: 0,
+    commitsCount: 0,
+    diffContent: '',
+    changedFiles: [],
+    evalChecks: [],
+    isStructured: false,
   }
 
   const sectionMatch = content.match(/## Agent Done 证据([\s\S]*?)(?=\n## |$)/)
@@ -148,6 +184,7 @@ export function IssueDetail({ issue, onClose, onApprove, onReject, onRun, onDele
   const [statusError, setStatusError] = useState<string | null>(null)
   const [children, setChildren] = useState<{ id: string; title: string; status: string }[]>([])
   const [runStats, setRunStats] = useState<{ total_runs: number; total_cost_usd: number; total_duration_ms: number; runs: any[] } | null>(null)
+  const [structuredEvidence, setStructuredEvidence] = useState<EvidenceData | null>(null)
 
   const updateIssue = useBoardStore(s => s.updateIssue)
   const updateIssueContent = useBoardStore(s => s.updateIssueContent)
@@ -191,6 +228,17 @@ export function IssueDetail({ issue, onClose, onApprove, onReject, onRun, onDele
       fetch(`/api/projects/${projectId}/issues/${issue.id}/stats`)
         .then(r => r.json())
         .then(data => setRunStats(data))
+      // Fetch structured evidence data when issue is agent_done
+      if (issue.status === 'agent_done') {
+        fetch(`/api/projects/${projectId}/issues/${issue.id}/evidence`)
+          .then(r => r.json())
+          .then(data => {
+            if (data && typeof data === 'object' && data.collected_at) {
+              setStructuredEvidence(parseStructuredEvidence(data))
+            }
+          })
+          .catch(() => {}) // Fallback to markdown parsing
+      }
     }
   }, [issue.id])
 
@@ -201,9 +249,13 @@ export function IssueDetail({ issue, onClose, onApprove, onReject, onRun, onDele
   }, [issue.title, issue.priority, issue.labels])
 
   const evidence = useMemo(() => {
-    if (issue.status === 'agent_done') return parseEvidence(content)
+    if (issue.status === 'agent_done') {
+      // Prefer structured evidence from API, fallback to markdown parsing
+      if (structuredEvidence) return structuredEvidence
+      return parseEvidence(content)
+    }
     return null
-  }, [content, issue.status])
+  }, [content, issue.status, structuredEvidence])
 
   const handleSaveFields = async () => {
     setSaving(true)
@@ -691,6 +743,10 @@ export function IssueDetail({ issue, onClose, onApprove, onReject, onRun, onDele
 function EvidencePanel({ evidence }: { evidence: EvidenceData }) {
   const { t } = useTranslation()
   const [galleryIndex, setGalleryIndex] = useState(0)
+  const [lightboxOpen, setLightboxOpen] = useState(false)
+  const [showFiles, setShowFiles] = useState(false)
+  const [showDiff, setShowDiff] = useState(false)
+  const [showBuildLog, setShowBuildLog] = useState(false)
   const hasAny = evidence.changeSummary || evidence.gitDiff || evidence.buildResult || evidence.screenshots.length > 0 || evidence.evalSummary || evidence.evalItems.length > 0
 
   if (!hasAny) return null
@@ -704,65 +760,14 @@ function EvidencePanel({ evidence }: { evidence: EvidenceData }) {
         </h3>
       </div>
       <div className="p-4 space-y-4">
-        {/* Change Summary */}
-        {evidence.changeSummary && (
-          <div className="flex items-center gap-3 px-3 py-2 bg-[var(--bg-secondary)] rounded-lg">
-            <GitBranch size={14} className="text-violet-500 shrink-0" />
-            <span className="text-sm text-[var(--text-primary)]">{evidence.changeSummary}</span>
-          </div>
-        )}
-        {evidence.gitDiff && (
-          <div>
-            <div className="flex items-center gap-1.5 text-xs font-medium text-[var(--text-secondary)] mb-2">
-              <FileCode size={14} /> {t('issueDetail.gitDiff')}
-            </div>
-            <pre className="bg-[#0d1117] text-[#c9d1d9] p-3 rounded-lg text-xs overflow-x-auto max-h-48 overflow-y-auto">
-              <code>{evidence.gitDiff}</code>
-            </pre>
-          </div>
-        )}
-
-        {/* Build Result */}
-        {evidence.buildResult && (
-          <div>
-            <div className="flex items-center gap-1.5 text-xs font-medium text-[var(--text-secondary)] mb-2">
-              <FlaskConical size={14} /> {t('issueDetail.buildResult')}
-            </div>
-            <div className="flex items-center gap-2">
-              <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium text-white ${evidence.buildResult.passed ? 'bg-green-500' : 'bg-red-500'}`}>
-                {evidence.buildResult.passed ? <CheckCircle2 size={12} /> : <XCircle size={12} />}
-                {evidence.buildResult.passed ? t('issueDetail.buildPass') : t('issueDetail.buildFail')}
-              </span>
-              <span className="text-xs text-[var(--text-secondary)]">{evidence.buildResult.output}</span>
-            </div>
-          </div>
-        )}
-
-        {/* Screenshots */}
-        {evidence.screenshots.length > 0 && (
-          <div>
-            <div className="flex items-center gap-1.5 text-xs font-medium text-[var(--text-secondary)] mb-2">
-              <Image size={14} /> {t('issueDetail.screenshots', { count: evidence.screenshots.length })}
-            </div>
-            <div className="flex gap-2 overflow-x-auto pb-2">
-              {evidence.screenshots.map((src, i) => (
-                <img
-                  key={i}
-                  src={src}
-                  alt={t('issueDetail.screenshot', { index: i + 1 })}
-                  className={`h-32 rounded-lg border-2 cursor-pointer transition-all ${i === galleryIndex ? 'border-[var(--accent)]' : 'border-transparent'}`}
-                  onClick={() => setGalleryIndex(i)}
-                />
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Eval Summary */}
+        {/* Eval Checks — most important, shown first */}
         {(evidence.evalItems.length > 0 || evidence.evalSummary) && (
           <div>
             <div className="flex items-center gap-1.5 text-xs font-medium text-[var(--text-secondary)] mb-2">
               <FlaskConical size={14} /> {t('issueDetail.evalResult')}
+              {evidence.evalSummary && (
+                <span className="ml-auto text-xs text-[var(--text-secondary)]">{evidence.evalSummary}</span>
+              )}
             </div>
             {evidence.evalItems.length > 0 && (
               <div className="space-y-1.5 mb-2">
@@ -780,8 +785,121 @@ function EvidencePanel({ evidence }: { evidence: EvidenceData }) {
                 ))}
               </div>
             )}
-            {evidence.evalSummary && (
-              <p className="text-xs text-[var(--text-secondary)] mt-1">{evidence.evalSummary}</p>
+          </div>
+        )}
+
+        {/* Screenshots with Lightbox */}
+        {evidence.screenshots.length > 0 && (
+          <div>
+            <div className="flex items-center gap-1.5 text-xs font-medium text-[var(--text-secondary)] mb-2">
+              <Image size={14} /> {t('issueDetail.screenshots', { count: evidence.screenshots.length })}
+            </div>
+            <div className="flex gap-2 ovo pb-2">
+              {evidence.screenshots.map((src, i) => (
+                <img
+                  key={i}
+                  src={src}
+                  alt={t('issueDetail.screenshot', { index: i + 1 })}
+                  className={`h-32 rounded-lg border-2 cursor-pointer transition-all hover:opacity-80 ${i === galleryIndex ? 'border-[var(--accent)]' : 'border-transparent'}`}
+                  onClick={() => { setGalleryIndex(i); setLightboxOpen(true) }}
+                />
+              ))}
+            </div>
+            {lightboxOpen && (
+              <Lightbox
+                images={evidence.screenshots}
+                initialIndex={galleryIndex}
+                onClose={() => setLightboxOpen(false)}
+              />
+            )}
+          </div>
+        )}
+
+        {/* Change Summary */}
+        {evidence.changeSummary && (
+          <div className="flex items-center gap-3 px-3 py-2 bg-[var(--bg-secondary)] rounded-lg">
+            <GitBranch size={14} className="text-violet-500 shrink-0" />
+            <span className="text-sm text-[var(--text-primary)]">{evidence.changeSummary}</span>
+            {evidence.isStructured && evidence.commitsCount > 0 && (
+              <span className="ml-auto text-xs text-[var(--text-secondary)]">
+                {t('issueDetail.commitsCount', { count: evidence.commitsCount })}
+              </span>
+            )}
+          </div>
+        )}
+
+        {/* File Changes — collapsible list */}
+        {evidence.isStructured && evidence.changedFiles.length > 0 && (
+          <div>
+            <button
+              onClick={() => setShowFiles(!showFiles)}
+              className="flex items-center gap-1.5 text-xs font-medium text-[var(--text-secondary)] mb-2 hover:text-[var(--text-primary)] transition-colors"
+            >
+              {showFiles ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+              <FileCode size={14} />
+              {t('issueDetail.filesChanged', { count: evidence.filesChanged })}
+            </button>
+            {showFiles && (
+              <div className="space-y-1 ml-1">
+                {evidence.changedFiles.map((f, i) => (
+                  <div key={i} className="flex items-center gap-2 text-xs px-2 py-1 rounded bg-[var(--bg-secondary)]">
+                    <span className="shrink-0">
+                      {f.change_type === 'added' && <FilePlus size={12} className="text-green-500" />}
+                      {f.change_type === 'deleted' && <FileMinus size={12} className="text-red-500" />}
+                      {f.change_type === 'modified' && <FileEdit size={12} className="text-amber-500" />}
+                    </span>
+                    <span className="font-mono text-[var(--text-primary)] truncate flex-1">{f.filename}</span>
+                    <span className="text-green-600 shrink-0">+{f.additions}</span>
+                    <span className="text-red-500 shrink-0">-{f.deletions}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Git Diff — collapsible */}
+        {(evidence.gitDiff || evidence.diffContent) && (
+          <div>
+            <button
+              onClick={() => setShowDiff(!showDiff)}
+              className="flex items-center gap-1.5 text-xs font-medium text-[var(--text-secondary)] mb-2 hover:text-[var(--text-primary)] transition-colors"
+            >
+              {showDiff ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+              <FileCode size={14} /> {t('issueDetail.codeChanges')}
+            </button>
+            {showDiff && (
+              <pre className="bg-[#0d1117] text-[#c9d1d9] p-3 rounded-lg text-xs overflow-x-auto max-h-64 overflow-y-auto">
+                <code>{evidence.diffContent || evidence.gitDiff}</code>
+              </pre>
+            )}
+          </div>
+        )}
+
+        {/* Build Result — collapsible log */}
+        {evidence.buildResult && (
+          <div>
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5 text-xs font-medium text-[var(--text-secondary)]">
+                <FlaskConical size={14} /> {t('issueDetail.buildResult')}
+              </div>
+              <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium text-white ${evidence.buildResult.passed ? 'bg-green-500' : 'bg-red-500'}`}>
+                {evidence.buildResult.passed ? <CheckCircle2 size={12} /> : <XCircle size={12} />}
+                {evidence.buildResult.passed ? t('issueDetail.buildPass') : t('issueDetail.buildFail')}
+              </span>
+              {evidence.buildResult.output && (
+                <button
+                  onClick={() => setShowBuildLog(!showBuildLog)}
+                  className="text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors ml-auto"
+                >
+                  {showBuildLog ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+                </button>
+              )}
+            </div>
+            {showBuildLog && evidence.buildResult.output && (
+              <pre className="bg-[#0d1117] text-[#c9d1d9] p-3 rounded-lg text-xs overflow-x-auto max-h-48 overflow-y-auto mt-2">
+                <code>{evidence.buildResult.output}</code>
+              </pre>
             )}
           </div>
         )}
@@ -824,3 +942,5 @@ function statusDot(status: string): string {
   }
   return map[status] || 'bg-gray-400'
 }
+
+export default IssueDetail

@@ -130,6 +130,13 @@ def update_issue(project_id: str, issue_id: str, req: UpdateIssueRequest):
     return issue.to_json()
 
 
+@router.get("/{issue_id}/evidence")
+def get_issue_evidence(project_id: str, issue_id: str):
+    storage = _get_storage(project_id)
+    evidence = storage.load_evidence(issue_id)
+    return evidence
+
+
 @router.get("/{issue_id}/content")
 def get_issue_content(project_id: str, issue_id: str):
     storage = _get_storage(project_id)

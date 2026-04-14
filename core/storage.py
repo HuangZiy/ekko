@@ -96,6 +96,17 @@ class ProjectStorage:
             result.append(json.loads(f.read_text()))
         return result
 
+    def save_evidence(self, issue_id: str, data: dict) -> None:
+        issue_dir = self.issues_dir / issue_id
+        issue_dir.mkdir(parents=True, exist_ok=True)
+        (issue_dir / "evidence.json").write_text(
+            json.dumps(data, indent=2, ensure_ascii=False)
+        )
+
+    def load_evidence(self, issue_id: str) -> dict | None:
+        f = self.issues_dir / issue_id / "evidence.json"
+        return json.loads(f.read_text()) if f.exists() else None
+
     def list_issues(self) -> list[Issue]:
         if not self.issues_dir.exists():
             return []

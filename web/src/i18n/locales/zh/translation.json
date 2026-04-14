@@ -4,6 +4,8 @@
     "newIssue": "新建问题",
     "switchToDark": "切换到深色模式",
     "switchToLight": "切换到浅色模式",
+    "switchToZh": "切换到中文",
+    "switchToEn": "切换到英文",
     "runAllTitle": "运行所有就绪的问题"
   },
   "board": {

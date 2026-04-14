@@ -1,0 +1,39 @@
+- generic [ref=e3]:
+  - generic [ref=e4]:
+    - generic [ref=e6]: Ekko
+    - generic [ref=e7] [cursor=pointer]:
+      - img [ref=e8]
+      - generic [ref=e10]: 项目
+      - img [ref=e11]
+    - generic [ref=e13]:
+      - generic [ref=e15] [cursor=pointer]:
+        - generic [ref=e16]:
+          - img [ref=e17]
+          - generic [ref=e19]: ekko
+        - generic [ref=e20]: 4/12 已完成
+      - generic [ref=e22] [cursor=pointer]:
+        - generic [ref=e24]: blog
+        - generic [ref=e25]: 0/2 已完成
+    - button "新建项目" [ref=e27]:
+      - img [ref=e28]
+      - text: 新建项目
+  - generic [ref=e29]:
+    - banner [ref=e30]:
+      - img [ref=e31]
+      - heading "ekko" [level=1] [ref=e36]
+      - generic [ref=e37]: PRJ-1
+      - generic [ref=e38]:
+        - button "切换到深色模式" [ref=e39]:
+          - img [ref=e40]
+        - button "全部运行" [ref=e42]:
+          - img [ref=e43]
+          - text: 全部运行
+        - button "新建问题" [ref=e45]:
+          - img [ref=e46]
+          - text: 新建问题
+    - main [ref=e47]:
+      - status [ref=e49]
+  - button "事件日志" [ref=e51]:
+    - img [ref=e52]
+    - generic [ref=e54]: 事件日志
+    - img [ref=e55]

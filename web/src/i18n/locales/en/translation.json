@@ -4,6 +4,8 @@
     "newIssue": "New Issue",
     "switchToDark": "Switch to dark mode",
     "switchToLight": "Switch to light mode",
+    "switchToZh": "Switch to Chinese",
+    "switchToEn": "Switch to English",
     "runAllTitle": "Run all ready issues"
   },
   "board": {

@@ -7,6 +7,7 @@ import { useProjectStore } from './stores/projectStore'
 import type { ProjectInfo } from './stores/projectStore'
 import { useWebSocket } from './hooks/useWebSocket'
 import { useTheme } from './hooks/useTheme'
+import { useLanguage } from './hooks/useLanguage'
 import { Board } from './components/Board'
 import { BoardStats } from './components/BoardStats'
 import { IssueDetail } from './components/IssueDetail'
@@ -14,7 +15,7 @@ import { ProjectSidebar } from './components/ProjectSidebar'
 import { ProjectDetail } from './components/ProjectDetail'
 import { RunLogPanel } from './components/RunLogPanel'
 import { MarkdownEditor } from './components/MarkdownEditor'
-import { LayoutDashboard, Plus, Play, Sun, Moon } from 'lucide-react'
+import { LayoutDashboard, Plus, Play, Sun, Moon, Languages } from 'lucide-react'
 import { AnimatePresence } from 'framer-motion'
 import i18n from './i18n'
 import './index.css'
@@ -51,6 +52,7 @@ function App() {
   const [newBlockedBy, setNewBlockedBy] = useState('')
 
   const { theme, toggleTheme } = useTheme()
+  const { language, toggleLanguage } = useLanguage()
 
   const projectId = useBoardStore(s => s.projectId)
   const setProjectId = useBoardStore(s => s.setProjectId)
@@ -135,6 +137,14 @@ function App() {
             <span className="text-xs text-gray-400 font-mono">{projectId}</span>
           )}
           <div className="ml-auto flex items-center gap-2">
+            <button
+              onClick={toggleLanguage}
+              className="p-2 rounded-lg hover:bg-[var(--bg-secondary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors flex items-center gap-1"
+              title={language === 'en' ? t('header.switchToZh') : t('header.switchToEn')}
+            >
+              <Languages size={18} />
+              <span className="text-xs font-medium">{language === 'en' ? 'EN' : '中'}</span>
+            </button>
             <button
               onClick={toggleTheme}
               className="p-2 rounded-lg hover:bg-[var(--bg-secondary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"

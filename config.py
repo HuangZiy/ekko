@@ -26,8 +26,8 @@ EVAL_PASS_THRESHOLD = 7  # each dimension >= 7/10
 MAX_PLANNER_TURNS = 50
 
 # Planning Agent (per-issue planning before generator)
-MAX_PLANNING_TURNS = 30
-MAX_PLANNING_BUDGET = 1.0  # USD per planning run
+MAX_PLANNING_TURNS = 50
+MAX_PLANNING_BUDGET = 3.0  # USD per planning run
 
 # Scheduler (auto-run)
 SCHEDULER_POLL_INTERVAL = 60    # seconds between polls

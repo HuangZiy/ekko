@@ -162,3 +162,151 @@ def test_collect_evidence_no_base_sha_legacy(tmp_path):
     assert "abc1234" in content
     # Should NOT have range-based headers
     assert "### Commits" not in content
+
+
+def test_collect_evidence_no_agent_commits_but_head_moved(tmp_path):
+    """When agent produced no commits but HEAD moved (external commits),
+    evidence should NOT misattribute the diff to the agent."""
+    store = ProjectStorage(tmp_path / "project")
+    ws = tmp_path / "workspace"
+    ws.mkdir()
+
+    issue = Issue.create(id="ISS-1", title="empty agent run")
+    store.save_issue(issue)
+    store.save_issue_content(issue.id, "# Task")
+
+    def mock_run_side_effect(cmd, **kwargs):
+        result = MagicMock(returncode=0)
+        cmd_str = " ".join(cmd)
+        if "rev-parse" in cmd_str:
+            # HEAD has moved from base_sha (external commit pushed HEAD forward)
+            result.stdout = "def5678"
+        elif "diff" in cmd_str:
+            # There IS a diff between base and HEAD, but it's from external commits
+            result.stdout = "core/ralph_loop.py | 66 ++++++\n"
+        elif "log" in cmd_str:
+            result.stdout = "a27e66e fix: some other agent commit (EKO-3)"
+        else:
+            result.stdout = ""
+        return result
+
+    with patch("core.evidence.subprocess.run", side_effect=mock_run_side_effect):
+        # agent_commits=[] means agent tracked commits and produced none
+        collect_evidence(issue.id, store, ws, base_sha="abc1234", agent_commits=[])
+
+    content = store.load_issue_content(issue.id)
+    # Should NOT contain the external diff
+    assert "ralph_loop.py" not in content
+    assert "a27e66e" not in content
+    # Should clearly state no agent commits
+    assert "No file changes by this agent" in content
+    assert "No commits by this agent" in content
+    # Should NOT use legacy header
+    assert "### Latest Commit" not in content
+
+
+def test_collect_evidence_with_agent_commits_list(tmp_path):
+    """When agent has explicit commit list, evidence should show range diff normally."""
+    store = ProjectStorage(tmp_path / "project")
+    ws = tmp_path / "workspace"
+    ws.mkdir()
+
+    issue = Issue.create(id="ISS-1", title="agent with commits")
+    store.save_issue(issue)
+    store.save_issue_content(issue.id, "# Task")
+
+    def mock_run_side_effect(cmd, **kwargs):
+        result = MagicMock(returncode=0)
+        cmd_str = " ".join(cmd)
+        if "rev-parse" in cmd_str:
+            result.stdout = "def5678"
+        elif "diff" in cmd_str and "abc1234..HEAD" in cmd_str:
+            result.stdout = "core/evidence.py | 20 ++++++\n"
+        elif "log" in cmd_str and "abc1234..HEAD" in cmd_str:
+            result.stdout = "def5678 fix: actual agent commit (ISS-1)"
+        else:
+            result.stdout = ""
+        return result
+
+    with patch("core.evidence.subprocess.run", side_effect=mock_run_side_effect):
+        # agent_commits has actual SHAs — agent did produce commits
+        collect_evidence(issue.id, store, ws, base_sha="abc1234", agent_commits=["def5678"])
+
+    content = store.load_issue_content(issue.id)
+    assert "core/evidence.py" in content
+    assert "def5678" in content
+    assert "### Commits" in content
+    assert "### Latest Commit" not in content
+
+
+def test_collect_evidence_agent_commits_none_backward_compat(tmp_path):
+    """When agent_commits is None (old callers), behavior should match pre-fix range diff."""
+    store = ProjectStorage(tmp_path / "project")
+    ws = tmp_path / "workspace"
+    ws.mkdir()
+
+    issue = Issue.create(id="ISS-1", title="backward compat")
+    store.save_issue(issue)
+    store.save_issue_content(issue.id, "# Task")
+
+    def mock_run_side_effect(cmd, **kwargs):
+        result = MagicMock(returncode=0)
+        cmd_str = " ".join(cmd)
+        if "rev-parse" in cmd_str:
+            result.stdout = "def5678"  # HEAD differs from base
+        elif "diff" in cmd_str and "abc1234..HEAD" in cmd_str:
+            result.stdout = "some_file.py | 10 +++\n"
+        elif "log" in cmd_str and "abc1234..HEAD" in cmd_str:
+            result.stdout = "def5678 feat: some commit"
+        else:
+            result.stdout = ""
+        return result
+
+    with patch("core.evidence.subprocess.run", side_effect=mock_run_side_effect):
+        # agent_commits=None — backward compatible, no filtering
+        collect_evidence(issue.id, store, ws, base_sha="abc1234", agent_commits=None)
+
+    content = store.load_issue_content(issue.id)
+    # Should show the diff and commits as before (no filtering)
+    assert "some_file.py" in content
+    assert "def5678" in content
+    assert "### Commits" in content
+    assert "No file changes by this agent" not in content
+    assert "No commits by this agent" not in content
+
+
+def test_collect_evidence_rev_parse_returns_empty(tmp_path):
+    """When git rev-parse HEAD returns empty (git failure), evidence should
+    output an error message instead of running unpredictable git commands."""
+    store = ProjectStorage(tmp_path / "project")
+    ws = tmp_path / "workspace"
+    ws.mkdir()
+
+    issue = Issue.create(id="ISS-1", title="rev-parse fails")
+    store.save_issue(issue)
+    store.save_issue_content(issue.id, "# Task")
+
+    call_log: list[str] = []
+
+    def mock_run_side_effect(cmd, **kwargs):
+        result = MagicMock(returncode=1)
+        cmd_str = " ".join(cmd)
+        call_log.append(cmd_str)
+        if "rev-parse" in cmd_str:
+            # Simulate git rev-parse HEAD failing (returns empty)
+            result.stdout = ""
+        else:
+            result.stdout = ""
+        return result
+
+    with patch("core.evidence.subprocess.run", side_effect=mock_run_side_effect):
+        collect_evidence(issue.id, store, ws, base_sha="abc1234")
+
+    content = store.load_issue_content(issue.id)
+    # Should contain error message
+    assert "unable to determine HEAD" in content
+    # Should NOT have attempted git diff or git log with empty current_head
+    diff_calls = [c for c in call_log if "diff" in c]
+    log_calls = [c for c in call_log if "log" in c and "rev-parse" not in c]
+    assert len(diff_calls) == 0, f"Should not run git diff when rev-parse fails, but got: {diff_calls}"
+    assert len(log_calls) == 0, f"Should not run git log when rev-parse fails, but got: {log_calls}"

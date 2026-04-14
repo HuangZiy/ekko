@@ -21,6 +21,7 @@ def collect_evidence(
     workspace: Path,
     run_build: bool = False,
     base_sha: str | None = None,
+    agent_commits: list[str] | None = None,
 ) -> None:
     """Collect agent-done evidence and append to issue markdown.
 
@@ -29,6 +30,10 @@ def collect_evidence(
                   commits made during the agent run, instead of a HEAD~1 snapshot.
                   This prevents evidence from pointing to unrelated commits when
                   other work lands between the fix and evidence collection.
+        agent_commits: List of commit SHAs actually produced by the agent during
+                       this run. When provided as an empty list, it means the agent
+                       produced no commits (even if HEAD moved due to external commits).
+                       When None, backward-compatible behavior is used.
     """
     sections = []
     now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
@@ -37,11 +42,21 @@ def collect_evidence(
     if base_sha:
         # Range-based: capture all changes during this agent run
         current_head = _run_cmd(["git", "rev-parse", "HEAD"], workspace)
-        if current_head and current_head == base_sha:
-            # Agent produced no commits
+        if not current_head:
+            # git rev-parse HEAD failed — workspace may not be a git repo or HEAD is detached
+            sections.append("### Git Diff\n\nEvidence collection error: unable to determine HEAD\n")
+            sections.append("### Commits\n\nEvidence collection error: unable to determine HEAD\n")
+        elif current_head == base_sha:
+            # HEAD hasn't moved at all — agent produced no commits
             sections.append("### Git Diff\n\nNo commits during this run\n")
             sections.append("### Commits\n\nNo commits during this run\n")
+        elif agent_commits is not None and len(agent_commits) == 0:
+            # Agent explicitly tracked commits and produced none.
+            # HEAD moved due to external commits (parallel agent, manual push, etc.)
+            sections.append("### Git Diff\n\nNo file changes by this agent (HEAD moved by external commits)\n")
+            sections.append("### Commits\n\nNo commits by this agent\n")
         else:
+            # agent_commits is either a non-empty list or None (backward compat)
             diff = _run_cmd(["git", "diff", f"{base_sha}..HEAD", "--stat"], workspace)
             if diff:
                 sections.append(f"### Git Diff\n\n```\n{diff}\n```\n")

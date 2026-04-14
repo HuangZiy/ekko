@@ -88,85 +88,7 @@ async def run_issue_loop(
     """
     all_stats: list[dict] = []
 
-    # === 1. Planning Phase (before generator) ===
-    # If issue has no plan yet, run the Planning Agent first
-    plan_content = storage.load_issue_plan(issue.id)
-    needs_planning = not plan_content
-
-    if needs_planning:
-        # Transition to PLANNING status where possible
-        if issue.status == IssueStatus.BACKLOG:
-            issue.move_to(IssueStatus.PLANNING)
-            storage.save_issue(issue)
-            await _sync_board(issue, storage, on_event)
-        elif issue.status == IssueStatus.REJECTED:
-            issue.move_to(IssueStatus.TODO)
-            storage.save_issue(issue)
-            await _sync_board(issue, storage, on_event)
-        # For TODO/FAILED: run planning inline without status change
-        # (PLANNING is only reachable from BACKLOG in the state machine)
-
-        _log("Planning", C_CYAN, f"{issue.id}: Running planning agent")
-        await _emit_harness(on_event, issue.id, "planning", f"Analyzing: {issue.title}")
-
-        from core.planner import run_issue_planning
-        plan_stats = await run_issue_planning(
-            issue, storage, workspace, on_event=on_event, cancel_event=cancel_event,
-        )
-        all_stats.append({"phase": "planning", "attempt": 0, **plan_stats})
-
-        # Check cancellation after planning
-        if plan_stats.get("cancelled") or (cancel_event and cancel_event.is_set()):
-            _log("Cancel", C_YELLOW, f"{issue.id}: cancelled during planning")
-            await _emit_harness(on_event, issue.id, "state", "Cancelled during planning", "warning")
-            issue = storage.load_issue(issue.id)
-            if issue.status == IssueStatus.PLANNING:
-                issue.move_to(IssueStatus.BACKLOG)
-                storage.save_issue(issue)
-                await _sync_board(issue, storage, on_event)
-            return {
-                "success": False, "issue_id": issue.id, "title": issue.title,
-                "attempts": 0, "cost_usd": plan_stats.get("cost_usd", 0),
-                "duration_ms": plan_stats.get("duration_ms", 0), "details": all_stats,
-            }
-
-        # If planning split the issue into children, stop here
-        if plan_stats.get("split_issues"):
-            _log("Planning", C_CYAN, f"{issue.id}: Split into {len(plan_stats['split_issues'])} child issues")
-            await _emit_harness(on_event, issue.id, "planning",
-                                f"Split into {len(plan_stats['split_issues'])} child issues", "info")
-            # Reload issue (planner updated blocked_by)
-            issue = storage.load_issue(issue.id)
-            # Move back to TODO — it will wait for children to complete
-            if issue.status == IssueStatus.PLANNING:
-                issue.move_to(IssueStatus.TODO)
-                storage.save_issue(issue)
-                await _sync_board(issue, storage, on_event)
-            _log("State", C_CYAN, f"{issue.id}: → todo (waiting for child issues)")
-            await _emit_harness(on_event, issue.id, "state", "→ todo (waiting for children)")
-            return {
-                "success": True, "issue_id": issue.id, "title": issue.title,
-                "attempts": 0, "cost_usd": plan_stats.get("cost_usd", 0),
-                "duration_ms": plan_stats.get("duration_ms", 0), "details": all_stats,
-                "split": True,
-            }
-
-        # Planning done, move to TODO then IN_PROGRESS
-        issue = storage.load_issue(issue.id)
-        if issue.status == IssueStatus.PLANNING:
-            issue.move_to(IssueStatus.TODO)
-            storage.save_issue(issue)
-            await _sync_board(issue, storage, on_event)
-
-        _log("Planning", C_GREEN, f"{issue.id}: Planning complete")
-        await _emit_harness(on_event, issue.id, "planning", "Planning complete", "success")
-
-    # === Capture base SHA before any code changes ===
-    # Used by collect_evidence() to do range diff (base_sha..HEAD) instead of
-    # a HEAD~1 snapshot, preventing evidence from pointing to unrelated commits.
-    base_sha = _evidence_run_cmd(["git", "rev-parse", "HEAD"], workspace) or None
-
-    # === 2. State: → In Progress ===
+    # === 1. State: → In Progress (immediately, so board reflects running) ===
     if issue.status == IssueStatus.BACKLOG:
         issue.move_to(IssueStatus.TODO)
         storage.save_issue(issue)
@@ -182,6 +104,61 @@ async def run_issue_loop(
         await _emit_harness(on_event, issue.id, "state", "→ in_progress")
         await _sync_board(issue, storage, on_event)
 
+    # === 2. Planning Phase (while in_progress) ===
+    plan_content = storage.load_issue_plan(issue.id)
+    needs_planning = not plan_content
+
+    if needs_planning:
+        _log("Planning", C_CYAN, f"{issue.id}: Running planning agent")
+        await _emit_harness(on_event, issue.id, "planning", f"Analyzing: {issue.title}")
+
+        from core.planner import run_issue_planning
+        plan_stats = await run_issue_planning(
+            issue, storage, workspace, on_event=on_event, cancel_event=cancel_event,
+        )
+        all_stats.append({"phase": "planning", "attempt": 0, **plan_stats})
+
+        # Check cancellation after planning
+        if plan_stats.get("cancelled") or (cancel_event and cancel_event.is_set()):
+            _log("Cancel", C_YELLOW, f"{issue.id}: cancelled during planning")
+            await _emit_harness(on_event, issue.id, "state", "Cancelled during planning", "warning")
+            issue = storage.load_issue(issue.id)
+            if issue.status == IssueStatus.IN_PROGRESS:
+                issue.move_to(IssueStatus.FAILED)
+                storage.save_issue(issue)
+                await _sync_board(issue, storage, on_event)
+            return {
+                "success": False, "issue_id": issue.id, "title": issue.title,
+                "attempts": 0, "cost_usd": plan_stats.get("cost_usd", 0),
+                "duration_ms": plan_stats.get("duration_ms", 0), "details": all_stats,
+            }
+
+        # If planning split the issue into children, move back to TODO to wait
+        if plan_stats.get("split_issues"):
+            _log("Planning", C_CYAN, f"{issue.id}: Split into {len(plan_stats['split_issues'])} child issues")
+            await _emit_harness(on_event, issue.id, "planning",
+                                f"Split into {len(plan_stats['split_issues'])} child issues", "info")
+            issue = storage.load_issue(issue.id)
+            if issue.status == IssueStatus.IN_PROGRESS:
+                issue.move_to(IssueStatus.TODO)
+                storage.save_issue(issue)
+                await _sync_board(issue, storage, on_event)
+            _log("State", C_CYAN, f"{issue.id}: → todo (waiting for child issues)")
+            await _emit_harness(on_event, issue.id, "state", "→ todo (waiting for children)")
+            return {
+                "success": True, "issue_id": issue.id, "title": issue.title,
+                "attempts": 0, "cost_usd": plan_stats.get("cost_usd", 0),
+                "duration_ms": plan_stats.get("duration_ms", 0), "details": all_stats,
+                "split": True,
+            }
+
+        _log("Planning", C_GREEN, f"{issue.id}: Planning complete")
+        await _emit_harness(on_event, issue.id, "planning", "Planning complete", "success")
+
+    # === Capture base SHA before any code changes ===
+    base_sha = _evidence_run_cmd(["git", "rev-parse", "HEAD"], workspace) or None
+    agent_commits: list[str] = []
+
     # === 3. Generator + Evaluator Loop ===
     passed = False
     for attempt in range(1, max_retries + 1):
@@ -189,10 +166,27 @@ async def run_issue_loop(
         await _emit_harness(on_event, issue.id, "loop", f"attempt #{attempt}/{max_retries}")
 
         # --- Generator: Ralph writes code ---
+        # Capture HEAD before generator runs to detect new commits
+        pre_gen_sha = _evidence_run_cmd(["git", "rev-parse", "HEAD"], workspace)
+
         _log("Generator", C_CYAN, f"Starting: {issue.title}")
         await _emit_harness(on_event, issue.id, "generator", f"Starting: {issue.title}")
         gen_stats = await _run_generator(issue, storage, workspace, on_event, cancel_event)
         all_stats.append({"phase": "generator", "attempt": attempt, **gen_stats})
+
+        # Track commits produced by this generator run
+        if pre_gen_sha:
+            post_gen_sha = _evidence_run_cmd(["git", "rev-parse", "HEAD"], workspace)
+            if post_gen_sha and post_gen_sha != pre_gen_sha:
+                new_shas = _evidence_run_cmd(
+                    ["git", "log", f"{pre_gen_sha}..{post_gen_sha}", "--format=%H"],
+                    workspace,
+                )
+                if new_shas:
+                    for sha in new_shas.splitlines():
+                        sha = sha.strip()
+                        if sha and sha not in agent_commits:
+                            agent_commits.append(sha)
 
         # Check cancellation after generator
         if gen_stats.get("cancelled") or (cancel_event and cancel_event.is_set()):
@@ -255,7 +249,7 @@ async def run_issue_loop(
         _log("Evidence", C_CYAN, f"Collecting evidence for {issue.id}")
         await _emit_harness(on_event, issue.id, "evidence", "Collecting evidence")
         try:
-            collect_evidence(issue.id, storage, workspace, run_build=True, base_sha=base_sha)
+            collect_evidence(issue.id, storage, workspace, run_build=True, base_sha=base_sha, agent_commits=agent_commits)
         except Exception as e:
             _log("Evidence", C_RED, f"Evidence collection failed: {e}")
             await _emit_harness(on_event, issue.id, "evidence", f"Failed: {e}", "error")

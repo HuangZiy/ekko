@@ -49,7 +49,7 @@ def _move_board_column(storage, issue_id: str, target_col: str) -> None:
 
 
 def _reset_stuck_issues() -> None:
-    """Reset any in_progress issues back to todo."""
+    """Reset any in_progress issues to failed (not todo) to avoid retry loops."""
     try:
         from core.models import IssueStatus
         from core.storage import PlatformStorage
@@ -59,7 +59,7 @@ def _reset_stuck_issues() -> None:
             storage = platform.get_project_storage(pid)
             for issue in storage.list_issues():
                 if issue.status == IssueStatus.IN_PROGRESS:
-                    issue.move_to(IssueStatus.TODO)
+                    issue.move_to(IssueStatus.FAILED)
                     storage.save_issue(issue)
                     _move_board_column(storage, issue.id, "todo")
                 elif issue.status == IssueStatus.PLANNING:
@@ -116,9 +116,16 @@ def create_app(harness_root: Path | None = None) -> FastAPI:
                         storage = platform.get_project_storage(pid)
                         for issue in storage.list_issues():
                             if issue.status == IssueStatus.IN_PROGRESS and issue.id not in _cancel_events:
-                                issue.move_to(IssueStatus.TODO)
+                                # Also check scheduler's running set before resetting
+                                from core.scheduler import scheduler as _sched
+                                sched_running = set()
+                                for _s in _sched._schedules.values():
+                                    sched_running |= _s.running_issues
+                                if issue.id in sched_running:
+                                    continue
+                                issue.move_to(IssueStatus.FAILED)
                                 storage.save_issue(issue)
-                                _move_board_column(storage, issue.id, "todo")
+                                _move_board_column(storage, issue.id, "todo")  # no failed column; board shows in todo
                                 await ws_manager.broadcast(pid, {
                                     "type": "issue_updated", "data": {"issue": issue.to_json()},
                                 })

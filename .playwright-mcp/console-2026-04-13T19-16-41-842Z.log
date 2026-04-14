@@ -1,0 +1,3 @@
+[     231ms] [ERROR] Failed to load resource: the server responded with a status of 502 (Bad Gateway) @ http://localhost:49722/api/projects:0
+[     322ms] SyntaxError: Failed to execute 'json' on 'Response': Unexpected end of JSON input
+    at fetchProjects (http://localhost:49722/assets/index-H6RfBqEl.js:9:92394)

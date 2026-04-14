@@ -474,6 +474,16 @@ class IssueScheduler:
             sched.last_error = f"dispatch {issue_id}: {err_msg}"
             _slog(f"{project_id}: {issue_id} DISPATCH ERROR — {err_msg}")
             logger.exception("Scheduler dispatch error for %s", issue_id)
+            # Move crashed issue to FAILED so watchdog won't reset it to TODO
+            try:
+                from core.models import IssueStatus
+                crashed = storage.load_issue(issue_id)
+                if crashed.status == IssueStatus.IN_PROGRESS:
+                    crashed.move_to(IssueStatus.FAILED)
+                    storage.save_issue(crashed)
+                    _slog(f"{project_id}: {issue_id} → failed (dispatch crashed)")
+            except Exception:
+                pass
             if on_event:
                 try:
                     await on_event({

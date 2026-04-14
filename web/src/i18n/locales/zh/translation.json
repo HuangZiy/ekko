@@ -159,6 +159,12 @@
     "cancel": "取消",
     "selectThis": "选择此目录"
   },
+  "issueCard": {
+    "stopTitle": "停止此问题",
+    "stop": "停止",
+    "runTitle": "运行此问题",
+    "blockedBy": "被 {{count}} 个问题阻塞"
+  },
   "markdownEditor": {
     "write": "编写",
     "preview": "预览",

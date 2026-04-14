@@ -1,0 +1,1045 @@
+- generic [ref=e3]:
+  - generic [ref=e4]:
+    - generic [ref=e6]: Ekko
+    - generic [ref=e7] [cursor=pointer]:
+      - img [ref=e8]
+      - generic [ref=e10]: 项目
+      - img [ref=e11]
+    - generic [ref=e13]:
+      - generic [ref=e15] [cursor=pointer]:
+        - generic [ref=e16]:
+          - img [ref=e17]
+          - generic [ref=e19]: ekko
+        - generic [ref=e20]: 4/12 已完成
+      - generic [ref=e22] [cursor=pointer]:
+        - generic [ref=e24]: blog
+        - generic [ref=e25]: 0/2 已完成
+    - button "新建项目" [ref=e27]:
+      - img [ref=e28]
+      - text: 新建项目
+  - generic [ref=e29]:
+    - banner [ref=e30]:
+      - img [ref=e31]
+      - heading "ekko" [level=1] [ref=e36]
+      - generic [ref=e37]: PRJ-1
+      - generic [ref=e38]:
+        - button "切换到深色模式" [ref=e39]:
+          - img [ref=e40]
+        - button "全部运行" [ref=e42]:
+          - img [ref=e43]
+          - text: 全部运行
+        - button "新建问题" [ref=e45]:
+          - img [ref=e46]
+          - text: 新建问题
+    - generic [ref=e48]:
+      - generic [ref=e49]: 12 个问题
+      - generic [ref=e50]:
+        - generic [ref=e51]: "待处理: 5"
+        - generic [ref=e52]: "Agent 完成: 3"
+        - generic [ref=e53]: "已完成: 4"
+      - generic [ref=e58]: 4/12 已完成 (33%)
+    - main [ref=e59]:
+      - generic [ref=e60]:
+        - generic [ref=e61]:
+          - generic [ref=e62]:
+            - heading "Backlog" [level=3] [ref=e64]
+            - generic [ref=e65]: "0"
+          - generic [ref=e67]: 将问题拖放到此处
+        - generic [ref=e68]:
+          - generic [ref=e69]:
+            - heading "Planning" [level=3] [ref=e71]
+            - generic [ref=e72]: "0"
+          - generic [ref=e74]: 将问题拖放到此处
+        - generic [ref=e75]:
+          - generic [ref=e76]:
+            - heading "Todo" [level=3] [ref=e78]
+            - generic [ref=e79]: "5"
+          - generic [ref=e80]:
+            - generic [ref=e82] [cursor=pointer]:
+              - button [ref=e83]:
+                - img [ref=e84]
+              - generic [ref=e91]:
+                - generic [ref=e92]:
+                  - generic [ref=e93]: ISS-10
+                  - img [ref=e94]
+                  - button "Run this issue" [ref=e97]:
+                    - img [ref=e98]
+                - generic [ref=e100]: 语言切换 UI 与验证
+                - generic [ref=e102]:
+                  - img [ref=e103]
+                  - text: planned
+                - generic [ref=e106]:
+                  - img [ref=e107]
+                  - text: Blocked by 1
+            - generic [ref=e110] [cursor=pointer]:
+              - button [ref=e111]:
+                - img [ref=e112]
+              - generic [ref=e119]:
+                - generic [ref=e120]:
+                  - generic [ref=e121]: ISS-7
+                  - button "Run this issue" [ref=e122]:
+                    - img [ref=e123]
+                - generic [ref=e125]: Ekko 项目的国际化改造
+                - generic [ref=e126]:
+                  - img [ref=e127]
+                  - text: Blocked by 3
+            - generic [ref=e130] [cursor=pointer]:
+              - button [ref=e131]:
+                - img [ref=e132]
+              - generic [ref=e139]:
+                - generic [ref=e140]:
+                  - generic [ref=e141]: ISS-9
+                  - img [ref=e142]
+                  - button "Run this issue" [ref=e145]:
+                    - img [ref=e146]
+                - generic [ref=e148]: 组件文本国际化替换
+                - generic [ref=e150]:
+                  - img [ref=e151]
+                  - text: planned
+                - generic [ref=e154]:
+                  - img [ref=e155]
+                  - text: Blocked by 1
+            - generic [ref=e158] [cursor=pointer]:
+              - button [ref=e159]:
+                - img [ref=e160]
+              - generic [ref=e167]:
+                - generic [ref=e168]:
+                  - generic [ref=e169]: EKO-1
+                  - img [ref=e170]
+                  - button "Run this issue" [ref=e173]:
+                    - img [ref=e174]
+                - generic [ref=e176]: "IssueCard.tsx 组件未国际化 — 该组件不在 ISS-9 的计划范围内，但包含多处硬编码英文：`title=\"Stop this issue\"`（第 67 行）、`<span>Stop</span>`（第 70 行）、`title=\"Run this issue\"`（第 77 行）、`Blocked by {issue.blocked_by.length}`（第 97 行）。UI 中卡片上可见 \"Blocked by 1\"、\"Run this issue\" 等英文文本。"
+                - generic [ref=e178]:
+                  - img [ref=e179]
+                  - text: eval-finding
+            - generic [ref=e183] [cursor=pointer]:
+              - button [ref=e184]:
+                - img [ref=e185]
+              - generic [ref=e192]:
+                - generic [ref=e193]:
+                  - generic [ref=e194]: EKO-2
+                  - img [ref=e195]
+                  - button "Run this issue" [ref=e198]:
+                    - img [ref=e199]
+                - generic [ref=e201]: "IssueDetail 状态变更失败提示硬编码 — 第 143 行 `data.detail || 'Status change failed'` fallback 文本为英文，应使用翻译 key。"
+                - generic [ref=e203]:
+                  - img [ref=e204]
+                  - text: eval-finding
+        - generic [ref=e207]:
+          - generic [ref=e208]:
+            - heading "In Progress" [level=3] [ref=e210]
+            - generic [ref=e211]: "0"
+          - generic [ref=e213]: 将问题拖放到此处
+        - generic [ref=e214]:
+          - generic [ref=e215]:
+            - heading "Agent Done" [level=3] [ref=e217]
+            - generic [ref=e218]: "3"
+          - generic [ref=e219]:
+            - generic [ref=e221] [cursor=pointer]:
+              - button [ref=e222]:
+                - img [ref=e223]
+              - generic [ref=e230]:
+                - generic [ref=e232]: ISS-4
+                - generic [ref=e233]: harness 增加 planning agent
+            - generic [ref=e235] [cursor=pointer]:
+              - button [ref=e236]:
+                - img [ref=e237]
+              - generic [ref=e244]:
+                - generic [ref=e245]:
+                  - generic [ref=e246]: ISS-8
+                  - img [ref=e247]
+                - generic [ref=e250]: i18n 基础设施搭建
+                - generic [ref=e252]:
+                  - img [ref=e253]
+                  - text: planned
+            - generic [ref=e257] [cursor=pointer]:
+              - button [ref=e258]:
+                - img [ref=e259]
+              - generic [ref=e266]:
+                - generic [ref=e268]: ISS-11
+                - generic [ref=e269]: Harness 定期轮询 Todo list，并自动按照 block和依赖顺序执行
+        - generic [ref=e270]:
+          - generic [ref=e271]:
+            - heading "Rejected" [level=3] [ref=e273]
+            - generic [ref=e274]: "0"
+          - generic [ref=e276]: 将问题拖放到此处
+        - generic [ref=e277]:
+          - generic [ref=e278]:
+            - heading "Human Done" [level=3] [ref=e280]
+            - generic [ref=e281]: "4"
+          - generic [ref=e282]:
+            - generic [ref=e284] [cursor=pointer]:
+              - button [ref=e285]:
+                - img [ref=e286]
+              - generic [ref=e293]:
+                - generic [ref=e295]: ISS-1
+                - generic [ref=e296]: Issue 创建时 Description需支持 markdown格式
+            - generic [ref=e298] [cursor=pointer]:
+              - button [ref=e299]:
+                - img [ref=e300]
+              - generic [ref=e307]:
+                - generic [ref=e309]: ISS-6
+                - generic [ref=e310]: Ekko 项目不要提交.harness目录下的任何文件
+            - generic [ref=e312] [cursor=pointer]:
+              - button [ref=e313]:
+                - img [ref=e314]
+              - generic [ref=e321]:
+                - generic [ref=e323]: ISS-5
+                - generic [ref=e324]: ekko 项目项目的 README
+            - generic [ref=e326] [cursor=pointer]:
+              - button [ref=e327]:
+                - img [ref=e328]
+              - generic [ref=e335]:
+                - generic [ref=e337]: ISS-3
+                - generic [ref=e338]: PROJECT 的 ISSUE 前缀支持修改
+      - status [ref=e339]
+  - generic [ref=e349]:
+    - generic [ref=e350]:
+      - generic [ref=e351]: ISS-9
+      - heading "组件文本国际化替换" [level=2] [ref=e352]
+      - button "编辑问题" [ref=e353]:
+        - img [ref=e354]
+      - button "删除问题" [ref=e357]:
+        - img [ref=e358]
+      - button "×" [ref=e361]
+    - generic [ref=e362]:
+      - generic [ref=e363]:
+        - button "todo" [ref=e365] [cursor=pointer]:
+          - text: todo
+          - img [ref=e366]
+        - generic [ref=e368]: medium
+      - generic [ref=e370]:
+        - img [ref=e371]
+        - text: planned
+      - generic [ref=e375]:
+        - img [ref=e376]
+        - text: 被阻塞： ISS-8
+      - generic [ref=e378]:
+        - img [ref=e379]
+        - generic [ref=e382]: 来源于
+        - generic [ref=e383]: ISS-7
+        - generic [ref=e384]:
+          - img [ref=e385]
+          - text: Agent
+      - generic [ref=e388]:
+        - generic [ref=e389]:
+          - img [ref=e390]
+          - text: 子 Issue (2)
+        - generic [ref=e393]:
+          - generic [ref=e394]:
+            - generic [ref=e396]: EKO-1
+            - generic [ref=e397]: "IssueCard.tsx 组件未国际化 — 该组件不在 ISS-9 的计划范围内，但包含多处硬编码英文：`title=\"Stop this issue\"`（第 67 行）、`<span>Stop</span>`（第 70 行）、`title=\"Run this issue\"`（第 77 行）、`Blocked by {issue.blocked_by.length}`（第 97 行）。UI 中卡片上可见 \"Blocked by 1\"、\"Run this issue\" 等英文文本。"
+            - generic [ref=e398]: todo
+          - generic [ref=e399]:
+            - generic [ref=e401]: EKO-2
+            - generic [ref=e402]: "IssueDetail 状态变更失败提示硬编码 — 第 143 行 `data.detail || 'Status change failed'` fallback 文本为英文，应使用翻译 key。"
+            - generic [ref=e403]: todo
+      - button "运行" [ref=e405]:
+        - img [ref=e406]
+        - text: 运行
+      - generic [ref=e408]:
+        - generic [ref=e409]:
+          - heading "计划" [level=3] [ref=e410]
+          - button "编辑" [ref=e411]:
+            - img [ref=e412]
+            - text: 编辑
+        - generic [ref=e415]:
+          - 'heading "ISS-9: 组件文本国际化替换" [level=1] [ref=e416]'
+          - heading "分析" [level=2] [ref=e417]
+          - heading "现状" [level=3] [ref=e418]
+          - list [ref=e419]:
+            - listitem [ref=e420]:
+              - text: i18n 基础设施已就绪：
+              - code [ref=e421]: "`i18next`"
+              - text: +
+              - code [ref=e422]: "`react-i18next`"
+              - text: +
+              - code [ref=e423]: "`i18next-browser-languagedetector`"
+              - text: 已配置完成（
+              - code [ref=e424]: "`web/src/i18n/index.ts`"
+              - text: ）
+            - listitem [ref=e425]:
+              - text: 已有
+              - code [ref=e426]: "`en/translation.json`"
+              - text: 和
+              - code [ref=e427]: "`zh/translation.json`"
+              - text: 两个 locale 文件，包含
+              - code [ref=e428]: "`header.*`"
+              - text: 、
+              - code [ref=e429]: "`board.*`"
+              - text: 、
+              - code [ref=e430]: "`issue.create.*`"
+              - text: 、
+              - code [ref=e431]: "`error.*`"
+              - text: 共约 25 个 key
+            - listitem [ref=e432]:
+              - strong [ref=e433]:
+                - text: 但没有任何组件实际调用
+                - code [ref=e434]: "`useTranslation()`"
+                - text: /
+                - code [ref=e435]: "`t()`"
+              - text: ，所有 UI 文本仍为硬编码
+            - listitem [ref=e436]:
+              - code [ref=e437]: "`STATUS_LABELS`"
+              - text: 在
+              - code [ref=e438]: "`constants/transitions.ts`"
+              - text: 中定义，但
+              - code [ref=e439]: "`BoardStats.tsx`"
+              - text: 和
+              - code [ref=e440]: "`ProjectDetail.tsx`"
+              - text: 各有一份本地
+              - code [ref=e441]: "`statusLabels`"
+              - text: 副本，且标签不一致（如
+              - code [ref=e442]: "`Todo`"
+              - text: vs
+              - code [ref=e443]: "`To Do`"
+              - text: 、
+              - code [ref=e444]: "`Human Done`"
+              - text: vs
+              - code [ref=e445]: "`Done`"
+              - text: ）
+            - listitem [ref=e446]:
+              - code [ref=e447]: "`IssueDetail.tsx`"
+              - text: 中混有中文硬编码（
+              - code [ref=e448]: "`来源于`"
+              - text: 、
+              - code [ref=e449]: "`子 Issue`"
+              - text: 、
+              - code [ref=e450]: "`缺陷描述、优化建议...`"
+              - text: 、
+              - code [ref=e451]: "`Agent Done 证据`"
+              - text: ）
+            - listitem [ref=e452]:
+              - code [ref=e453]: "`ErrorBoundary`"
+              - text: 是 class component，无法直接使用
+              - code [ref=e454]: "`useTranslation`"
+              - text: hook
+          - heading "关键决策" [level=3] [ref=e455]
+          - list [ref=e456]:
+            - listitem [ref=e457]:
+              - strong [ref=e458]: STATUS_LABELS 统一方案
+              - text: ：将状态标签移入 translation.json（
+              - code [ref=e459]: "`status.*`"
+              - text: 命名空间），删除
+              - code [ref=e460]: "`transitions.ts`"
+              - text: 中的
+              - code [ref=e461]: "`STATUS_LABELS`"
+              - text: 常量和两处本地副本，改为通过
+              - code [ref=e462]: "`t('status.xxx')`"
+              - text: 获取
+            - listitem [ref=e463]:
+              - strong [ref=e464]: ErrorBoundary 处理
+              - text: ：由于是 class component，使用
+              - code [ref=e465]: "`i18n.t()`"
+              - text: 直接导入（不依赖 hook），或用
+              - code [ref=e466]: "`withTranslation`"
+              - text: HOC 包装
+            - listitem [ref=e467]:
+              - strong [ref=e468]: key 命名规范
+              - text: ：按组件/功能域分层，如
+              - code [ref=e469]: "`issueDetail.plan`"
+              - text: 、
+              - code [ref=e470]: "`projectSidebar.newProject`"
+          - heading "执行计划" [level=2] [ref=e471]
+          - heading "第一阶段：扩充翻译文件 + 统一 STATUS_LABELS" [level=3] [ref=e472]
+          - list [ref=e473]:
+            - listitem [ref=e474]:
+              - paragraph [ref=e475]:
+                - checkbox [disabled] [ref=e476]
+                - text: 步骤1：在
+                - code [ref=e477]: "`en/translation.json`"
+                - text: 中新增所有缺失的 key（涉及文件：
+                - code [ref=e478]: "`web/src/i18n/locales/en/translation.json`"
+                - text: ）
+              - list [ref=e479]:
+                - listitem [ref=e480]:
+                  - text: 新增
+                  - code [ref=e481]: "`status.*`"
+                  - text: 命名空间：
+                  - code [ref=e482]: "`backlog`"
+                  - text: ","
+                  - code [ref=e483]: "`planning`"
+                  - text: ","
+                  - code [ref=e484]: "`todo`"
+                  - text: ","
+                  - code [ref=e485]: "`inProgress`"
+                  - text: ","
+                  - code [ref=e486]: "`agentDone`"
+                  - text: ","
+                  - code [ref=e487]: "`failed`"
+                  - text: ","
+                  - code [ref=e488]: "`rejected`"
+                  - text: ","
+                  - code [ref=e489]: "`humanDone`"
+                - listitem [ref=e490]:
+                  - text: 新增
+                  - code [ref=e491]: "`boardStats.*`"
+                  - text: ：
+                  - code [ref=e492]: "`issueCount`"
+                  - text: ","
+                  - code [ref=e493]: "`cost`"
+                  - text: ","
+                  - code [ref=e494]: "`progress`"
+                - listitem [ref=e495]:
+                  - text: 新增
+                  - code [ref=e496]: "`column.*`"
+                  - text: ：
+                  - code [ref=e497]: "`dropHere`"
+                - listitem [ref=e498]:
+                  - text: 新增
+                  - code [ref=e499]: "`agentLog.*`"
+                  - text: ：
+                  - code [ref=e500]: "`title`"
+                  - text: ","
+                  - code [ref=e501]: "`history`"
+                  - text: ","
+                  - code [ref=e502]: "`cancel`"
+                  - text: ","
+                  - code [ref=e503]: "`collapse`"
+                  - text: ","
+                  - code [ref=e504]: "`expand`"
+                  - text: ","
+                  - code [ref=e505]: "`noEntries`"
+                  - text: ","
+                  - code [ref=e506]: "`noActivity`"
+                - listitem [ref=e507]:
+                  - text: 新增
+                  - code [ref=e508]: "`runLog.*`"
+                  - text: ：
+                  - code [ref=e509]: "`eventLog`"
+                  - text: ","
+                  - code [ref=e510]: "`events`"
+                  - text: ","
+                  - code [ref=e511]: "`clear`"
+                  - text: ","
+                  - code [ref=e512]: "`noEvents`"
+                - listitem [ref=e513]:
+                  - text: 新增
+                  - code [ref=e514]: "`issueDetail.*`"
+                  - text: ：
+                  - code [ref=e515]: "`editIssue`"
+                  - text: ","
+                  - code [ref=e516]: "`saveChanges`"
+                  - text: ","
+                  - code [ref=e517]: "`cancel`"
+                  - text: ","
+                  - code [ref=e518]: "`deleteIssue`"
+                  - text: ","
+                  - code [ref=e519]: "`labelsLabel`"
+                  - text: ","
+                  - code [ref=e520]: "`labelsPlaceholder`"
+                  - text: ","
+                  - code [ref=e521]: "`blockedBy`"
+                  - text: ","
+                  - code [ref=e522]: "`blocks`"
+                  - text: ","
+                  - code [ref=e523]: "`parentIssue`"
+                  - text: ","
+                  - code [ref=e524]: "`childIssues`"
+                  - text: ","
+                  - code [ref=e525]: "`agentRuns`"
+                  - text: ","
+                  - code [ref=e526]: "`total`"
+                  - text: ","
+                  - code [ref=e527]: "`run`"
+                  - text: ","
+                  - code [ref=e528]: "`turns`"
+                  - text: ","
+                  - code [ref=e529]: "`tokens`"
+                  - text: ","
+                  - code [ref=e530]: "`cost`"
+                  - text: ","
+                  - code [ref=e531]: "`duration`"
+                  - text: ","
+                  - code [ref=e532]: "`result`"
+                  - text: ","
+                  - code [ref=e533]: "`pass`"
+                  - text: ","
+                  - code [ref=e534]: "`fail`"
+                  - text: ","
+                  - code [ref=e535]: "`resume`"
+                  - text: ","
+                  - code [ref=e536]: "`runAction`"
+                  - text: ","
+                  - code [ref=e537]: "`stop`"
+                  - text: ","
+                  - code [ref=e538]: "`plan`"
+                  - text: ","
+                  - code [ref=e539]: "`content`"
+                  - text: ","
+                  - code [ref=e540]: "`humanReview`"
+                  - text: ","
+                  - code [ref=e541]: "`edit`"
+                  - text: ","
+                  - code [ref=e542]: "`save`"
+                  - text: ","
+                  - code [ref=e543]: "`planPlaceholder`"
+                  - text: ","
+                  - code [ref=e544]: "`contentPlaceholder`"
+                  - text: ","
+                  - code [ref=e545]: "`noPlan`"
+                  - text: ","
+                  - code [ref=e546]: "`noIssues`"
+                  - text: ","
+                  - code [ref=e547]: "`approve`"
+                  - text: ","
+                  - code [ref=e548]: "`reject`"
+                  - text: ","
+                  - code [ref=e549]: "`submitRejection`"
+                  - text: ","
+                  - code [ref=e550]: "`rejectPlaceholder`"
+                  - text: ","
+                  - code [ref=e551]: "`deleteConfirm`"
+                  - text: ","
+                  - code [ref=e552]: "`delete`"
+                  - text: ","
+                  - code [ref=e553]: "`evidence`"
+                  - text: ","
+                  - code [ref=e554]: "`gitDiff`"
+                  - text: ","
+                  - code [ref=e555]: "`buildResult`"
+                  - text: ","
+                  - code [ref=e556]: "`screenshots`"
+                  - text: ","
+                  - code [ref=e557]: "`evalResult`"
+                  - text: ","
+                  - code [ref=e558]: "`buildPass`"
+                  - text: ","
+                  - code [ref=e559]: "`buildFail`"
+                - listitem [ref=e560]:
+                  - text: 新增
+                  - code [ref=e561]: "`projectDetail.*`"
+                  - text: ：
+                  - code [ref=e562]: "`editProject`"
+                  - text: ","
+                  - code [ref=e563]: "`saveChanges`"
+                  - text: ","
+                  - code [ref=e564]: "`cancel`"
+                  - text: ","
+                  - code [ref=e565]: "`id`"
+                  - text: ","
+                  - code [ref=e566]: "`created`"
+                  - text: ","
+                  - code [ref=e567]: "`issueKey`"
+                  - text: ","
+                  - code [ref=e568]: "`workspace`"
+                  - text: ","
+                  - code [ref=e569]: "`issueStatistics`"
+                  - text: ","
+                  - code [ref=e570]: "`total`"
+                  - text: ","
+                  - code [ref=e571]: "`noIssues`"
+                  - text: ","
+                  - code [ref=e572]: "`agentRuns`"
+                  - text: ","
+                  - code [ref=e573]: "`runs`"
+                  - text: ","
+                  - code [ref=e574]: "`cost`"
+                  - text: ","
+                  - code [ref=e575]: "`duration`"
+                - listitem [ref=e576]:
+                  - text: 新增
+                  - code [ref=e577]: "`projectSidebar.*`"
+                  - text: ：
+                  - code [ref=e578]: "`projects`"
+                  - text: ","
+                  - code [ref=e579]: "`noProjects`"
+                  - text: ","
+                  - code [ref=e580]: "`projectName`"
+                  - text: ","
+                  - code [ref=e581]: "`workspacePath`"
+                  - text: ","
+                  - code [ref=e582]: "`browseDirectories`"
+                  - text: ","
+                  - code [ref=e583]: "`create`"
+                  - text: ","
+                  - code [ref=e584]: "`cancel`"
+                  - text: ","
+                  - code [ref=e585]: "`newProject`"
+                  - text: ","
+                  - code [ref=e586]: "`projectDetails`"
+                  - text: ","
+                  - code [ref=e587]: "`deleteConfirm`"
+                  - text: ","
+                  - code [ref=e588]: "`yes`"
+                  - text: ","
+                  - code [ref=e589]: "`no`"
+                  - text: ","
+                  - code [ref=e590]: "`progress`"
+                - listitem [ref=e591]:
+                  - text: 新增
+                  - code [ref=e592]: "`directoryPicker.*`"
+                  - text: ：
+                  - code [ref=e593]: "`selectDirectory`"
+                  - text: ","
+                  - code [ref=e594]: "`loading`"
+                  - text: ","
+                  - code [ref=e595]: "`noSubdirectories`"
+                  - text: ","
+                  - code [ref=e596]: "`browseFailed`"
+                  - text: ","
+                  - code [ref=e597]: "`connectFailed`"
+                  - text: ","
+                  - code [ref=e598]: "`cancel`"
+                  - text: ","
+                  - code [ref=e599]: "`selectThis`"
+                - listitem [ref=e600]:
+                  - text: 新增
+                  - code [ref=e601]: "`markdownEditor.*`"
+                  - text: ：
+                  - code [ref=e602]: "`write`"
+                  - text: ","
+                  - code [ref=e603]: "`preview`"
+                  - text: ","
+                  - code [ref=e604]: "`uploadImage`"
+                  - text: ","
+                  - code [ref=e605]: "`uploading`"
+                  - text: ","
+                  - code [ref=e606]: "`dropImage`"
+                  - text: ","
+                  - code [ref=e607]: "`nothingToPreview`"
+                  - text: ","
+                  - code [ref=e608]: "`footerHint`"
+                  - text: ","
+                  - code [ref=e609]: "`footerHintUpload`"
+                  - text: ","
+                  - code [ref=e610]: "`bold`"
+                  - text: ","
+                  - code [ref=e611]: "`italic`"
+                  - text: ","
+                  - code [ref=e612]: "`heading1`"
+                  - text: ","
+                  - code [ref=e613]: "`heading2`"
+                  - text: ","
+                  - code [ref=e614]: "`heading3`"
+                  - text: ","
+                  - code [ref=e615]: "`code`"
+                  - text: ","
+                  - code [ref=e616]: "`link`"
+                  - text: ","
+                  - code [ref=e617]: "`bulletList`"
+                  - text: ","
+                  - code [ref=e618]: "`numberedList`"
+                  - text: ","
+                  - code [ref=e619]: "`quote`"
+            - listitem [ref=e620]:
+              - paragraph [ref=e621]:
+                - checkbox [disabled] [ref=e622]
+                - text: 步骤2：在
+                - code [ref=e623]: "`zh/translation.json`"
+                - text: 中新增对应的中文翻译（涉及文件：
+                - code [ref=e624]: "`web/src/i18n/locales/zh/translation.json`"
+                - text: ）
+              - list [ref=e625]:
+                - listitem [ref=e626]: 与步骤1 一一对应，确保所有 key 在两个 locale 文件中同步
+          - heading "第二阶段：统一 STATUS_LABELS" [level=3] [ref=e627]
+          - list [ref=e628]:
+            - listitem [ref=e629]:
+              - checkbox [disabled] [ref=e630]
+              - text: 步骤3：创建
+              - code [ref=e631]: "`useStatusLabels`"
+              - text: hook 或工具函数，用
+              - code [ref=e632]: "`t('status.xxx')`"
+              - text: 替代硬编码的
+              - code [ref=e633]: "`STATUS_LABELS`"
+              - text: （涉及文件：
+              - code [ref=e634]: "`web/src/constants/transitions.ts`"
+              - text: ，可新建
+              - code [ref=e635]: "`web/src/hooks/useStatusLabels.ts`"
+              - text: ）
+              - list [ref=e636]:
+                - listitem [ref=e637]:
+                  - text: 保留
+                  - code [ref=e638]: "`VALID_TRANSITIONS`"
+                  - text: 不变
+                - listitem [ref=e639]:
+                  - text: 导出一个
+                  - code [ref=e640]: "`getStatusLabel(status: string, t: TFunction): string`"
+                  - text: 函数，或直接在组件中用
+                  - code [ref=e641]: "`t(`"
+                  - text: "status.${status}"
+                  - code [ref=e642]: "`)`"
+                - listitem [ref=e643]:
+                  - text: 删除
+                  - code [ref=e644]: "`STATUS_LABELS`"
+                  - text: 常量导出
+          - heading "第三阶段：逐组件替换硬编码文本" [level=3] [ref=e645]
+          - list [ref=e646]:
+            - listitem [ref=e647]:
+              - paragraph [ref=e648]:
+                - checkbox [disabled] [ref=e649]
+                - text: 步骤4：替换
+                - code [ref=e650]: "`App.tsx`"
+                - text: 中的硬编码文本（涉及文件：
+                - code [ref=e651]: "`web/src/App.tsx`"
+                - text: ）
+              - list [ref=e652]:
+                - listitem [ref=e653]:
+                  - text: 在
+                  - code [ref=e654]: "`App`"
+                  - text: 函数组件中添加
+                  - code [ref=e655]: "`const { t } = useTranslation()`"
+                - listitem [ref=e656]: 替换 header 区域：theme toggle title、Run All、New Issue
+                - listitem [ref=e657]: 替换 create form：所有 label、placeholder、option、button
+                - listitem [ref=e658]: 替换空状态文本 "Select a project..."
+                - listitem [ref=e659]:
+                  - code [ref=e660]: "`ErrorBoundary`"
+                  - text: （class component）：使用
+                  - code [ref=e661]: "`import i18n from '../i18n'`"
+                  - text: +
+                  - code [ref=e662]: "`i18n.t('error.uiError')`"
+                  - text: /
+                  - code [ref=e663]: "`i18n.t('error.dismiss')`"
+            - listitem [ref=e664]:
+              - paragraph [ref=e665]:
+                - checkbox [disabled] [ref=e666]
+                - text: 步骤5：替换
+                - code [ref=e667]: "`BoardStats.tsx`"
+                - text: （涉及文件：
+                - code [ref=e668]: "`web/src/components/BoardStats.tsx`"
+                - text: ）
+              - list [ref=e669]:
+                - listitem [ref=e670]:
+                  - text: 添加
+                  - code [ref=e671]: "`useTranslation`"
+                - listitem [ref=e672]:
+                  - text: 删除本地
+                  - code [ref=e673]: "`statusLabels`"
+                  - text: map，改用
+                  - code [ref=e674]: "`t(`"
+                  - text: "status.${col.id}"
+                  - code [ref=e675]: "`)`"
+                - listitem [ref=e676]:
+                  - text: 替换
+                  - code [ref=e677]: "`\"{total} issues\"`"
+                  - text: →
+                  - code [ref=e678]: "`t('boardStats.issueCount', { count: total })`"
+                - listitem [ref=e679]:
+                  - text: 替换
+                  - code [ref=e680]: "`\"Cost: $...\"`"
+                  - text: →
+                  - code [ref=e681]: "`t('boardStats.cost', { amount: ... })`"
+                - listitem [ref=e682]:
+                  - text: 替换
+                  - code [ref=e683]: "`\"{done}/{total} done ({pct}%)\"`"
+                  - text: →
+                  - code [ref=e684]: "`t('boardStats.progress', { done, total, pct })`"
+            - listitem [ref=e685]:
+              - paragraph [ref=e686]:
+                - checkbox [disabled] [ref=e687]
+                - text: 步骤6：替换
+                - code [ref=e688]: "`Column.tsx`"
+                - text: （涉及文件：
+                - code [ref=e689]: "`web/src/components/Column.tsx`"
+                - text: ）
+              - list [ref=e690]:
+                - listitem [ref=e691]:
+                  - text: 添加
+                  - code [ref=e692]: "`useTranslation`"
+                - listitem [ref=e693]:
+                  - text: 替换
+                  - code [ref=e694]: "`\"Drop issues here\"`"
+                  - text: →
+                  - code [ref=e695]: "`t('column.dropHere')`"
+            - listitem [ref=e696]:
+              - paragraph [ref=e697]:
+                - checkbox [disabled] [ref=e698]
+                - text: 步骤7：替换
+                - code [ref=e699]: "`AgentLogPanel.tsx`"
+                - text: （涉及文件：
+                - code [ref=e700]: "`web/src/components/AgentLogPanel.tsx`"
+                - text: ）
+              - list [ref=e701]:
+                - listitem [ref=e702]:
+                  - text: 添加
+                  - code [ref=e703]: "`useTranslation`"
+                - listitem [ref=e704]:
+                  - text: 替换
+                  - code [ref=e705]: "`\"Agent Log\"`"
+                  - text: ","
+                  - code [ref=e706]: "`\"History\"`"
+                  - text: ","
+                  - code [ref=e707]: "`\"Cancel\"`"
+                  - text: ","
+                  - code [ref=e708]: "`\"Collapse\"`"
+                  - text: /
+                  - code [ref=e709]: "`\"Expand\"`"
+                  - text: ", 两个空状态文本"
+            - listitem [ref=e710]:
+              - paragraph [ref=e711]:
+                - checkbox [disabled] [ref=e712]
+                - text: 步骤8：替换
+                - code [ref=e713]: "`RunLogPanel.tsx`"
+                - text: （涉及文件：
+                - code [ref=e714]: "`web/src/components/RunLogPanel.tsx`"
+                - text: ）
+              - list [ref=e715]:
+                - listitem [ref=e716]:
+                  - text: 添加
+                  - code [ref=e717]: "`useTranslation`"
+                - listitem [ref=e718]:
+                  - text: 替换
+                  - code [ref=e719]: "`\"Event Log\"`"
+                  - text: ","
+                  - code [ref=e720]: "`\"Events\"`"
+                  - text: ","
+                  - code [ref=e721]: "`\"Clear\"`"
+                  - text: ", 空状态文本"
+            - listitem [ref=e722]:
+              - paragraph [ref=e723]:
+                - checkbox [disabled] [ref=e724]
+                - text: 步骤9：替换
+                - code [ref=e725]: "`IssueDetail.tsx`"
+                - text: （涉及文件：
+                - code [ref=e726]: "`web/src/components/IssueDetail.tsx`"
+                - text: ）
+              - list [ref=e727]:
+                - listitem [ref=e728]:
+                  - text: 添加
+                  - code [ref=e729]: "`useTranslation`"
+                - listitem [ref=e730]: 替换所有 button title/label：Edit issue, Save changes, Cancel, Delete issue
+                - listitem [ref=e731]: 替换 Labels 编辑区的 label 和 placeholder
+                - listitem [ref=e732]: 替换依赖关系文本：Blocked by, Blocks
+                - listitem [ref=e733]:
+                  - text: 替换中文文本：
+                  - code [ref=e734]: "`来源于`"
+                  - text: →
+                  - code [ref=e735]: "`t('issueDetail.parentIssue')`"
+                  - text: ","
+                  - code [ref=e736]: "`子 Issue`"
+                  - text: →
+                  - code [ref=e737]: "`t('issueDetail.childIssues')`"
+                  - text: ","
+                  - code [ref=e738]: "`缺陷描述、优化建议...`"
+                  - text: →
+                  - code [ref=e739]: "`t('issueDetail.rejectPlaceholder')`"
+                  - text: ","
+                  - code [ref=e740]: "`Agent Done 证据`"
+                  - text: →
+                  - code [ref=e741]: "`t('issueDetail.evidence')`"
+                - listitem [ref=e742]: 替换 Run Stats 表头和内容
+                - listitem [ref=e743]: 替换 Run/Resume/Stop 按钮
+                - listitem [ref=e744]: 替换 Plan/Content/Human Review 区域
+                - listitem [ref=e745]: 替换 Approve/Reject/Submit Rejection
+                - listitem [ref=e746]: 替换 Delete 确认对话框
+                - listitem [ref=e747]:
+                  - text: 替换
+                  - code [ref=e748]: "`EvidencePanel`"
+                  - text: 中的所有标签：Git Diff, Build Result, Screenshots, Eval Result, PASS/FAIL
+                - listitem [ref=e749]:
+                  - text: 删除对
+                  - code [ref=e750]: "`STATUS_LABELS`"
+                  - text: 的导入，改用
+                  - code [ref=e751]: "`t('status.xxx')`"
+            - listitem [ref=e752]:
+              - paragraph [ref=e753]:
+                - checkbox [disabled] [ref=e754]
+                - text: 步骤10：替换
+                - code [ref=e755]: "`ProjectDetail.tsx`"
+                - text: （涉及文件：
+                - code [ref=e756]: "`web/src/components/ProjectDetail.tsx`"
+                - text: ）
+              - list [ref=e757]:
+                - listitem [ref=e758]:
+                  - text: 添加
+                  - code [ref=e759]: "`useTranslation`"
+                - listitem [ref=e760]:
+                  - text: 删除本地
+                  - code [ref=e761]: "`statusLabels`"
+                  - text: map，改用
+                  - code [ref=e762]: "`t('status.xxx')`"
+                - listitem [ref=e763]: 替换所有 button title、字段标签（ID, Created, Issue Key）、section heading（Workspace, Issue Statistics, Agent Runs）
+                - listitem [ref=e764]: 替换统计标签（total, Runs, Cost, Duration）和空状态
+            - listitem [ref=e765]:
+              - paragraph [ref=e766]:
+                - checkbox [disabled] [ref=e767]
+                - text: 步骤11：替换
+                - code [ref=e768]: "`ProjectSidebar.tsx`"
+                - text: （涉及文件：
+                - code [ref=e769]: "`web/src/components/ProjectSidebar.tsx`"
+                - text: ）
+              - list [ref=e770]:
+                - listitem [ref=e771]:
+                  - text: 添加
+                  - code [ref=e772]: "`useTranslation`"
+                - listitem [ref=e773]: 替换 "Projects", "No projects yet", input placeholder, button 文本
+                - listitem [ref=e774]: 替换 delete 确认（Delete?, Yes, No）
+                - listitem [ref=e775]: "替换进度文本 \"{done}/{total} done\""
+            - listitem [ref=e776]:
+              - paragraph [ref=e777]:
+                - checkbox [disabled] [ref=e778]
+                - text: 步骤12：替换
+                - code [ref=e779]: "`DirectoryPicker.tsx`"
+                - text: （涉及文件：
+                - code [ref=e780]: "`web/src/components/DirectoryPicker.tsx`"
+                - text: ）
+              - list [ref=e781]:
+                - listitem [ref=e782]:
+                  - text: 添加
+                  - code [ref=e783]: "`useTranslation`"
+                - listitem [ref=e784]: 替换 "Select Directory", "Loading...", "No subdirectories", 错误信息, "Cancel", "Select this directory"
+            - listitem [ref=e785]:
+              - paragraph [ref=e786]:
+                - checkbox [disabled] [ref=e787]
+                - text: 步骤13：替换
+                - code [ref=e788]: "`MarkdownEditor.tsx`"
+                - text: （涉及文件：
+                - code [ref=e789]: "`web/src/components/MarkdownEditor.tsx`"
+                - text: ）
+              - list [ref=e790]:
+                - listitem [ref=e791]:
+                  - text: 添加
+                  - code [ref=e792]: "`useTranslation`"
+                - listitem [ref=e793]: 替换 "Write", "Preview" tab 文本
+                - listitem [ref=e794]: 替换 toolbar action labels（Bold, Italic, Heading 1/2/3, Code, Link, Bullet List, Numbered List, Quote）
+                - listitem [ref=e795]: 替换 "Upload image", "Uploading...", "Drop image here", "Nothing to preview"
+                - listitem [ref=e796]: 替换 footer hint 文本
+          - heading "第四阶段：验证" [level=3] [ref=e797]
+          - list [ref=e798]:
+            - listitem [ref=e799]:
+              - checkbox [disabled] [ref=e800]
+              - text: 步骤14：运行 TypeScript 编译检查，确保无类型错误（
+              - code [ref=e801]: "`npx tsc --noEmit`"
+              - text: ）
+            - listitem [ref=e802]:
+              - checkbox [disabled] [ref=e803]
+              - text: 步骤15：运行 Vite 构建，确保打包成功（
+              - code [ref=e804]: "`npm run build`"
+              - text: ）
+            - listitem [ref=e805]:
+              - checkbox [disabled] [ref=e806]
+              - text: 步骤16：手动验证 — 切换语言后所有文本正确显示，无遗漏的硬编码文本
+          - heading "涉及文件" [level=2] [ref=e807]
+          - list [ref=e808]:
+            - listitem [ref=e809]:
+              - code [ref=e810]: "`web/src/i18n/locales/en/translation.json`"
+              - text: — 扩充英文翻译 key（约新增 120+ key）
+            - listitem [ref=e811]:
+              - code [ref=e812]: "`web/src/i18n/locales/zh/translation.json`"
+              - text: — 扩充中文翻译 key（与英文同步）
+            - listitem [ref=e813]:
+              - code [ref=e814]: "`web/src/constants/transitions.ts`"
+              - text: — 删除
+              - code [ref=e815]: "`STATUS_LABELS`"
+              - text: 导出
+            - listitem [ref=e816]:
+              - code [ref=e817]: "`web/src/App.tsx`"
+              - text: — 添加
+              - code [ref=e818]: "`useTranslation`"
+              - text: ，替换 header + create form + ErrorBoundary 文本
+            - listitem [ref=e819]:
+              - code [ref=e820]: "`web/src/components/BoardStats.tsx`"
+              - text: — 添加
+              - code [ref=e821]: "`useTranslation`"
+              - text: ，删除本地 statusLabels，替换统计文本
+            - listitem [ref=e822]:
+              - code [ref=e823]: "`web/src/components/Column.tsx`"
+              - text: — 添加
+              - code [ref=e824]: "`useTranslation`"
+              - text: ，替换空状态文本
+            - listitem [ref=e825]:
+              - code [ref=e826]: "`web/src/components/AgentLogPanel.tsx`"
+              - text: — 添加
+              - code [ref=e827]: "`useTranslation`"
+              - text: ，替换面板标题和空状态
+            - listitem [ref=e828]:
+              - code [ref=e829]: "`web/src/components/RunLogPanel.tsx`"
+              - text: — 添加
+              - code [ref=e830]: "`useTranslation`"
+              - text: ，替换面板标题和空状态
+            - listitem [ref=e831]:
+              - code [ref=e832]: "`web/src/components/IssueDetail.tsx`"
+              - text: — 添加
+              - code [ref=e833]: "`useTranslation`"
+              - text: ，替换大量文本（含中文），删除 STATUS_LABELS 导入
+            - listitem [ref=e834]:
+              - code [ref=e835]: "`web/src/components/ProjectDetail.tsx`"
+              - text: — 添加
+              - code [ref=e836]: "`useTranslation`"
+              - text: ，删除本地 statusLabels，替换字段标签
+            - listitem [ref=e837]:
+              - code [ref=e838]: "`web/src/components/ProjectSidebar.tsx`"
+              - text: — 添加
+              - code [ref=e839]: "`useTranslation`"
+              - text: ，替换项目管理相关文本
+            - listitem [ref=e840]:
+              - code [ref=e841]: "`web/src/components/DirectoryPicker.tsx`"
+              - text: — 添加
+              - code [ref=e842]: "`useTranslation`"
+              - text: ，替换目录选择器文本
+            - listitem [ref=e843]:
+              - code [ref=e844]: "`web/src/components/MarkdownEditor.tsx`"
+              - text: — 添加
+              - code [ref=e845]: "`useTranslation`"
+              - text: ，替换编辑器 UI 文本
+          - heading "风险与注意事项" [level=2] [ref=e846]
+          - list [ref=e847]:
+            - listitem [ref=e848]:
+              - paragraph [ref=e849]:
+                - strong [ref=e850]: ErrorBoundary 是 class component
+                - text: ：不能使用
+                - code [ref=e851]: "`useTranslation`"
+                - text: hook。方案：直接
+                - code [ref=e852]: "`import i18n from '../i18n'`"
+                - text: 后调用
+                - code [ref=e853]: "`i18n.t()`"
+                - text: ，或用
+                - code [ref=e854]: "`withTranslation`"
+                - text: HOC 包装。推荐前者，改动最小。
+            - listitem [ref=e855]:
+              - paragraph [ref=e856]:
+                - strong [ref=e857]: STATUS_LABELS 删除的影响面
+                - text: ：
+                - code [ref=e858]: "`IssueDetail.tsx`"
+                - text: 直接导入了
+                - code [ref=e859]: "`STATUS_LABELS`"
+                - text: ，删除后需确保所有引用点都改为
+                - code [ref=e860]: "`t('status.xxx')`"
+                - text: 。用 grep 确认无遗漏。
+            - listitem [ref=e861]:
+              - paragraph [ref=e862]:
+                - strong [ref=e863]: 插值语法
+                - text: ：带变量的文本（如
+                - code [ref=e864]: "`{done}/{total} done ({pct}%)`"
+                - text: ）需使用 i18next 插值语法
+                - code [ref=e865]: "`{{done}}/{{total}} done ({{pct}}%)`"
+                - text: ，注意双花括号。
+            - listitem [ref=e866]:
+              - paragraph [ref=e867]:
+                - strong [ref=e868]: toolbarActions 是模块级常量
+                - text: ：
+                - code [ref=e869]: "`MarkdownEditor.tsx`"
+                - text: 中的
+                - code [ref=e870]: "`toolbarActions`"
+                - text: 数组在模块加载时初始化，其
+                - code [ref=e871]: "`label`"
+                - text: 字段如果改为
+                - code [ref=e872]: "`t()`"
+                - text: 调用，需要确保在组件渲染时才求值（可改为 key，在渲染时
+                - code [ref=e873]: "`t(action.labelKey)`"
+                - text: ）。
+            - listitem [ref=e874]:
+              - paragraph [ref=e875]:
+                - strong [ref=e876]: locale 文件 key 一致性
+                - text: ：两个 locale 文件必须保持 key 完全同步，否则 fallback 到英文时可能出现不一致。建议用脚本或 diff 工具校验。
+            - listitem [ref=e877]:
+              - paragraph [ref=e878]:
+                - strong [ref=e879]:
+                  - code [ref=e880]: "`parseEvidence`"
+                  - text: 函数中的正则
+                - text: ：该函数用正则匹配
+                - code [ref=e881]: "`## Agent Done 证据`"
+                - text: 等中文标题来解析 content。国际化后如果 content 本身是用户/agent 生成的 markdown，这些正则不应改动——它们匹配的是数据内容而非 UI 文本。只需替换
+                - code [ref=e882]: "`EvidencePanel`"
+                - text: 中的显示文本。
+      - generic [ref=e883]:
+        - generic [ref=e884]:
+          - heading "内容" [level=3] [ref=e885]
+          - button "编辑" [ref=e886]:
+            - img [ref=e887]
+            - text: 编辑
+        - paragraph [ref=e891]: 将 12 个组件中的硬编码文本替换为 t() 调用，统一 STATUS_LABELS（步骤 6-17）
+  - button "事件日志" [ref=e341]:
+    - img [ref=e342]
+    - generic [ref=e344]: 事件日志
+    - img [ref=e345]

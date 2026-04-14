@@ -159,6 +159,12 @@
     "cancel": "Cancel",
     "selectThis": "Select this directory"
   },
+  "issueCard": {
+    "stopTitle": "Stop this issue",
+    "stop": "Stop",
+    "runTitle": "Run this issue",
+    "blockedBy": "Blocked by {{count}}"
+  },
   "markdownEditor": {
     "write": "Write",
     "preview": "Preview",

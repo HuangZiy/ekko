@@ -1,6 +1,7 @@
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { GripVertical, AlertCircle, Clock, Tag, Play, Square, Bot } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import type { Issue } from '../stores/boardStore'
 import { useBoardStore } from '../stores/boardStore'
 
@@ -17,6 +18,7 @@ interface IssueCardProps {
 }
 
 export function IssueCard({ issue, onClick }: IssueCardProps) {
+  const { t } = useTranslation()
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: issue.id,
   })
@@ -64,17 +66,17 @@ export function IssueCard({ issue, onClick }: IssueCardProps) {
               <button
                 onClick={handleStop}
                 className="ml-auto flex items-center gap-1 p-1 rounded hover:bg-red-50 text-red-500 hover:text-red-600 transition-colors"
-                title="Stop this issue"
+                title={t('issueCard.stopTitle')}
               >
                 <Square size={10} fill="currentColor" />
-                <span className="text-xs">Stop</span>
+                <span className="text-xs">{t('issueCard.stop')}</span>
               </button>
             )}
             {canRun && !isRunning && issue.status !== 'in_progress' && (
               <button
                 onClick={handleRun}
                 className="ml-auto p-1 rounded hover:bg-green-50 text-green-600 hover:text-green-700 transition-colors"
-                title="Run this issue"
+                title={t('issueCard.runTitle')}
               >
                 <Play size={12} />
               </button>
@@ -94,7 +96,7 @@ export function IssueCard({ issue, onClick }: IssueCardProps) {
           {issue.blocked_by.length > 0 && (
             <div className="flex items-center gap-1 mt-1.5 text-xs text-orange-600">
               <AlertCircle size={12} />
-              Blocked by {issue.blocked_by.length}
+              {t('issueCard.blockedBy', { count: issue.blocked_by.length })}
             </div>
           )}
           {issue.assignee && (

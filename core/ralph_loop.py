@@ -24,7 +24,7 @@ from typing import Awaitable, Callable
 
 from core.models import Issue, IssueStatus, IssuePriority, Board
 from core.storage import ProjectStorage
-from core.evidence import collect_evidence
+from core.evidence import collect_evidence, _run_cmd as _evidence_run_cmd
 
 # Priority sort order — lower value = higher priority
 _PRIORITY_ORDER = {
@@ -161,6 +161,11 @@ async def run_issue_loop(
         _log("Planning", C_GREEN, f"{issue.id}: Planning complete")
         await _emit_harness(on_event, issue.id, "planning", "Planning complete", "success")
 
+    # === Capture base SHA before any code changes ===
+    # Used by collect_evidence() to do range diff (base_sha..HEAD) instead of
+    # a HEAD~1 snapshot, preventing evidence from pointing to unrelated commits.
+    base_sha = _evidence_run_cmd(["git", "rev-parse", "HEAD"], workspace) or None
+
     # === 2. State: → In Progress ===
     if issue.status == IssueStatus.BACKLOG:
         issue.move_to(IssueStatus.TODO)
@@ -250,7 +255,7 @@ async def run_issue_loop(
         _log("Evidence", C_CYAN, f"Collecting evidence for {issue.id}")
         await _emit_harness(on_event, issue.id, "evidence", "Collecting evidence")
         try:
-            collect_evidence(issue.id, storage, workspace, run_build=True)
+            collect_evidence(issue.id, storage, workspace, run_build=True, base_sha=base_sha)
         except Exception as e:
             _log("Evidence", C_RED, f"Evidence collection failed: {e}")
             await _emit_harness(on_event, issue.id, "evidence", f"Failed: {e}", "error")

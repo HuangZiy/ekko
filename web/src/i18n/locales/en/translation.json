@@ -1,7 +1,4 @@
 {
-  "common": {
-    "loading": "Loading..."
-  },
   "header": {
     "runAll": "Run All",
     "newIssue": "New Issue",

@@ -1,7 +1,4 @@
 {
-  "common": {
-    "loading": "加载中..."
-  },
   "header": {
     "runAll": "全部运行",
     "newIssue": "新建问题",

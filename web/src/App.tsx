@@ -11,7 +11,7 @@ import { useLanguage } from './hooks/useLanguage'
 import { Board } from './components/Board'
 import { BoardStats } from './components/BoardStats'
 import { ProjectSidebar } from './components/ProjectSidebar'
-import { LayoutDashboard, Plus, Play, Sun, Moon, Languages } from 'lucide-react'
+import { LayoutDashboard, Plus, Play, Sun, Moon, Languages, Loader2 } from 'lucide-react'
 import { AnimatePresence } from 'framer-motion'
 import i18n from './i18n'
 import './index.css'
@@ -191,7 +191,7 @@ function App() {
       {/* Issue Detail Slide-over */}
       <AnimatePresence>
         {selectedIssue && (
-          <Suspense fallback={null}>
+          <Suspense fallback={<div className="fixed inset-y-0 right-0 w-[520px] flex items-center justify-center bg-[var(--bg-card)] z-50"><Loader2 className="animate-spin text-[var(--text-secondary)]" size={32} /></div>}>
             <ErrorBoundary>
               <IssueDetail
                 issue={selectedIssue}
@@ -216,7 +216,7 @@ function App() {
       </AnimatePresence>
       <AnimatePresence>
         {selectedProject && (
-          <Suspense fallback={null}>
+          <Suspense fallback={<div className="fixed inset-y-0 right-0 w-[520px] flex items-center justify-center bg-[var(--bg-card)] z-50"><Loader2 className="animate-spin text-[var(--text-secondary)]" size={32} /></div>}>
             <ProjectDetail
               project={selectedProject}
               onClose={() => setSelectedProject(null)}
@@ -275,7 +275,7 @@ function App() {
               {/* Description */}
               <div>
                 <label className="text-xs font-medium text-[var(--text-secondary)] mb-1 block">{t('issue.create.descriptionLabel')}</label>
-                <Suspense fallback={null}>
+                <Suspense fallback={<div className="w-full h-[168px] rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] flex items-center justify-center"><Loader2 className="animate-spin text-[var(--text-secondary)]" size={20} /></div>}>
                   <MarkdownEditor
                     value={newDescription}
                     onChange={setNewDescription}
@@ -317,7 +317,7 @@ function App() {
       )}
 
       {/* Run Log Panel */}
-      <Suspense fallback={null}>
+      <Suspense fallback={<div className="h-10" />}>
         <RunLogPanel />
       </Suspense>
     </div>

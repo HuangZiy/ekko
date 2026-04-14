@@ -70,24 +70,30 @@ def _collect_screenshots(
     storage: ProjectStorage,
     project_id: str | None,
 ) -> list[dict]:
-    """Collect screenshots: copy to uploads dir and return structured list."""
+    """Collect screenshots and screen recordings: copy to uploads dir and return structured list.
+
+    Supports both image files (.png, .jpg, .jpeg, .gif, .webp) and video files (.mp4, .webm).
+    Each entry includes a 'type' field: 'image' or 'video'.
+    """
     if not screenshots_dir or not screenshots_dir.exists() or not screenshots_dir.is_dir():
         return []
 
     image_extensions = {".png", ".jpg", ".jpeg", ".gif", ".webp"}
-    screenshot_files = sorted(
+    video_extensions = {".mp4", ".webm"}
+    media_extensions = image_extensions | video_extensions
+    media_files = sorted(
         f for f in screenshots_dir.iterdir()
-        if f.is_file() and f.suffix.lower() in image_extensions
+        if f.is_file() and f.suffix.lower() in media_extensions
     )
-    if not screenshot_files:
+    if not media_files:
         return []
 
-    # Copy screenshots to issue uploads dir for self-contained storage
+    # Copy media to issue uploads dself-contained storage
     uploads_dir = storage.issues_dir / issue_id / "uploads"
     uploads_dir.mkdir(parents=True, exist_ok=True)
 
     result: list[dict] = []
-    for sf in screenshot_files:
+    for sf in media_files:
         dest = uploads_dir / sf.name
         try:
             shutil.copy2(sf, dest)
@@ -98,7 +104,9 @@ def _collect_screenshots(
             url = f"/api/projects/{project_id}/issues/{issue_id}/screenshots/{sf.name}"
         else:
             url = f"screenshots/{sf.name}"
-        result.append({"url": url, "alt": sf.stem, "filename": sf.name})
+
+        media_type = "video" if sf.suffix.lower() in video_extensions else "image"
+        result.append({"url": url, "alt": sf.stem, "filename": sf.name, "type": media_type})
 
     return result
 
@@ -247,9 +255,13 @@ def collect_evidence(
     evidence_data["screenshots"] = screenshot_list
 
     if screenshot_list:
-        screenshot_lines = ["### 截图\n"]
+        screenshot_lines = ["### 截图/录屏\n"]
         for ss in screenshot_list:
-            screenshot_lines.append(f"![{ss['alt']}]({ss['url']})")
+            if ss.get("type") == "video":
+                # Videos use markdown link (not image) since markdown can't embed video
+                screenshot_lines.append(f"[🎬 {ss['alt']}]({ss['url']})")
+            else:
+                screenshot_lines.append(f"![{ss['alt']}]({ss['url']})")
         sections.append("\n".join(screenshot_lines) + "\n")
 
     # --- Eval Summary ---

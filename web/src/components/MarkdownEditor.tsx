@@ -226,8 +226,11 @@ export function MarkdownEditor({
         return
       }
       const data = await res.json()
-      const mdImage = `![${file.name}](${data.url})\n`
-      insertTextAtCursor(mdImage)
+      const isVideo = file.type.startsWith('video/')
+      const mdMarkup = isVideo
+        ? `[🎬 ${file.name}](${data.url})\n`
+        : `![${file.name}](${data.url})\n`
+      insertTextAtCursor(mdMarkup)
     } catch (err) {
       console.error('Upload error:', err)
     } finally {
@@ -240,7 +243,7 @@ export function MarkdownEditor({
     const items = e.clipboardData?.items
     if (!items) return
     for (const item of Array.from(items)) {
-      if (item.type.startsWith('image/')) {
+      if (item.type.startsWith('image/') || item.type.startsWith('video/')) {
         e.preventDefault()
         const file = item.getAsFile()
         if (file) uploadImage(file)
@@ -256,7 +259,7 @@ export function MarkdownEditor({
     const files = e.dataTransfer?.files
     if (!files) return
     for (const file of Array.from(files)) {
-      if (file.type.startsWith('image/')) {
+      if (file.type.startsWith('image/') || file.type.startsWith('video/')) {
         uploadImage(file)
         return
       }
@@ -274,7 +277,7 @@ export function MarkdownEditor({
 
   const handleFileSelect = useCallback((e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
-    if (file && file.type.startsWith('image/')) {
+    if (file && (file.type.startsWith('image/') || file.type.startsWith('video/'))) {
       uploadImage(file)
     }
     // Reset input so same file can be selected again
@@ -353,7 +356,7 @@ export function MarkdownEditor({
                 <input
                   ref={fileInputRef}
                   type="file"
-                  accept="image/*"
+                  accept="image/*,video/mp4,video/webm"
                   className="hidden"
                   onChange={handleFileSelect}
                 />

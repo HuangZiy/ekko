@@ -1,4 +1,4 @@
-"""Image upload API for issue descriptions."""
+"""Image and video upload API for issue descriptions."""
 
 from __future__ import annotations
 
@@ -10,8 +10,11 @@ from fastapi.responses import FileResponse
 
 router = APIRouter(tags=["uploads"])
 
-ALLOWED_TYPES = {"image/png", "image/jpeg", "image/gif", "image/webp", "image/svg+xml"}
-MAX_SIZE = 10 * 1024 * 1024  # 10MB
+ALLOWED_IMAGE_TYPES = {"image/png", "image/jpeg", "image/gif", "image/webp", "image/svg+xml"}
+ALLOWED_VIDEO_TYPES = {"video/mp4", "video/webm"}
+ALLOWED_TYPES = ALLOWED_IMAGE_TYPES | ALLOWED_VIDEO_TYPES
+MAX_IMAGE_SIZE = 10 * 1024 * 1024   # 10MB for images
+MAX_VIDEO_SIZE = 100 * 1024 * 1024  # 100MB for videos
 
 
 def _get_storage(project_id: str):
@@ -23,14 +26,16 @@ def _validate_and_read(file: UploadFile, data: bytes):
     """Validate file type and size."""
     if file.content_type not in ALLOWED_TYPES:
         raise HTTPException(400, f"Unsupported file type: {file.content_type}. Allowed: {', '.join(ALLOWED_TYPES)}")
-    if len(data) > MAX_SIZE:
-        raise HTTPException(400, f"File too large. Max size: {MAX_SIZE // (1024*1024)}MB")
+    max_size = MAX_VIDEO_SIZE if file.content_type in ALLOWED_VIDEO_TYPES else MAX_IMAGE_SIZE
+    if len(data) > max_size:
+        raise HTTPException(400, f"File too large. Max size: {max_size // (1024*1024)}MB")
 
 
 def _save_file(uploads_dir: Path, file: UploadFile, data: bytes) -> str:
     """Save file to uploads_dir and return the generated filename."""
     uploads_dir.mkdir(parents=True, exist_ok=True)
-    ext = Path(file.filename or "image.png").suffix or ".png"
+    default_ext = ".mp4" if file.content_type and file.content_type.startswith("video/") else ".png"
+    ext = Path(file.filename or f"file{default_ext}").suffix or default_ext
     filename = f"{uuid.uuid4().hex[:12]}{ext}"
     filepath = uploads_dir / filename
     filepath.write_bytes(data)
@@ -53,6 +58,8 @@ def _serve_file(uploads_dir: Path, filename: str) -> FileResponse:
         ".gif": "image/gif",
         ".webp": "image/webp",
         ".svg": "image/svg+xml",
+        ".mp4": "video/mp4",
+        ".webm": "video/webm",
     }
     media_type = ext_map.get(filepath.suffix.lower(), "application/octet-stream")
     return FileResponse(filepath, media_type=media_type)

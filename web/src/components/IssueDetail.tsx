@@ -15,17 +15,32 @@ import { VALID_TRANSITIONS } from '../constants/transitions'
 import { AgentLogPanel } from './AgentLogPanel'
 import { Lightbox } from './Lightbox'
 
+const VIDEO_EXTENSIONS = /\.(mp4|webm)$/i
+
 const markdownComponents: Components = {
-  img: ({ src, alt, ...props }) => (
-    <img
-      src={src}
-      alt={alt || ''}
-      loading="lazy"
-      style={{ maxWidth: '100%', height: 'auto', borderRadius: '0.5rem', cursor: 'pointer' }}
-      onClick={() => src && window.open(src, '_blank')}
-      {...props}
-    />
-  ),
+  img: ({ src, alt, ...props }) => {
+    if (src && VIDEO_EXTENSIONS.test(src)) {
+      return (
+        <video
+          src={src}
+          controls
+          muted
+          loop
+          style={{ maxWidth: '100%', borderRadius: '0.5rem' }}
+        />
+      )
+    }
+    return (
+      <img
+        src={src}
+        alt={alt || ''}
+        loading="lazy"
+        style={{ maxWidth: '100%', height: 'auto', borderRadius: '0.5rem', cursor: 'pointer' }}
+        onClick={() => src && window.open(src, '_blank')}
+        {...props}
+      />
+    )
+  },
   a: ({ href, children, ...props }) => (
     <a href={href} target="_blank" rel="noopener noreferrer" {...props}>
       {children}
@@ -47,11 +62,16 @@ interface IssueDetailProps {
   onDelete?: () => void
 }
 
+interface ScreenshotItem {
+  url: string
+  type?: 'image' | 'video'  // defaults to 'image' for backward compat
+}
+
 interface EvidenceData {
   changeSummary: string
   gitDiff: string
   buildResult: { passed: boolean; output: string } | null
-  screenshots: string[]
+  screenshots: ScreenshotItem[]
   evalSummary: string
   evalItems: { passed: boolean; text: string }[]
   // Structured fields from evidence.json
@@ -64,7 +84,10 @@ interface EvidenceData {
 }
 
 function parseStructuredEvidence(data: Record<string, unknown>): EvidenceData {
-  const screenshots = (data.screenshots as { url: string }[] || []).map(s => s.url)
+  const screenshots: ScreenshotItem[] = (data.screenshots as { url: string; type?: string }[] || []).map(s => ({
+    url: s.url,
+    type: (s.type === 'video' ? 'video' : 'image') as 'image' | 'video',
+  }))
   const evalChecks = (data.eval_checks as { criterion: string; passed: boolean; detail: string }[] || [])
   const changedFiles = (data.changed_files as { filename: string; additions: number; deletions: number; change_type: string }[] || [])
   const buildResult = data.build_result as { passed: boolean; status: string; output: string } | null
@@ -128,11 +151,23 @@ function parseEvidence(content: string): EvidenceData {
     evidence.buildResult = { passed, output: lineMatch ? lineMatch[0].trim() : '' }
   }
 
-  // Extract screenshots (markdown images)
+  // Extract screenshots (markdown images) and video links
   const imgRegex = /!\[([^\]]*)\]\(([^)]+)\)/g
   let imgMatch: RegExpExecArray | null
   while ((imgMatch = imgRegex.exec(section)) !== null) {
-    evidence.screenshots.push(imgMatch[2])
+    const url = imgMatch[2]
+    const isVideo = /\.(mp4|webm)$/i.test(url)
+    evidence.screenshots.push({ url, type: isVideo ? 'video' : 'image' })
+  }
+  // Also detect video markdown links: [🎬 name](url.mp4)
+  const videoLinkRegex = /\[🎬[^\]]*\]\(([^)]+)\)/g
+  let videoMatch: RegExpExecArray | null
+  while ((videoMatch = videoLinkRegex.exec(section)) !== null) {
+    const url = videoMatch[1]
+    // Avoid duplicates if already captured
+    if (!evidence.screenshots.some(s => s.url === url)) {
+      evidence.screenshots.push({ url, type: 'video' })
+    }
   }
 
   // Extract eval result — supports both new structured format and legacy single-line
@@ -788,26 +823,39 @@ function EvidencePanel({ evidence }: { evidence: EvidenceData }) {
           </div>
         )}
 
-        {/* Screenshots with Lightbox */}
+        {/* Screenshots / Recordings with Lightbox */}
         {evidence.screenshots.length > 0 && (
           <div>
             <div className="flex items-center gap-1.5 text-xs font-medium text-[var(--text-secondary)] mb-2">
               <Image size={14} /> {t('issueDetail.screenshots', { count: evidence.screenshots.length })}
             </div>
             <div className="flex gap-2 ovo pb-2">
-              {evidence.screenshots.map((src, i) => (
-                <img
-                  key={i}
-                  src={src}
-                  alt={t('issueDetail.screenshot', { index: i + 1 })}
-                  className={`h-32 rounded-lg border-2 cursor-pointer transition-all hover:opacity-80 ${i === galleryIndex ? 'border-[var(--accent)]' : 'border-transparent'}`}
-                  onClick={() => { setGalleryIndex(i); setLightboxOpen(true) }}
-                />
-              ))}
+              {evidence.screenshots.map((item, i) => {
+                const isVideo = item.type === 'video' || /\.(mp4|webm)$/i.test(item.url)
+                return isVideo ? (
+                  <video
+                    key={i}
+                    src={item.url}
+                    muted
+                    loop
+                    controls
+                    className={`h-32 rounded-lg border-2 cursor-pointer transition-all hover:opacity-80 ${i === galleryIndex ? 'border-[var(--accent)]' : 'border-transparent'}`}
+                    onClick={() => { setGalleryIndex(i); setLightboxOpen(true) }}
+                  />
+                ) : (
+                  <img
+                    key={i}
+                    src={item.url}
+                    alt={t('issueDetail.screenshot', { index: i + 1 })}
+                    className={`h-32 rounded-lg border-2 cursor-pointer transition-all hover:opacity-80 ${i === galleryIndex ? 'border-[var(--accent)]' : 'border-transparent'}`}
+                    onClick={() => { setGalleryIndex(i); setLightboxOpen(true) }}
+                  />
+                )
+              })}
             </div>
             {lightboxOpen && (
               <Lightbox
-                images={evidence.screenshots}
+                media={evidence.screenshots.map(s => ({ url: s.url, type: s.type === 'video' || /\.(mp4|webm)$/i.test(s.url) ? 'video' : 'image' }))}
                 initialIndex={galleryIndex}
                 onClose={() => setLightboxOpen(false)}
               />

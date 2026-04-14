@@ -333,7 +333,7 @@ def test_collect_evidence_includes_screenshots_with_project_id(tmp_path):
         collect_evidence(issue.id, store, ws, project_id="proj-123")
 
     content = store.load_issue_content(issue.id)
-    assert "### 截图" in content
+    assert "### 截图/录屏" in content
     assert "![step1](/api/projects/proj-123/issues/ISS-1/screenshots/step1.png)" in content
     assert "![step2](/api/projects/proj-123/issues/ISS-1/screenshots/step2.jpg)" in content
 
@@ -358,7 +358,7 @@ def test_collect_evidence_screenshots_without_project_id(tmp_path):
         collect_evidence(issue.id, store, ws)
 
     content = store.load_issue_content(issue.id)
-    assert "### 截图" in content
+    assert "### 截图/录屏" in content
     assert "![capture](screenshots/capture.png)" in content
 
 
@@ -377,7 +377,7 @@ def test_collect_evidence_no_screenshots_dir(tmp_path):
         collect_evidence(issue.id, store, ws, project_id="proj-123")
 
     content = store.load_issue_content(issue.id)
-    assert "### 截图" not in content
+    assert "### 截图/录屏" not in content
 
 
 def test_collect_evidence_empty_screenshots_dir(tmp_path):
@@ -399,7 +399,7 @@ def test_collect_evidence_empty_screenshots_dir(tmp_path):
         collect_evidence(issue.id, store, ws, project_id="proj-123")
 
     content = store.load_issue_content(issue.id)
-    assert "### 截图" not in content
+    assert "### 截图/录屏" not in content
 
 
 def test_collect_evidence_includes_change_summary(tmp_path):
@@ -476,3 +476,115 @@ def test_collect_evidence_includes_file_diff_details(tmp_path):
     assert "### 修改文件详情" in content
     assert "#### core/evidence.py" in content
     assert "+new line 1" in content
+
+
+def test_collect_evidence_video_files_collected(tmp_path):
+    """Video files (.mp4, .webm) should be collected alongside images."""
+    store = ProjectStorage(tmp_path / "project")
+    ws = tmp_path / "workspace"
+    ws.mkdir()
+
+    issue = Issue.create(id="ISS-1", title="video task")
+    store.save_issue(issue)
+    store.save_issue_content(issue.id, "# Task")
+
+    # Create fake media files (images + videos)
+    screenshots_dir = store.root / "runs" / issue.id / "screenshots"
+    screenshots_dir.mkdir(parents=True, exist_ok=True)
+    (screenshots_dir / "step1.png").write_bytes(b"fake png")
+    (screenshots_dir / "recording.mp4").write_bytes(b"fake mp4")
+    (screenshots_dir / "demo.webm").write_bytes(b"fake webm")
+
+    with patch("core.evidence.subprocess.run") as mock_run:
+        mock_run.return_value = MagicMock(stdout="file.py | 10 ++++\n", returncode=0)
+        collect_evidence(issue.id, store, ws, project_id="proj-123")
+
+    content = store.load_issue_content(issue.id)
+    assert "### 截图/录屏" in content
+    # Image uses markdown image syntax
+    assert "![step1](/api/projects/proj-123/issues/ISS-1/screenshots/step1.png)" in content
+    # Videos use markdown link syntax with 🎬 prefix
+    assert "[🎬 recording](/api/projects/proj-123/issues/ISS-1/screenshots/recording.mp4)" in content
+    assert "[🎬 demo](/api/projects/proj-123/issues/ISS-1/screenshots/demo.webm)" in content
+
+
+def test_collect_evidence_video_type_field_in_evidence_data(tmp_path):
+    """Evidence data should include type='video' for video files and type='image' for images."""
+    store = ProjectStorage(tmp_path / "project")
+    ws = tmp_path / "workspace"
+    ws.mkdir()
+
+    issue = Issue.create(id="ISS-1", title="video type field")
+    store.save_issue(issue)
+    store.save_issue_content(issue.id, "# Task")
+
+    screenshots_dir = store.root / "runs" / issue.id / "screenshots"
+    screenshots_dir.mkdir(parents=True, exist_ok=True)
+    (screenshots_dir / "capture.png").write_bytes(b"fake png")
+    (screenshots_dir / "screen.mp4").write_bytes(b"fake mp4")
+    (screenshots_dir / "clip.webm").write_bytes(b"fake webm")
+
+    with patch("core.evidence.subprocess.run") as mock_run:
+        mock_run.return_value = MagicMock(stdout="file.py | 10 ++++\n", returncode=0)
+        collect_evidence(issue.id, store, ws, project_id="proj-123")
+
+    # Read the evidence.json to check type fields
+    import json
+    evidence_path = store.issues_dir / issue.id / "evidence.json"
+    assert evidence_path.exists(), "evidence.json should be created"
+    evidence_data = json.loads(evidence_path.read_text())
+
+    screenshots = evidence_data["screenshots"]
+    assert len(screenshots) == 3
+
+    # Find each by filename
+    by_name = {s["filename"]: s for s in screenshots}
+    assert by_name["capture.png"]["type"] == "image"
+    assert by_name["screen.mp4"]["type"] == "video"
+    assert by_name["clip.webm"]["type"] == "video"
+
+
+def test_collect_evidence_only_videos_no_images(tmp_path):
+    """When only video files exist (no images), they should still be collected."""
+    store = ProjectStorage(tmp_path / "project")
+    ws = tmp_path / "workspace"
+    ws.mkdir()
+
+    issue = Issue.create(id="ISS-1", title="only videos")
+    store.save_issue(issue)
+    store.save_issue_content(issue.id, "# Task")
+
+    screenshots_dir = store.root / "runs" / issue.id / "screenshots"
+    screenshots_dir.mkdir(parents=True, exist_ok=True)
+    (screenshots_dir / "recording.mp4").write_bytes(b"fake mp4")
+
+    with patch("core.evidence.subprocess.run") as mock_run:
+        mock_run.return_value = MagicMock(stdout="", returncode=0)
+        collect_evidence(issue.id, store, ws, project_id="proj-123")
+
+    content = store.load_issue_content(issue.id)
+    assert "### 截图/录屏" in content
+    assert "[🎬 recording](/api/projects/proj-123/issues/ISS-1/screenshots/recording.mp4)" in content
+
+
+def test_collect_evidence_unsupported_files_ignored(tmp_path):
+    """Non-image, non-video files in screenshots dir should be ignored."""
+    store = ProjectStorage(tmp_path / "project")
+    ws = tmp_path / "workspace"
+    ws.mkdir()
+
+    issue = Issue.create(id="ISS-1", title="unsupported files")
+    store.save_issue(issue)
+    store.save_issue_content(issue.id, "# Task")
+
+    screenshots_dir = store.root / "runs" / issue.id / "screenshots"
+    screenshots_dir.mkdir(parents=True, exist_ok=True)
+    (screenshots_dir / "notes.txt").write_text("some notes")
+    (screenshots_dir / "data.json").write_text("{}")
+
+    with patch("core.evidence.subprocess.run") as mock_run:
+        mock_run.return_value = MagicMock(stdout="", returncode=0)
+        collect_evidence(issue.id, store, ws, project_id="proj-123")
+
+    content = store.load_issue_content(issue.id)
+    assert "### 截图/录屏" not in content

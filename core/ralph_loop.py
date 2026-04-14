@@ -443,7 +443,7 @@ def find_ready_issues(storage: ProjectStorage) -> list[Issue]:
     Results are sorted by priority (urgent > high > medium > low).
     """
     all_issues = storage.list_issues()
-    done_ids = {i.id for i in all_issues if i.status == IssueStatus.HUMAN_DONE}
+    done_ids = {i.id for i in all_issues if i.status in (IssueStatus.HUMAN_DONE, IssueStatus.AGENT_DONE)}
     ready = [
         i for i in all_issues
         if i.status in (IssueStatus.TODO, IssueStatus.BACKLOG)

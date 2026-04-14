@@ -52,6 +52,7 @@ interface EvidenceData {
   buildResult: { passed: boolean; output: string } | null
   screenshots: string[]
   evalSummary: string
+  evalItems: { passed: boolean; text: string }[]
 }
 
 function parseEvidence(content: string): EvidenceData {
@@ -61,6 +62,7 @@ function parseEvidence(content: string): EvidenceData {
     buildResult: null,
     screenshots: [],
     evalSummary: '',
+    evalItems: [],
   }
 
   const sectionMatch = content.match(/## Agent Done 证据([\s\S]*?)(?=\n## |$)/)
@@ -97,10 +99,30 @@ function parseEvidence(content: string): EvidenceData {
     evidence.screenshots.push(imgMatch[2])
   }
 
-  // Extract eval result
-  const evalMatch = section.match(/(?:eval|评估)[^\n]*[:：]\s*([^\n]+)/i)
-  if (evalMatch) {
-    evidence.evalSummary = evalMatch[1].trim()
+  // Extract eval result — supports both new structured format and legacy single-line
+  const evalSectionMatch = section.match(/### 评估摘要\s*\n([\s\S]*?)(?=\n### |$)/)
+  if (evalSectionMatch) {
+    const evalBlock = evalSectionMatch[1]
+    // Parse individual ✅/❌ items
+    const itemRegex = /- (✅|❌)\s*(.+)/g
+    let itemMatch: RegExpExecArray | null
+    while ((itemMatch = itemRegex.exec(evalBlock)) !== null) {
+      evidence.evalItems.push({
+        passed: itemMatch[1] === '✅',
+        text: itemMatch[2].trim(),
+      })
+    }
+    // Extract summary line (e.g. "评估结果: 3/4 通过")
+    const resultLine = evalBlock.match(/评估结果[:：]\s*([^\n]+)/i)
+    if (resultLine) {
+      evidence.evalSummary = resultLine[1].trim()
+    }
+  } else {
+    // Legacy: single-line eval match
+    const evalMatch = section.match(/(?:eval|评估)[^\n]*[:：]\s*([^\n]+)/i)
+    if (evalMatch) {
+      evidence.evalSummary = evalMatch[1].trim()
+    }
   }
 
   return evidence
@@ -669,7 +691,7 @@ export function IssueDetail({ issue, onClose, onApprove, onReject, onRun, onDele
 function EvidencePanel({ evidence }: { evidence: EvidenceData }) {
   const { t } = useTranslation()
   const [galleryIndex, setGalleryIndex] = useState(0)
-  const hasAny = evidence.changeSummary || evidence.gitDiff || evidence.buildResult || evidence.screenshots.length > 0 || evidence.evalSummary
+  const hasAny = evidence.changeSummary || evidence.gitDiff || evidence.buildResult || evidence.screenshots.length > 0 || evidence.evalSummary || evidence.evalItems.length > 0
 
   if (!hasAny) return null
 
@@ -737,12 +759,30 @@ function EvidencePanel({ evidence }: { evidence: EvidenceData }) {
         )}
 
         {/* Eval Summary */}
-        {evidence.evalSummary && (
+        {(evidence.evalItems.length > 0 || evidence.evalSummary) && (
           <div>
             <div className="flex items-center gap-1.5 text-xs font-medium text-[var(--text-secondary)] mb-2">
               <FlaskConical size={14} /> {t('issueDetail.evalResult')}
             </div>
-            <p className="text-sm text-[var(--text-primary)]">{evidence.evalSummary}</p>
+            {evidence.evalItems.length > 0 && (
+              <div className="space-y-1.5 mb-2">
+                {evidence.evalItems.map((item, i) => (
+                  <div key={i} className="flex items-start gap-2 text-sm">
+                    <span className="shrink-0 mt-0.5">
+                      {item.passed
+                        ? <CheckCircle2 size={14} className="text-green-500" />
+                        : <XCircle size={14} className="text-red-500" />}
+                    </span>
+                    <span className={`${item.passed ? 'text-[var(--text-primary)]' : 'text-red-600 font-medium'}`}>
+                      {item.text}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+            {evidence.evalSummary && (
+              <p className="text-xs text-[var(--text-secondary)] mt-1">{evidence.evalSummary}</p>
+            )}
           </div>
         )}
       </div>

@@ -158,6 +158,8 @@ async def run_issue_loop(
     # === Capture base SHA before any code changes ===
     base_sha = _evidence_run_cmd(["git", "rev-parse", "HEAD"], workspace) or None
     agent_commits: list[str] = []
+    last_eval_report: str | None = None
+    last_screenshots_dir: Path | None = None
 
     # === 3. Generator + Evaluator Loop ===
     passed = False
@@ -211,6 +213,10 @@ async def run_issue_loop(
         eval_result = await _run_evaluator(issue, storage, workspace, on_event)
         all_stats.append({"phase": "evaluator", "attempt": attempt, **eval_result.get("stats", {})})
 
+        # Track last eval report and screenshots dir for evidence collection
+        last_eval_report = eval_result.get("report")
+        last_screenshots_dir = storage.root / "runs" / issue.id / "screenshots"
+
         if eval_result["passed"]:
             _log("Evaluator", C_GREEN, f"Issue {issue.id} PASSED")
             await _emit_harness(on_event, issue.id, "evaluator", "PASSED", "success")
@@ -252,7 +258,15 @@ async def run_issue_loop(
             # Resolve project_id for screenshot URL construction
             _project_meta = storage.load_project_meta()
             _project_id = _project_meta.id if _project_meta and hasattr(_project_meta, 'id') else None
-            collect_evidence(issue.id, storage, workspace, run_build=True, base_sha=base_sha, agent_commits=agent_commits, project_id=_project_id)
+            collect_evidence(
+                issue.id, storage, workspace,
+                run_build=True,
+                base_sha=base_sha,
+                agent_commits=agent_commits,
+                project_id=_project_id,
+                eval_report=last_eval_report,
+                screenshots_dir=last_screenshots_dir,
+            )
         except Exception as e:
             _log("Evidence", C_RED, f"Evidence collection failed: {e}")
             await _emit_harness(on_event, issue.id, "evidence", f"Failed: {e}", "error")

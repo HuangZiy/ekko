@@ -1,0 +1,222 @@
+- generic [ref=e3]:
+  - generic [ref=e4]:
+    - generic [ref=e6]: Ekko
+    - generic [ref=e7] [cursor=pointer]:
+      - img [ref=e8]
+      - generic [ref=e10]: 项目
+      - img [ref=e11]
+    - generic [ref=e13]:
+      - generic [ref=e15] [cursor=pointer]:
+        - generic [ref=e16]:
+          - img [ref=e17]
+          - generic [ref=e19]: ekko
+        - generic [ref=e20]: 4/14 已完成
+      - generic [ref=e22] [cursor=pointer]:
+        - generic [ref=e24]: blog
+        - generic [ref=e25]: 0/2 已完成
+    - button "新建项目" [ref=e27]:
+      - img [ref=e28]
+      - text: 新建项目
+  - generic [ref=e29]:
+    - banner [ref=e30]:
+      - img [ref=e31]
+      - heading "ekko" [level=1] [ref=e36]
+      - generic [ref=e37]: PRJ-1
+      - generic [ref=e38]:
+        - button "中" [ref=e39]:
+          - img [ref=e40]
+          - generic [ref=e44]: 中
+        - button "切换到深色模式" [ref=e45]:
+          - img [ref=e46]
+        - button "全部运行" [ref=e48]:
+          - img [ref=e49]
+          - text: 全部运行
+        - button "新建问题" [ref=e51]:
+          - img [ref=e52]
+          - text: 新建问题
+    - generic [ref=e54]:
+      - generic [ref=e55]: 14 个问题
+      - generic [ref=e56]:
+        - generic [ref=e57]: "待处理: 4"
+        - generic [ref=e58]: "Agent 完成: 6"
+        - generic [ref=e59]: "已完成: 4"
+      - generic [ref=e64]: 4/14 已完成 (29%)
+    - main [ref=e65]:
+      - generic [ref=e66]:
+        - generic [ref=e67]:
+          - generic [ref=e68]:
+            - heading "Backlog" [level=3] [ref=e70]
+            - generic [ref=e71]: "0"
+          - generic [ref=e73]: 将问题拖放到此处
+        - generic [ref=e74]:
+          - generic [ref=e75]:
+            - heading "Planning" [level=3] [ref=e77]
+            - generic [ref=e78]: "0"
+          - generic [ref=e80]: 将问题拖放到此处
+        - generic [ref=e81]:
+          - generic [ref=e82]:
+            - heading "Todo" [level=3] [ref=e84]
+            - generic [ref=e85]: "4"
+          - generic [ref=e86]:
+            - generic [ref=e88] [cursor=pointer]:
+              - button [ref=e89]:
+                - img [ref=e90]
+              - generic [ref=e97]:
+                - generic [ref=e98]:
+                  - generic [ref=e99]: ISS-7
+                  - button "运行此问题" [ref=e100]:
+                    - img [ref=e101]
+                - generic [ref=e103]: Ekko 项目的国际化改造
+                - generic [ref=e104]:
+                  - img [ref=e105]
+                  - text: 被 3 个问题阻塞
+            - generic [ref=e108] [cursor=pointer]:
+              - button [ref=e109]:
+                - img [ref=e110]
+              - generic [ref=e117]:
+                - generic [ref=e118]:
+                  - generic [ref=e119]: EKO-3
+                  - img [ref=e120]
+                  - button "运行此问题" [ref=e123]:
+                    - img [ref=e124]
+                - generic [ref=e126]: "Commit 归属错误 — 本次关联的 commit `2f71e7b` 实际内容是「国际化 IssueCard.tsx 组件」（新增 `issueCard` 命名空间的 4 个 key），并未修改 `IssueDetail.tsx`。EKO-2 的实际修复来自更早的 commit `d03696f`（\"feat: replace hardcoded text with i18n t() calls across all components (ISS-9)\"）。这意味着 EKO-2 的修复被错误地归因到了一个不相关的 commit 上，建议修正 Issue 关联或补充说明。"
+                - generic [ref=e128]:
+                  - img [ref=e129]
+                  - text: eval-finding
+            - generic [ref=e133] [cursor=pointer]:
+              - button [ref=e134]:
+                - img [ref=e135]
+              - generic [ref=e142]:
+                - generic [ref=e143]:
+                  - generic [ref=e144]: ISS-10
+                  - img [ref=e145]
+                  - button "运行此问题" [ref=e148]:
+                    - img [ref=e149]
+                - generic [ref=e151]: 语言切换 UI 与验证
+                - generic [ref=e153]:
+                  - img [ref=e154]
+                  - text: planned
+                - generic [ref=e157]:
+                  - img [ref=e158]
+                  - text: 被 1 个问题阻塞
+            - generic [ref=e161] [cursor=pointer]:
+              - button [ref=e162]:
+                - img [ref=e163]
+              - generic [ref=e170]:
+                - generic [ref=e171]:
+                  - generic [ref=e172]: EKO-4
+                  - img [ref=e173]
+                  - button "运行此问题" [ref=e176]:
+                    - img [ref=e177]
+                - generic [ref=e179]: "Commit 信息与实际修复不匹配 — commit message 为 \"i18n: 国际化 IssueCard.tsx 组件\"，但本 Issue 的核心修复在 `IssueDetail.tsx`。虽然 IssueCard.tsx 也做了 i18n 改造，但 commit message 未提及 IssueDetail 的修复，容易误导 git log 追溯。"
+                - generic [ref=e181]:
+                  - img [ref=e182]
+                  - text: eval-finding
+        - generic [ref=e185]:
+          - generic [ref=e186]:
+            - heading "In Progress" [level=3] [ref=e188]
+            - generic [ref=e189]: "0"
+          - generic [ref=e191]: 将问题拖放到此处
+        - generic [ref=e192]:
+          - generic [ref=e193]:
+            - heading "Agent Done" [level=3] [ref=e195]
+            - generic [ref=e196]: "6"
+          - generic [ref=e197]:
+            - generic [ref=e199] [cursor=pointer]:
+              - button [ref=e200]:
+                - img [ref=e201]
+              - generic [ref=e208]:
+                - generic [ref=e210]: ISS-4
+                - generic [ref=e211]: harness 增加 planning agent
+            - generic [ref=e213] [cursor=pointer]:
+              - button [ref=e214]:
+                - img [ref=e215]
+              - generic [ref=e222]:
+                - generic [ref=e223]:
+                  - generic [ref=e224]: ISS-8
+                  - img [ref=e225]
+                - generic [ref=e228]: i18n 基础设施搭建
+                - generic [ref=e230]:
+                  - img [ref=e231]
+                  - text: planned
+            - generic [ref=e235] [cursor=pointer]:
+              - button [ref=e236]:
+                - img [ref=e237]
+              - generic [ref=e244]:
+                - generic [ref=e246]: ISS-11
+                - generic [ref=e247]: Harness 定期轮询 Todo list，并自动按照 block和依赖顺序执行
+            - generic [ref=e249] [cursor=pointer]:
+              - button [ref=e250]:
+                - img [ref=e251]
+              - generic [ref=e258]:
+                - generic [ref=e259]:
+                  - generic [ref=e260]: ISS-9
+                  - img [ref=e261]
+                - generic [ref=e264]: 组件文本国际化替换
+                - generic [ref=e266]:
+                  - img [ref=e267]
+                  - text: planned
+                - generic [ref=e270]:
+                  - img [ref=e271]
+                  - text: 被 1 个问题阻塞
+            - generic [ref=e274] [cursor=pointer]:
+              - button [ref=e275]:
+                - img [ref=e276]
+              - generic [ref=e283]:
+                - generic [ref=e284]:
+                  - generic [ref=e285]: EKO-1
+                  - img [ref=e286]
+                - generic [ref=e289]: "IssueCard.tsx 组件未国际化 — 该组件不在 ISS-9 的计划范围内，但包含多处硬编码英文：`title=\"Stop this issue\"`（第 67 行）、`<span>Stop</span>`（第 70 行）、`title=\"Run this issue\"`（第 77 行）、`Blocked by {issue.blocked_by.length}`（第 97 行）。UI 中卡片上可见 \"Blocked by 1\"、\"Run this issue\" 等英文文本。"
+                - generic [ref=e291]:
+                  - img [ref=e292]
+                  - text: eval-finding
+            - generic [ref=e296] [cursor=pointer]:
+              - button [ref=e297]:
+                - img [ref=e298]
+              - generic [ref=e305]:
+                - generic [ref=e306]:
+                  - generic [ref=e307]: EKO-2
+                  - img [ref=e308]
+                - generic [ref=e311]: "IssueDetail 状态变更失败提示硬编码 — 第 143 行 `data.detail || 'Status change failed'` fallback 文本为英文，应使用翻译 key。"
+                - generic [ref=e313]:
+                  - img [ref=e314]
+                  - text: eval-finding
+        - generic [ref=e317]:
+          - generic [ref=e318]:
+            - heading "Rejected" [level=3] [ref=e320]
+            - generic [ref=e321]: "0"
+          - generic [ref=e323]: 将问题拖放到此处
+        - generic [ref=e324]:
+          - generic [ref=e325]:
+            - heading "Human Done" [level=3] [ref=e327]
+            - generic [ref=e328]: "4"
+          - generic [ref=e329]:
+            - generic [ref=e331] [cursor=pointer]:
+              - button [ref=e332]:
+                - img [ref=e333]
+              - generic [ref=e340]:
+                - generic [ref=e342]: ISS-1
+                - generic [ref=e343]: Issue 创建时 Description需支持 markdown格式
+            - generic [ref=e345] [cursor=pointer]:
+              - button [ref=e346]:
+                - img [ref=e347]
+              - generic [ref=e354]:
+                - generic [ref=e356]: ISS-6
+                - generic [ref=e357]: Ekko 项目不要提交.harness目录下的任何文件
+            - generic [ref=e359] [cursor=pointer]:
+              - button [ref=e360]:
+                - img [ref=e361]
+              - generic [ref=e368]:
+                - generic [ref=e370]: ISS-5
+                - generic [ref=e371]: ekko 项目项目的 README
+            - generic [ref=e373] [cursor=pointer]:
+              - button [ref=e374]:
+                - img [ref=e375]
+              - generic [ref=e382]:
+                - generic [ref=e384]: ISS-3
+                - generic [ref=e385]: PROJECT 的 ISSUE 前缀支持修改
+      - status [ref=e386]
+  - button "事件日志" [ref=e388]:
+    - img [ref=e389]
+    - generic [ref=e391]: 事件日志
+    - img [ref=e392]

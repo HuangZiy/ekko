@@ -30,6 +30,20 @@ class CreateIssueRequest(BaseModel):
     source: str = "human"
 
 
+class ChildIssueRequest(BaseModel):
+    title: str
+    description: str = ""
+    plan: str = ""
+    priority: str = "medium"
+    labels: list[str] = []
+
+
+class BatchCreateRequest(BaseModel):
+    parent_id: str
+    issues: list[ChildIssueRequest]
+    chain_dependencies: bool = True
+
+
 class UpdateIssueRequest(BaseModel):
     title: str | None = None
     priority: str | None = None
@@ -75,6 +89,60 @@ def create_issue(project_id: str, req: CreateIssueRequest):
     _publish(project_id, "issue_created", {"issue": issue.to_json()})
 
     return issue.to_json()
+
+
+@router.post("/batch")
+def batch_create_issues(project_id: str, req: BatchCreateRequest):
+    storage = _get_storage(project_id)
+
+    # Validate parent exists
+    try:
+        parent = storage.load_issue(req.parent_id)
+    except FileNotFoundError:
+        raise HTTPException(404, f"Parent issue {req.parent_id} not found")
+
+    project = storage.load_project_meta()
+    prefix = project.key if project else "ISS"
+
+    created = []
+    prev_id: str | None = None
+
+    for child_req in req.issues:
+        issue_id = storage.next_issue_id(prefix)
+        issue = Issue.create(
+            id=issue_id,
+            title=child_req.title,
+            priority=child_req.priority,
+            labels=child_req.labels + (parent.labels or []) + ["planned"],
+        )
+        issue.parent_id = req.parent_id
+        issue.source = "agent"
+
+        if req.chain_dependencies and prev_id:
+            issue.add_blocker(prev_id)
+
+        storage.save_issue(issue)
+
+        if child_req.description:
+            content = f"# {issue.id}: {issue.title}\n\n## 描述\n\n{child_req.description}\n"
+            storage.save_issue_content(issue.id, content)
+
+        if child_req.plan:
+            storage.save_issue_plan(issue.id, child_req.plan)
+
+        _add_to_board(project_id, issue.id, "backlog")
+        _publish(project_id, "issue_created", {"issue": issue.to_json()})
+
+        created.append({"id": issue.id, "title": issue.title})
+        prev_id = issue_id
+
+    # Update parent: blocked_by all children
+    for item in created:
+        if item["id"] not in parent.blocked_by:
+            parent.blocked_by.append(item["id"])
+    storage.save_issue(parent)
+
+    return {"created": created, "parent_id": req.parent_id}
 
 
 @router.get("/{issue_id}")

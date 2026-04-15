@@ -26,6 +26,8 @@ class CreateIssueRequest(BaseModel):
     blocked_by: list[str] = []
     workspace: str = "default"
     parent_id: str | None = None
+    plan: str = ""
+    source: str = "human"
 
 
 class UpdateIssueRequest(BaseModel):
@@ -53,9 +55,9 @@ def create_issue(project_id: str, req: CreateIssueRequest):
     issue_id = storage.next_issue_id(prefix)
     issue = Issue.create(id=issue_id, title=req.title, priority=req.priority, labels=req.labels)
     issue.workspace = req.workspace
+    issue.source = req.source
     if req.parent_id:
         issue.parent_id = req.parent_id
-        issue.source = "human"  # Web UI created, but linked to parent
     for blocker_id in req.blocked_by:
         issue.add_blocker(blocker_id)
     storage.save_issue(issue)
@@ -63,6 +65,9 @@ def create_issue(project_id: str, req: CreateIssueRequest):
     if req.description:
         content = f"# {issue.id}: {issue.title}\n\n## 描述\n\n{req.description}\n"
         storage.save_issue_content(issue.id, content)
+
+    if req.plan:
+        storage.save_issue_plan(issue.id, req.plan)
 
     # Add to board backlog
     _add_to_board(project_id, issue.id, "backlog")

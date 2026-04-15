@@ -50,6 +50,59 @@ class TestIssueCreate:
         assert code == 0
         assert "Persistent issue" in out.out
 
+    def test_with_parent_id(self, cli):
+        # Create parent first
+        code, out = cli("issue", "create", "Parent issue")
+        parent_id = out.out.strip().split()[1].rstrip(":")
+
+        code, out = cli("issue", "create", "Child issue", "--parent-id", parent_id)
+        assert code == 0
+        child_id = out.out.strip().split()[1].rstrip(":")
+
+        code, out = cli("issue", "show", child_id)
+        assert parent_id in out.out
+
+    def test_with_blocked_by(self, cli):
+        code, out = cli("issue", "create", "Blocker")
+        blocker_id = out.out.strip().split()[1].rstrip(":")
+
+        code, out = cli("issue", "create", "Blocked", "--blocked-by", blocker_id)
+        assert code == 0
+        child_id = out.out.strip().split()[1].rstrip(":")
+
+        code, out = cli("issue", "show", child_id)
+        assert blocker_id in out.out
+        assert "BLOCKED" in out.out or blocker_id in out.out
+
+    def test_with_description(self, cli):
+        code, out = cli("issue", "create", "With desc", "--description", "Detailed description here")
+        assert code == 0
+        issue_id = out.out.strip().split()[1].rstrip(":")
+
+        code, out = cli("issue", "show", issue_id)
+        assert "Detailed description here" in out.out
+
+    def test_with_plan(self, cli):
+        code, out = cli("issue", "create", "With plan", "--plan", "- [ ] Step 1\n- [ ] Step 2")
+        assert code == 0
+        issue_id = out.out.strip().split()[1].rstrip(":")
+
+        # Verify plan was saved by checking the plan file directly
+        from core.storage import ProjectStorage
+        store = ProjectStorage(cli.project_dir)
+        plan = store.load_issue_plan(issue_id)
+        assert "Step 1" in plan
+
+    def test_with_source(self, cli):
+        code, out = cli("issue", "create", "Agent created", "--source", "agent")
+        assert code == 0
+        issue_id = out.out.strip().split()[1].rstrip(":")
+
+        from core.storage import ProjectStorage
+        store = ProjectStorage(cli.project_dir)
+        issue = store.load_issue(issue_id)
+        assert issue.source == "agent"
+
 
 class TestIssueList:
     def test_empty(self, cli):

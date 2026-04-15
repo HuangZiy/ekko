@@ -149,7 +149,6 @@ def _issue_create(args: argparse.Namespace) -> None:
     import json
     store = _get_storage(args)
 
-    # Determine issue prefix from project key
     project = store.load_project_meta()
     if project is None:
         print("Error: project metadata not found in storage directory.", file=sys.stderr)
@@ -162,7 +161,26 @@ def _issue_create(args: argparse.Namespace) -> None:
         priority=args.priority,
         labels=args.label or [],
     )
+
+    # Set optional fields
+    if args.parent_id:
+        issue.parent_id = args.parent_id
+    if args.source:
+        issue.source = args.source
+    if args.blocked_by:
+        for blocker_id in args.blocked_by:
+            issue.add_blocker(blocker_id)
+
     store.save_issue(issue)
+
+    # Save description as content.md
+    if args.description:
+        content = f"# {issue.id}: {issue.title}\n\n## 描述\n\n{args.description}\n"
+        store.save_issue_content(issue.id, content)
+
+    # Save plan as plan.md
+    if args.plan:
+        store.save_issue_plan(issue.id, args.plan)
 
     # Add to board backlog
     board_file = store.root / "board.json"
@@ -203,6 +221,7 @@ def _issue_show(args: argparse.Namespace) -> None:
     print(f"Status:     {issue.status.value}")
     print(f"Priority:   {issue.priority.value}")
     print(f"Labels:     {', '.join(issue.labels) or '—'}")
+    print(f"Parent:     {issue.parent_id or '—'}")
     print(f"Assignee:   {issue.assignee or '—'}")
     print(f"Blocked by: {', '.join(issue.blocked_by) or '—'}")
     print(f"Blocks:     {', '.join(issue.blocks) or '—'}")
@@ -691,6 +710,11 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("title", help="Issue title")
     p.add_argument("--label", action="append", help="Add label (repeatable)")
     p.add_argument("--priority", default="medium", choices=["low", "medium", "high", "urgent"])
+    p.add_argument("--parent-id", default=None, help="Parent issue ID")
+    p.add_argument("--blocked-by", action="append", help="Blocker issue ID (repeatable)")
+    p.add_argument("--description", default="", help="Issue description (saved as content.md)")
+    p.add_argument("--plan", default="", help="Execution plan (saved as plan.md)")
+    p.add_argument("--source", default="human", choices=["human", "agent"], help="Issue source")
     p.set_defaults(func=_issue_create)
 
     # issue list

@@ -349,6 +349,90 @@ def _issue_delete(args: argparse.Namespace) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Board subcommands
+# ---------------------------------------------------------------------------
+
+def _board_show(args: argparse.Namespace) -> None:
+    """Show kanban board overview grouped by column."""
+    import json
+    store = _get_storage(args)
+    board_file = store.root / "board.json"
+
+    if not board_file.exists():
+        print("No board found. Create issues first.")
+        return
+
+    data = json.loads(board_file.read_text())
+    issues_map = {}
+    for issue in store.list_issues():
+        issues_map[issue.id] = issue
+
+    for col in data["columns"]:
+        issue_ids = col["issues"]
+        if not issue_ids:
+            continue
+        print(f"\n{col['name']} ({len(issue_ids)})")
+        for iid in issue_ids:
+            issue = issues_map.get(iid)
+            if issue:
+                blocked = " [BLOCKED]" if issue.is_blocked() else ""
+                print(f"  {issue.id}  [{issue.priority.value:<6}]  {issue.title}{blocked}")
+            else:
+                print(f"  {iid}  (not found)")
+    print()
+
+
+def _board_move(args: argparse.Namespace) -> None:
+    """Move an issue to a different board column."""
+    import json
+    from core.models import IssueStatus
+    store = _get_storage(args)
+
+    try:
+        issue = store.load_issue(args.issue_id)
+    except FileNotFoundError:
+        print(f"Issue not found: {args.issue_id}", file=sys.stderr)
+        sys.exit(1)
+
+    status_map = {
+        "backlog": IssueStatus.BACKLOG,
+        "planning": IssueStatus.PLANNING,
+        "todo": IssueStatus.TODO,
+        "in_progress": IssueStatus.IN_PROGRESS,
+        "agent_done": IssueStatus.AGENT_DONE,
+        "rejected": IssueStatus.REJECTED,
+        "human_done": IssueStatus.HUMAN_DONE,
+    }
+    new_status = status_map.get(args.column)
+    if not new_status:
+        print(f"Invalid column: {args.column}", file=sys.stderr)
+        sys.exit(1)
+
+    old = issue.status.value
+    try:
+        issue.move_to(new_status)
+    except ValueError as e:
+        print(str(e), file=sys.stderr)
+        sys.exit(1)
+    store.save_issue(issue)
+
+    # Update board.json
+    board_file = store.root / "board.json"
+    if board_file.exists():
+        data = json.loads(board_file.read_text())
+        for col in data["columns"]:
+            if args.issue_id in col["issues"]:
+                col["issues"].remove(args.issue_id)
+        for col in data["columns"]:
+            if col["id"] == args.column:
+                col["issues"].append(args.issue_id)
+                break
+        board_file.write_text(json.dumps(data, indent=2, ensure_ascii=False))
+
+    print(f"Moved {args.issue_id}: {old} -> {args.column}")
+
+
+# ---------------------------------------------------------------------------
 # Review subcommands
 # ---------------------------------------------------------------------------
 
@@ -806,6 +890,16 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("issue_id", help="Issue ID (e.g. ISS-1)")
     p.add_argument("-y", "--yes", action="store_true", help="Skip confirmation")
     p.set_defaults(func=_issue_delete)
+
+    # -- board --
+    board_parser = sub.add_parser("board", help="Kanban board overview")
+    board_sub = board_parser.add_subparsers(dest="board_command")
+    board_parser.set_defaults(func=_board_show)
+
+    p = board_sub.add_parser("move", help="Move issue to a board column")
+    p.add_argument("issue_id", help="Issue ID")
+    p.add_argument("column", help="Target column (backlog, planning, todo, in_progress, ...)")
+    p.set_defaults(func=_board_move)
 
     # -- review --
     review_parser = sub.add_parser("review", help="Review an agent-done issue")

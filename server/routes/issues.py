@@ -7,7 +7,7 @@ from pathlib import Path
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
-from core.models import Issue, IssueStatus
+from core.models import Issue, IssuePriority, IssueStatus
 from core.storage import ProjectStorage
 
 router = APIRouter(prefix="/api/projects/{project_id}/issues", tags=["issues"])
@@ -108,7 +108,10 @@ def update_issue(project_id: str, issue_id: str, req: UpdateIssueRequest):
     if req.title is not None:
         issue.title = req.title
     if req.priority is not None:
-        issue.priority = req.priority
+        try:
+            issue.priority = IssuePriority(req.priority)
+        except ValueError:
+            raise HTTPException(400, f"Invalid priority: {req.priority}")
     if req.labels is not None:
         issue.labels = req.labels
     if req.assignee is not None:

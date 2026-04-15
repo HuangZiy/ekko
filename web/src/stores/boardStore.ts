@@ -57,6 +57,10 @@ interface BoardState {
   sseLog: SSELogEntry[]
   agentLogs: Record<string, AgentLogEntry[]>
   wsSend: ((msg: Record<string, unknown>) => void) | null
+  planningActive: Record<string, boolean>
+  setPlanningActive: (issueId: string, active: boolean) => void
+  startPlanning: (issueId: string, cols?: number, rows?: number) => Promise<void>
+  stopPlanning: (issueId: string) => Promise<void>
   setProjectId: (id: string) => void
   addRunningIssue: (issueId: string) => void
   removeRunningIssue: (issueId: string) => void
@@ -92,6 +96,7 @@ export const useBoardStore = create<BoardState>((set, get) => ({
   sseLog: [],
   agentLogs: {},
   wsSend: null,
+  planningActive: {},
 
   setProjectId: (id) => set({ projectId: id }),
 
@@ -322,6 +327,38 @@ export const useBoardStore = create<BoardState>((set, get) => ({
   },
 
   setWsSend: (fn) => set({ wsSend: fn }),
+
+  setPlanningActive: (issueId, active) => set(state => ({
+    planningActive: { ...state.planningActive, [issueId]: active },
+  })),
+
+  startPlanning: async (issueId, cols = 80, rows = 24) => {
+    const { projectId } = get()
+    if (!projectId) return
+    const res = await fetch(`/api/projects/${projectId}/planning/start`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ issue_id: issueId, cols, rows }),
+    })
+    if (res.ok) {
+      set(state => ({
+        planningActive: { ...state.planningActive, [issueId]: true },
+      }))
+    }
+  },
+
+  stopPlanning: async (issueId) => {
+    const { projectId } = get()
+    if (!projectId) return
+    await fetch(`/api/projects/${projectId}/planning/stop`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ issue_id: issueId }),
+    })
+    set(state => ({
+      planningActive: { ...state.planningActive, [issueId]: false },
+    }))
+  },
 
   updateIssueFromEvent: (issue) => {
     set(state => ({ issues: { ...state.issues, [issue.id]: issue } }))

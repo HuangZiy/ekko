@@ -112,6 +112,7 @@ def move_issue_on_board(project_id: str, issue_id: str, req: MoveIssueRequest):
         from core.models import IssueStatus
         status_map = {
             "backlog": IssueStatus.BACKLOG,
+            "planning": IssueStatus.PLANNING,
             "todo": IssueStatus.TODO,
             "in_progress": IssueStatus.IN_PROGRESS,
             "agent_done": IssueStatus.AGENT_DONE,

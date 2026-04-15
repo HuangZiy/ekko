@@ -18,7 +18,7 @@ class IssueStatus(str, Enum):
 
 VALID_TRANSITIONS = {
     IssueStatus.BACKLOG: {IssueStatus.PLANNING, IssueStatus.TODO},
-    IssueStatus.PLANNING: {IssueStatus.TODO, IssueStatus.BACKLOG},
+    IssueStatus.PLANNING: {IssueStatus.TODO, IssueStatus.BACKLOG, IssueStatus.IN_PROGRESS},
     IssueStatus.TODO: {IssueStatus.IN_PROGRESS, IssueStatus.BACKLOG},
     IssueStatus.IN_PROGRESS: {IssueStatus.AGENT_DONE, IssueStatus.FAILED, IssueStatus.TODO},
     IssueStatus.AGENT_DONE: {IssueStatus.HUMAN_DONE, IssueStatus.REJECTED},

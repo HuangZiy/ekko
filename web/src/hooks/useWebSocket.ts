@@ -15,6 +15,7 @@ export function useWebSocket() {
   const appendAgentLog = useBoardStore(s => s.appendAgentLog)
   const setWsSend = useBoardStore(s => s.setWsSend)
   const removeRunningIssue = useBoardStore(s => s.removeRunningIssue)
+  const setPlanningActive = useBoardStore(s => s.setPlanningActive)
   const fetchProjects = useProjectStore(s => s.fetchProjects)
 
   const wsRef = useRef<WebSocket | null>(null)
@@ -164,6 +165,28 @@ export function useWebSocket() {
             logEvent('run_error', payload?.issue_id ? `${payload.issue_id}: ${payload.error}` : (payload?.error || 'Run failed'), payload?.issue_id)
             if (payload?.issue_id) removeRunningIssue(payload.issue_id)
             break
+
+          case 'planning_started':
+            if (payload?.issue_id) {
+              setPlanningActive(payload.issue_id, true)
+              logEvent('planning_started', `Planning started for ${payload.issue_id}`, payload.issue_id)
+            }
+            break
+
+          case 'planning_output':
+            window.dispatchEvent(new CustomEvent('planning_output', {
+              detail: { issue_id: data.issue_id, data: data.data },
+            }))
+            break
+
+          case 'planning_ended':
+            if (payload?.issue_id) {
+              setPlanningActive(payload.issue_id, false)
+              logEvent('planning_ended', `Planning ended for ${payload.issue_id}`, payload.issue_id)
+              fetchBoard()
+              fetchIssues()
+            }
+            break
         }
       }
 
@@ -193,7 +216,7 @@ export function useWebSocket() {
         wsRef.current = null
       }
     }
-  }, [projectId, updateIssueFromEvent, moveBoardFromEvent, fetchBoard, fetchIssues, addSSELog, appendAgentLog, setWsSend, removeRunningIssue, fetchProjects, sendMessage])
+  }, [projectId, updateIssueFromEvent, moveBoardFromEvent, fetchBoard, fetchIssues, addSSELog, appendAgentLog, setWsSend, removeRunningIssue, setPlanningActive, fetchProjects, sendMessage])
 
   return { sendMessage }
 }

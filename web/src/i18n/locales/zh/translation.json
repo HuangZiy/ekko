@@ -134,7 +134,12 @@
     "codeChanges": "代码变更",
     "changeSummary": "变更摘要",
     "clickToEnlarge": "点击放大查看",
-    "buildLog": "构建日志"
+    "buildLog": "构建日志",
+    "startPlanning": "开始规划",
+    "stopPlanning": "停止规划",
+    "planningTerminal": "规划终端",
+    "planningActive": "规划会话进行中",
+    "planningEnded": "规划会话已结束"
   },
   "projectDetail": {
     "editProject": "编辑项目",
@@ -181,7 +186,9 @@
     "stopTitle": "停止此问题",
     "stop": "停止",
     "runTitle": "运行此问题",
-    "blockedBy": "被 {{count}} 个问题阻塞"
+    "blockedBy": "被 {{count}} 个问题阻塞",
+    "planningTitle": "开始规划此问题",
+    "planning": "规划"
   },
   "markdownEditor": {
     "write": "编写",

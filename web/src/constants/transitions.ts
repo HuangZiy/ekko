@@ -1,6 +1,6 @@
 export const VALID_TRANSITIONS: Record<string, string[]> = {
   backlog: ['planning', 'todo'],
-  planning: ['todo', 'backlog'],
+  planning: ['todo', 'backlog', 'in_progress'],
   todo: ['in_progress', 'backlog'],
   in_progress: ['agent_done', 'failed', 'todo'],
   agent_done: ['human_done', 'rejected'],

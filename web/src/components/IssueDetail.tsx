@@ -9,11 +9,12 @@ import { MarkdownEditor } from './MarkdownEditor'
 import type { Components } from 'react-markdown'
 import {
   Clock, Tag, AlertCircle, CheckCircle2, XCircle, GitBranch,
-  Pencil, Save, X, Image, FileCode, FlaskConical, ShieldCheck, Play, ChevronDown, ChevronRight, Trash2, Square, Bot, ArrowUpRight, FilePlus, FileMinus, FileEdit
+  Pencil, Save, X, Image, FileCode, FlaskConical, ShieldCheck, Play, ChevronDown, ChevronRight, Trash2, Square, Bot, ArrowUpRight, FilePlus, FileMinus, FileEdit, ClipboardList
 } from 'lucide-react'
 import { VALID_TRANSITIONS } from '../constants/transitions'
 import { AgentLogPanel } from './AgentLogPanel'
 import { Lightbox } from './Lightbox'
+import { PlanningTerminal } from './PlanningTerminal'
 
 const VIDEO_EXTENSIONS = /\.(mp4|webm)$/i
 
@@ -568,15 +569,35 @@ export function IssueDetail({ issue, onClose, onApprove, onReject, onRun, onDele
             </div>
           )}
 
-          {/* Run / Stop Action */}
-          {onRun && ['todo', 'backlog', 'rejected', 'failed'].includes(issue.status) && !isRunning && (
-            <div className="border-t border-[var(--border)] pt-4">
-              <button
-                onClick={onRun}
-                className="flex items-center gap-1.5 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-medium"
-              >
-                <Play size={16} /> {issue.status === 'failed' ? t('issueDetail.resume') : t('issueDetail.runAction')}
-              </button>
+          {/* Planning Terminal */}
+          {issue.status === 'planning' && (
+            <div>
+              <PlanningTerminal
+                issueId={issue.id}
+                projectId={useBoardStore.getState().projectId || ''}
+              />
+            </div>
+          )}
+
+          {/* Run / Stop / Planning Action */}
+          {['todo', 'backlog', 'rejected', 'failed', 'planning'].includes(issue.status) && !isRunning && (
+            <div className="border-t border-[var(--border)] pt-4 flex items-center gap-2">
+              {issue.status === 'backlog' && (
+                <button
+                  onClick={() => useBoardStore.getState().moveIssue(issue.id, 'planning')}
+                  className="flex items-center gap-1.5 px-4 py-2 bg-violet-600 text-white rounded-lg hover:bg-violet-700 text-sm font-medium"
+                >
+                  <ClipboardList size={16} /> {t('issueCard.planning')}
+                </button>
+              )}
+              {onRun && (
+                <button
+                  onClick={onRun}
+                  className="flex items-center gap-1.5 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-medium"
+                >
+                  <Play size={16} /> {issue.status === 'failed' ? t('issueDetail.resume') : t('issueDetail.runAction')}
+                </button>
+              )}
             </div>
           )}
           {(isRunning || issue.status === 'in_progress') && (

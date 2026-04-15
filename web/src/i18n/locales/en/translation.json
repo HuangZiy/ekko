@@ -134,7 +134,12 @@
     "codeChanges": "Code Changes",
     "changeSummary": "Change Summary",
     "clickToEnlarge": "Click to enlarge",
-    "buildLog": "Build Log"
+    "buildLog": "Build Log",
+    "startPlanning": "Start Planning",
+    "stopPlanning": "Stop Planning",
+    "planningTerminal": "Planning Terminal",
+    "planningActive": "Planning session active",
+    "planningEnded": "Planning session ended"
   },
   "projectDetail": {
     "editProject": "Edit project",
@@ -181,7 +186,9 @@
     "stopTitle": "Stop this issue",
     "stop": "Stop",
     "runTitle": "Run this issue",
-    "blockedBy": "Blocked by {{count}}"
+    "blockedBy": "Blocked by {{count}}",
+    "planningTitle": "Start planning this issue",
+    "planning": "Plan"
   },
   "markdownEditor": {
     "write": "Write",

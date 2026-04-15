@@ -39,6 +39,20 @@ async def project_websocket(project_id: str, ws: WebSocket):
                 if issue_id:
                     from server.routes.run import request_cancel
                     request_cancel(issue_id)
+            elif msg_type == "planning_input":
+                issue_id = data.get("issue_id")
+                if issue_id:
+                    from server.routes.planning import handle_planning_input
+                    await handle_planning_input(issue_id, data.get("data", ""))
+            elif msg_type == "planning_resize":
+                issue_id = data.get("issue_id")
+                if issue_id:
+                    from server.routes.planning import handle_planning_resize
+                    await handle_planning_resize(
+                        issue_id,
+                        data.get("cols", 80),
+                        data.get("rows", 24),
+                    )
     except WebSocketDisconnect:
         pass
     except Exception:

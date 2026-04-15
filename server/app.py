@@ -9,6 +9,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from server.routes import issues, board, projects, reviews, run, fs, uploads
+from server.routes import planning as planning_route
 from server.routes import ws as ws_route
 from server.routes import scheduler as scheduler_route
 
@@ -62,10 +63,6 @@ def _reset_stuck_issues() -> None:
                     issue.move_to(IssueStatus.FAILED)
                     storage.save_issue(issue)
                     _move_board_column(storage, issue.id, "todo")
-                elif issue.status == IssueStatus.PLANNING:
-                    issue.move_to(IssueStatus.BACKLOG)
-                    storage.save_issue(issue)
-                    _move_board_column(storage, issue.id, "backlog")
     except Exception:
         pass
 
@@ -89,6 +86,7 @@ def create_app(harness_root: Path | None = None) -> FastAPI:
     app.include_router(board.router)
     app.include_router(reviews.router)
     app.include_router(run.router)
+    app.include_router(planning_route.router)
     app.include_router(fs.router)
     app.include_router(uploads.router)
     app.include_router(ws_route.router)

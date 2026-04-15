@@ -1,6 +1,6 @@
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { GripVertical, AlertCircle, Clock, Tag, Play, Square, Bot } from 'lucide-react'
+import { GripVertical, AlertCircle, Clock, Tag, Play, Square, Bot, ClipboardList } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import type { Issue } from '../stores/boardStore'
 import { useBoardStore } from '../stores/boardStore'
@@ -24,6 +24,7 @@ export function IssueCard({ issue, onClick }: IssueCardProps) {
   })
   const runSingleIssue = useBoardStore(s => s.runSingleIssue)
   const stopIssue = useBoardStore(s => s.stopIssue)
+  const moveIssue = useBoardStore(s => s.moveIssue)
   const isRunning = useBoardStore(s => s.runningIssueIds.includes(issue.id)) || issue.status === 'in_progress'
   const hasOtherRunning = useBoardStore(s => Object.values(s.issues).some(i => i.status === 'in_progress' && i.id !== issue.id))
 
@@ -33,7 +34,8 @@ export function IssueCard({ issue, onClick }: IssueCardProps) {
     opacity: isDragging ? 0.5 : 1,
   }
 
-  const canRun = !hasOtherRunning && (issue.status === 'todo' || issue.status === 'rejected' || issue.status === 'backlog' || issue.status === 'failed')
+  const canRun = !hasOtherRunning && (issue.status === 'todo' || issue.status === 'rejected' || issue.status === 'backlog' || issue.status === 'failed' || issue.status === 'planning')
+  const canPlan = issue.status === 'backlog'
 
   const handleRun = (e: React.MouseEvent) => {
     e.stopPropagation()
@@ -43,6 +45,11 @@ export function IssueCard({ issue, onClick }: IssueCardProps) {
   const handleStop = (e: React.MouseEvent) => {
     e.stopPropagation()
     stopIssue(issue.id)
+  }
+
+  const handlePlan = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    moveIssue(issue.id, 'planning')
   }
 
   return (
@@ -72,14 +79,27 @@ export function IssueCard({ issue, onClick }: IssueCardProps) {
                 <span className="text-xs">{t('issueCard.stop')}</span>
               </button>
             )}
-            {canRun && !isRunning && issue.status !== 'in_progress' && (
-              <button
-                onClick={handleRun}
-                className="ml-auto p-1 rounded hover:bg-green-50 text-green-600 hover:text-green-700 transition-colors"
-                title={t('issueCard.runTitle')}
-              >
-                <Play size={12} />
-              </button>
+            {!isRunning && issue.status !== 'in_progress' && (canPlan || canRun) && (
+              <div className="ml-auto flex items-center gap-0.5">
+                {canPlan && (
+                  <button
+                    onClick={handlePlan}
+                    className="p-1 rounded hover:bg-violet-50 text-violet-600 hover:text-violet-700 transition-colors"
+                    title={t('issueCard.planningTitle')}
+                  >
+                    <ClipboardList size={12} />
+                  </button>
+                )}
+                {canRun && (
+                  <button
+                    onClick={handleRun}
+                    className="p-1 rounded hover:bg-green-50 text-green-600 hover:text-green-700 transition-colors"
+                    title={t('issueCard.runTitle')}
+                  >
+                    <Play size={12} />
+                  </button>
+                )}
+              </div>
             )}
           </div>
           <div className="text-sm font-medium text-[var(--text-primary)] truncate">{issue.title}</div>

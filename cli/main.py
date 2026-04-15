@@ -671,6 +671,60 @@ def _plan_issue(args: argparse.Namespace) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Stats
+# ---------------------------------------------------------------------------
+
+def _stats(args: argparse.Namespace) -> None:
+    """Show cost/duration/turns statistics."""
+    store = _get_storage(args)
+    issue_id = getattr(args, "issue_id", None)
+
+    if issue_id:
+        try:
+            issue = store.load_issue(issue_id)
+        except FileNotFoundError:
+            print(f"Issue not found: {issue_id}", file=sys.stderr)
+            sys.exit(1)
+
+        runs = store.list_all_run_stats(issue_id)
+        if not runs:
+            print(f"{issue_id}: {issue.title}")
+            print(f"  0 runs")
+            return
+
+        total_cost = sum(r.get("cost_usd", 0) for r in runs)
+        total_duration = sum(r.get("duration_ms", 0) for r in runs)
+        total_attempts = sum(r.get("attempts", 0) for r in runs)
+
+        print(f"{issue_id}: {issue.title}")
+        print(f"  Runs:     {len(runs)}")
+        print(f"  Cost:     ${total_cost:.2f}")
+        print(f"  Duration: {total_duration // 1000}s")
+        print(f"  Attempts: {total_attempts}")
+
+        for i, r in enumerate(runs):
+            status = "PASS" if r.get("success") else "FAIL"
+            cost = r.get("cost_usd", 0)
+            dur = r.get("duration_ms", 0) // 1000
+            print(f"    run-{i+1:03d}: {status}  ${cost:.2f}  {dur}s")
+    else:
+        issues = store.list_issues()
+        total_cost = 0.0
+        total_runs = 0
+        by_status = {}
+
+        for issue in issues:
+            by_status.setdefault(issue.status.value, []).append(issue)
+            runs = store.list_all_run_stats(issue.id)
+            total_runs += len(runs)
+            total_cost += sum(r.get("cost_usd", 0) for r in runs)
+
+        print(f"Project: {len(issues)} issues, {total_runs} runs, ${total_cost:.2f} total cost")
+        for status, items in sorted(by_status.items()):
+            print(f"  {status:<15} {len(items)}")
+
+
+# ---------------------------------------------------------------------------
 # Run
 # ---------------------------------------------------------------------------
 
@@ -929,6 +983,11 @@ def build_parser() -> argparse.ArgumentParser:
     plan_issue_parser = sub.add_parser("plan-issue", help="Run planning agent for a specific issue")
     plan_issue_parser.add_argument("issue_id", help="Issue ID to plan (e.g. ISS-4)")
     plan_issue_parser.set_defaults(func=_plan_issue)
+
+    # -- stats --
+    stats_parser = sub.add_parser("stats", help="Show cost/duration statistics")
+    stats_parser.add_argument("issue_id", nargs="?", default=None, help="Issue ID (omit for project summary)")
+    stats_parser.set_defaults(func=_stats)
 
     # -- run --
     run_parser = sub.add_parser("run", help="Run execution loop for pending issues")

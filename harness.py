@@ -515,7 +515,7 @@ async def run_ekko(user_prompt: str) -> None:
             _log_file = None
 
 
-_CLI_SUBCOMMANDS = {"init", "issue", "review", "project", "board", "plan", "plan-issue", "run", "serve"}
+_CLI_SUBCOMMANDS = {"init", "issue", "review", "project", "board", "plan", "plan-issue", "run", "serve", "stats"}
 
 if __name__ == "__main__":
     # Delegate to new CLI if a known subcommand is used

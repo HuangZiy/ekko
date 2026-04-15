@@ -256,7 +256,7 @@ def _print_summary(task_dir: Path, cycle_stats: list[dict], harness_start: float
     lines = []
     lines.append("")
     lines.append(f"{C_BOLD}{'='*80}{C_RESET}")
-    lines.append(f"{C_BOLD}  Harness Summary{C_RESET}")
+    lines.append(f"{C_BOLD}  Ekko Summary{C_RESET}")
     lines.append(f"{C_BOLD}{'='*80}{C_RESET}")
     lines.append("")
     lines.append(f"  {'Cycle':<8} {'Phase':<12} {'Task':<40} {'Cost':>8} {'Duration':>10} {'Turns':>6} {'Tokens':>20}")
@@ -375,7 +375,7 @@ async def _generate_readme() -> None:
 # Main harness
 # ---------------------------------------------------------------------------
 
-async def run_harness(user_prompt: str) -> None:
+async def run_ekko(user_prompt: str) -> None:
     WORKSPACE_DIR.mkdir(parents=True, exist_ok=True)
     TASKS_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -417,8 +417,8 @@ async def run_harness(user_prompt: str) -> None:
 
     # Open log file for this task
     global _log_file
-    _log_file = open(task_dir / "harness.log", "a", encoding="utf-8")
-    _log_file.write(f"\n{'='*60}\nHarness started: {datetime.now().isoformat()}\nPrompt: {user_prompt}\nTask: {task_id}\n{'='*60}\n")
+    _log_file = open(task_dir / "ekko.log", "a", encoding="utf-8")
+    _log_file.write(f"\n{'='*60}\nEkko started: {datetime.now().isoformat()}\nPrompt: {user_prompt}\nTask: {task_id}\n{'='*60}\n")
     _log_file.flush()
 
     try:
@@ -507,7 +507,7 @@ async def run_harness(user_prompt: str) -> None:
 
         _mark_completed(task_dir)
         _sync_fix_plan_from_workspace(task_dir)
-        _tee(f"\n{C_GREEN}Harness complete. Task: {task_id}{C_RESET}")
+        _tee(f"\n{C_GREEN}Ekko complete. Task: {task_id}{C_RESET}")
 
     finally:
         if _log_file:
@@ -524,4 +524,4 @@ if __name__ == "__main__":
         cli_main(sys.argv[1:])
     else:
         prompt = sys.argv[1] if len(sys.argv) > 1 else "创建一个极简风格的技术博客"
-        anyio.run(run_harness, prompt)
+        anyio.run(run_ekko, prompt)

@@ -15,7 +15,7 @@ dependencies = [
 ]
 
 [project.scripts]
-harness = "cli.main:main"
+ekko = "cli.main:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["core", "cli", "server", "agents"]

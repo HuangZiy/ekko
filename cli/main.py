@@ -22,7 +22,7 @@ def _get_storage(args: argparse.Namespace):
     platform = _get_platform()
     active_id = platform.get_active_project_id()
     if not active_id:
-        print("No active project. Create one with: harness project create \"name\" /path/to/workspace", file=sys.stderr)
+        print("No active project. Create one with: ekko project create \"name\" /path/to/workspace", file=sys.stderr)
         sys.exit(1)
     return platform.get_project_storage(active_id)
 
@@ -46,7 +46,7 @@ def _project_list(args: argparse.Namespace) -> None:
     projects = platform.list_projects()
     active_id = platform.get_active_project_id()
     if not projects:
-        print("No projects. Create one with: harness project create \"name\" /path/to/workspace")
+        print("No projects. Create one with: ekko project create \"name\" /path/to/workspace")
         return
     for pid, project in projects:
         marker = " *" if pid == active_id else ""
@@ -644,7 +644,7 @@ def _scheduler_once(args: argparse.Namespace) -> None:
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        prog="harness",
+        prog="ekko",
         description="Ekko — AI-driven development with kanban issue management",
     )
     parser.add_argument("--project", help="Project storage directory", default=None)

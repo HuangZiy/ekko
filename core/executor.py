@@ -137,6 +137,20 @@ def build_issue_prompt(issue: Issue, storage: ProjectStorage, workspace: Path) -
     if ralph_prompt_path.exists():
         base_prompt = ralph_prompt_path.read_text()
 
+    # Find the next unchecked step to highlight
+    next_step = None
+    if plan:
+        for line in plan.splitlines():
+            if line.strip().startswith("- [ ]"):
+                next_step = line.strip()
+                break
+    if next_step:
+        next_step_hint = f"\n\n**当前步骤（只做这一步，完成后立即在 plan.md 中将 `[ ]` 改为 `[x]`）:** {next_step}"
+    elif plan:
+        next_step_hint = "\n\n（所有步骤已完成，请运行构建验证后提交）"
+    else:
+        next_step_hint = ""
+
     return f"""{base_prompt}
 
 ## 任务: {issue.title}
@@ -153,6 +167,7 @@ ID: {issue.id}
 路径: {plan_path}
 
 {plan if plan else '（尚无计划，请先制定计划再实现）'}
+{next_step_hint}
 
 如需更新计划，直接 Write/Edit 上述路径。
 

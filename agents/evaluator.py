@@ -145,6 +145,7 @@ async def run_issue_eval(
     issue_id: str,
     issue_title: str,
     issue_content: str,
+    plan: str | None = None,
     screenshots_dir: Path | None = None,
     workspace: Path | None = None,
     on_event: Callable[[dict], Awaitable[None]] | None = None,
@@ -167,6 +168,22 @@ async def run_issue_eval(
 
     git_diff = _get_git_diff(ws)
 
+    # Build plan completion summary for evaluator context
+    plan_section = ""
+    if plan:
+        total = sum(1 for l in plan.splitlines() if l.strip().startswith("- ["))
+        done = sum(1 for l in plan.splitlines() if l.strip().startswith("- [x]"))
+        remaining = [l.strip() for l in plan.splitlines() if l.strip().startswith("- [ ]")]
+        plan_section = f"""
+### 执行计划完成情况
+进度：{done}/{total} 步骤已完成
+
+{plan}
+
+"""
+        if remaining:
+            plan_section += f"**未完成步骤（{len(remaining)} 项）：**\n" + "\n".join(remaining) + "\n"
+
     server, port = _start_dev_server(ws)
     try:
         prompt = f"""增量评估：验证以下 Issue 是否正确完成。
@@ -178,7 +195,7 @@ async def run_issue_eval(
 
 ### 详细内容与验收标准
 {issue_content if issue_content else '（无详细描述，根据标题判断）'}
-
+{plan_section}
 ### 本次代码变更
 {git_diff}
 
@@ -186,8 +203,9 @@ async def run_issue_eval(
 
 1. 用 Playwright 打开 http://localhost:{port}，验证与此 Issue 相关的页面和功能
 2. 对照 Issue 的验收标准逐项检查
-3. 运行 `npm run build` 确认构建通过
-4. 只关注此 Issue 的完成情况，不做全量评估
+3. 如果执行计划中有未完成步骤（`- [ ]`），必须输出 [FAIL] 指出哪些步骤未完成
+4. 运行 `npm run build` 确认构建通过
+5. 只关注此 Issue 的完成情况，不做全量评估
 
 ## 输出格式（严格遵守）
 

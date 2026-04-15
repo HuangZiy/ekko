@@ -101,6 +101,12 @@ async def run_issue_loop(
         issue.move_to(IssueStatus.IN_PROGRESS)
         storage.save_issue(issue)
         _log("State", C_CYAN, f"{issue.id}: → in_progress")
+        print(f"[DEBUG] {issue.id}: saved in_progress to disk, _cancel_events check next", flush=True)
+        try:
+            from server.routes.run import _cancel_events
+            print(f"[DEBUG] {issue.id}: _cancel_events keys = {list(_cancel_events.keys())}", flush=True)
+        except ImportError:
+            pass
         await _emit_harness(on_event, issue.id, "state", "→ in_progress")
         await _sync_board(issue, storage, on_event)
 
@@ -334,11 +340,14 @@ async def _run_evaluator(
     screenshots_dir = storage.root / "runs" / issue.id / "screenshots"
     screenshots_dir.mkdir(parents=True, exist_ok=True)
 
+    plan = storage.load_issue_plan(issue.id)
+
     try:
         report, stats = await run_issue_eval(
             issue_id=issue.id,
             issue_title=issue.title,
             issue_content=content,
+            plan=plan,
             screenshots_dir=screenshots_dir,
             workspace=workspace,
             on_event=on_event,

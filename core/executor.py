@@ -9,6 +9,8 @@ import time
 from pathlib import Path
 from typing import Awaitable, Callable
 
+import re
+
 from claude_agent_sdk import (
     ClaudeSDKClient, ClaudeAgentOptions, ResultMessage,
     AssistantMessage, SystemMessage, TextBlock, ToolUseBlock, ToolResultBlock,
@@ -18,6 +20,18 @@ from claude_agent_sdk.types import StreamEvent
 from config import MODEL, MAX_TURNS_PER_LOOP, MAX_BUDGET_PER_LOOP
 from core.models import Issue
 from core.storage import ProjectStorage
+
+
+def _discover_plugins(workspace: Path) -> list[dict]:
+    """Find .claude/skills/* dirs in workspace and return as SdkPluginConfig list."""
+    skills_root = workspace / ".claude" / "skills"
+    if not skills_root.is_dir():
+        return []
+    return [
+        {"type": "local", "path": str(d)}
+        for d in sorted(skills_root.iterdir())
+        if d.is_dir() and (d / "SKILL.md").exists()
+    ]
 
 
 C_RESET = "\033[0m"
@@ -120,6 +134,26 @@ def build_issue_prompt(issue: Issue, storage: ProjectStorage, workspace: Path) -
     except FileNotFoundError:
         content = ""
 
+    # Replace API image URLs with local file paths so Ralph can Read them
+    if content:
+        def _url_to_local(m):
+            mid = m.group(2)  # issue_id from URL
+            fname = m.group(3)
+            local = storage.issues_dir / mid / "uploads" / fname
+            return f'![{m.group(1)}]({local})' if local.exists() else m.group(0)
+        content = re.sub(
+            r'!\[([^\]]*)\]\(/api/projects/[^/]+/issues/([^/]+)/uploads/([^)]+)\)',
+            _url_to_local, content,
+        )
+        # Also handle project-level shared uploads
+        content = re.sub(
+            r'!\[([^\]]*)\]\(/api/projects/[^/]+/uploads/([^)]+)\)',
+            lambda m: f'![{m.group(1)}]({storage.issues_dir / "_shared" / "uploads" / m.group(2)})'
+            if (storage.issues_dir / "_shared" / "uploads" / m.group(2)).exists()
+            else m.group(0),
+            content,
+        )
+
     plan = storage.load_issue_plan(issue.id)
     plan_path = storage.issues_dir / issue.id / "plan.md"
 
@@ -215,6 +249,7 @@ async def execute_issue(
             max_turns=MAX_TURNS_PER_LOOP,
             max_budget_usd=MAX_BUDGET_PER_LOOP,
             permission_mode="bypassPermissions",
+            plugins=_discover_plugins(workspace),
         ),
     ):
         _log_message(message, issue.id)

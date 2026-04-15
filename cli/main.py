@@ -28,6 +28,68 @@ def _get_storage(args: argparse.Namespace):
 
 
 # ---------------------------------------------------------------------------
+# Init
+# ---------------------------------------------------------------------------
+
+def _init(args: argparse.Namespace) -> None:
+    """Initialize a new Ekko project in the current directory."""
+    import json
+    from core.models import Project, Board
+    from core.storage import ProjectStorage
+
+    cwd = Path.cwd()
+    harness_dir = cwd / ".harness"
+
+    if harness_dir.exists():
+        print("Error: project already initialized in this directory.", file=sys.stderr)
+        sys.exit(1)
+
+    # Interactive prompts if name/key not provided
+    name = args.name
+    if not name:
+        name = input("Project name: ").strip()
+        if not name:
+            print("Error: project name is required.", file=sys.stderr)
+            sys.exit(1)
+
+    key = args.key
+    if not key:
+        default_key = name[:3].upper()
+        key = input(f"Issue prefix [{default_key}]: ").strip().upper() or default_key
+
+    # Create .harness structure
+    store = ProjectStorage(harness_dir)
+    project = Project.create(
+        id=f"prj-{name.lower().replace(' ', '-')}",
+        name=name,
+        workspace_path=str(cwd),
+        key=key.upper(),
+    )
+    store.save_project_meta(project)
+
+    # Create board.json
+    board = Board.create()
+    board_data = {"columns": [{"id": c.id, "name": c.name, "issues": c.issues} for c in board.columns]}
+    (harness_dir / "board.json").write_text(json.dumps(board_data, indent=2, ensure_ascii=False))
+
+    # Create issues dir
+    (harness_dir / "issues").mkdir(exist_ok=True)
+
+    # Register to platform
+    platform = _get_platform()
+    registry_file = platform.root / "registry.json"
+    registry = {}
+    if registry_file.exists():
+        registry = json.loads(registry_file.read_text())
+    registry[project.id] = str(harness_dir)
+    platform.root.mkdir(parents=True, exist_ok=True)
+    registry_file.write_text(json.dumps(registry, indent=2, ensure_ascii=False))
+
+    print(f"Initialized project '{name}' (prefix: {key})")
+    print(f"  Storage: {harness_dir}")
+
+
+# ---------------------------------------------------------------------------
 # Project subcommands
 # ---------------------------------------------------------------------------
 
@@ -668,6 +730,12 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--project", help="Project storage directory", default=None)
     sub = parser.add_subparsers(dest="command")
+
+    # -- init --
+    init_parser = sub.add_parser("init", help="Initialize Ekko project in current directory")
+    init_parser.add_argument("--name", default=None, help="Project name (interactive if omitted)")
+    init_parser.add_argument("--key", default=None, help="Issue ID prefix, e.g. EKO (interactive if omitted)")
+    init_parser.set_defaults(func=_init)
 
     # -- project --
     project_parser = sub.add_parser("project", help="Manage projects")

@@ -23,15 +23,39 @@ from core.storage import ProjectStorage
 
 
 def _discover_plugins(workspace: Path) -> list[dict]:
-    """Find .claude/skills/* dirs in workspace and return as SdkPluginConfig list."""
-    skills_root = workspace / ".claude" / "skills"
-    if not skills_root.is_dir():
-        return []
-    return [
-        {"type": "local", "path": str(d)}
-        for d in sorted(skills_root.iterdir())
-        if d.is_dir() and (d / "SKILL.md").exists()
-    ]
+    """Find skill dirs from workspace, user global, and installed plugins."""
+    plugins: list[dict] = []
+    seen: set[str] = set()
+
+    def _add_skills_from(root: Path) -> None:
+        if not root.is_dir():
+            return
+        for d in sorted(root.iterdir()):
+            if d.is_dir() and (d / "SKILL.md").exists() and d.name not in seen:
+                plugins.append({"type": "local", "path": str(d)})
+                seen.add(d.name)
+
+    # 1. Workspace-local skills
+    _add_skills_from(workspace / ".claude" / "skills")
+
+    # 2. User global skills (~/.claude/skills/)
+    home_skills = Path.home() / ".claude" / "skills"
+    _add_skills_from(home_skills)
+
+    # 3. Installed plugins (~/.claude/plugins/installed_plugins.json)
+    import json
+    installed_file = Path.home() / ".claude" / "plugins" / "installed_plugins.json"
+    if installed_file.exists():
+        try:
+            data = json.loads(installed_file.read_text())
+            for entries in data.get("plugins", {}).values():
+                for entry in entries:
+                    install_path = Path(entry.get("installPath", ""))
+                    _add_skills_from(install_path / "skills")
+        except (json.JSONDecodeError, KeyError):
+            pass
+
+    return plugins
 
 
 C_RESET = "\033[0m"

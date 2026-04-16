@@ -3,23 +3,30 @@
 from __future__ import annotations
 
 import asyncio
+import base64
 import os
 import pty
 import signal
 import struct
 import fcntl
 import termios
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
+
+from pathlib import Path
 
 from core.models import IssueStatus
 from core.storage import ProjectStorage
+from config import MODEL
 from server.ws import ws_manager
 
 router = APIRouter(prefix="/api/projects/{project_id}/planning", tags=["planning"])
+
+
+MAX_OUTPUT_BUFFER = 100 * 1024  # 100KB ring buffer per session
 
 
 @dataclass
@@ -31,6 +38,7 @@ class PlanningSession:
     read_task: asyncio.Task | None = None
     started_at: str = ""
     content_snapshot: str = ""
+    output_buffer: bytearray = field(default_factory=bytearray)
 
 
 # Global session registry: issue_id -> session
@@ -60,6 +68,11 @@ async def _read_pty_loop(session: PlanningSession) -> None:
                 "issue_id": session.issue_id,
                 "data": data.decode("utf-8", errors="replace"),
             })
+            # Append to ring buffer for replay on reconnect
+            session.output_buffer.extend(data)
+            if len(session.output_buffer) > MAX_OUTPUT_BUFFER:
+                excess = len(session.output_buffer) - MAX_OUTPUT_BUFFER
+                del session.output_buffer[:excess]
     except asyncio.CancelledError:
         pass
     finally:
@@ -179,7 +192,55 @@ async def handle_planning_resize(issue_id: str, cols: int, rows: int) -> None:
         pass
 
 
+async def _feed_initial_prompt(session: PlanningSession, issue_dir: str, issue_title: str) -> None:
+    """Feed the planning prompt into the PTY after Claude CLI is ready.
+
+    Sends /brainstorming + issue directory, letting Claude explore files itself.
+    """
+    await asyncio.sleep(1.5)
+
+    template_path = Path(__file__).resolve().parent.parent.parent / "prompts" / "interactive_planning.md"
+    template = template_path.read_text().strip()
+    prompt = template.format(issue_title=issue_title, issue_dir=issue_dir)
+
+    encoded = prompt.encode("utf-8")
+    loop = asyncio.get_event_loop()
+
+    try:
+        for i in range(0, len(encoded), 2048):
+            chunk = encoded[i : i + 2048]
+            await loop.run_in_executor(None, os.write, session.master_fd, chunk)
+            await asyncio.sleep(0.05)
+
+        await asyncio.sleep(0.1)
+        await loop.run_in_executor(None, os.write, session.master_fd, b"\n")
+    except OSError:
+        pass
+
+
 # --- REST endpoints ---
+
+@router.get("/status")
+async def planning_status(project_id: str):
+    """Return list of active planning session issue_ids for this project."""
+    active = [
+        sid for sid, s in _sessions.items()
+        if s.project_id == project_id
+    ]
+    return {"active_sessions": active}
+
+
+@router.get("/replay")
+async def planning_replay(project_id: str, issue_id: str = Query(...)):
+    """Return buffered terminal output for reconnecting clients."""
+    session = _sessions.get(issue_id)
+    if not session or session.project_id != project_id:
+        raise HTTPException(404, f"No active planning session for {issue_id}")
+    return {
+        "issue_id": issue_id,
+        "data": base64.b64encode(bytes(session.output_buffer)).decode("ascii"),
+    }
+
 
 class StartRequest(BaseModel):
     issue_id: str
@@ -238,10 +299,15 @@ async def start_planning(project_id: str, req: StartRequest):
     winsize = struct.pack("HHHH", req.rows, req.cols, 0, 0)
     fcntl.ioctl(slave_fd, termios.TIOCSWINSZ, winsize)
 
-    # Spawn claude process
+    # Resolve issue directory path for the prompt
+    issue_dir = str(storage.issues_dir / req.issue_id)
+
+    # Spawn claude process with model and skip-permissions
     env = {**os.environ, "TERM": "xterm-256color"}
     process = await asyncio.create_subprocess_exec(
         "claude",
+        "--model", MODEL,
+        "--dangerously-skip-permissions",
         stdin=slave_fd,
         stdout=slave_fd,
         stderr=slave_fd,
@@ -270,6 +336,9 @@ async def start_planning(project_id: str, req: StartRequest):
         "type": "planning_started",
         "data": {"issue_id": req.issue_id},
     })
+
+    # Feed initial planning prompt into the PTY so Claude has issue context
+    asyncio.create_task(_feed_initial_prompt(session, issue_dir, issue.title))
 
     return {"ok": True, "session_id": req.issue_id}
 

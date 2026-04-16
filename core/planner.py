@@ -21,6 +21,7 @@ from claude_agent_sdk.types import StreamEvent
 from config import MODEL, MAX_PLANNING_TURNS, MAX_PLANNING_BUDGET
 from core.models import Issue, IssueStatus
 from core.storage import ProjectStorage
+from core.executor import _discover_plugins
 
 
 PROMPTS_DIR = Path("prompts")
@@ -279,6 +280,7 @@ async def run_issue_planning(
             max_turns=MAX_PLANNING_TURNS,
             max_budget_usd=MAX_PLANNING_BUDGET,
             permission_mode="bypassPermissions",
+            plugins=_discover_plugins(workspace),
         ),
     ):
         _log_message(message, issue.id)

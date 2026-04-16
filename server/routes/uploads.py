@@ -113,7 +113,19 @@ def get_upload(project_id: str, issue_id: str, filename: str):
     return _serve_file(uploads_dir, filename)
 
 
-# --- Evaluator screenshots (generated during agent runs) ---
+# --- Serve local absolute path files (for agent-written content with absolute paths) ---
+
+@router.get("/api/local-file")
+def get_local_file(path: str):
+    """Serve a file by its absolute local path. Used when content.md contains absolute paths."""
+    filepath = Path(path)
+    if not filepath.is_absolute() or not filepath.exists():
+        raise HTTPException(404, "File not found")
+    # Security: only allow files under known harness directories
+    path_str = str(filepath.resolve())
+    if "/.harness/" not in path_str:
+        raise HTTPException(403, "Access denied — only .harness files allowed")
+    return _serve_file(filepath.parent, filepath.name)
 
 @router.get("/api/projects/{project_id}/issues/{issue_id}/screenshots/{filename}")
 def get_screenshot(project_id: str, issue_id: str, filename: str):

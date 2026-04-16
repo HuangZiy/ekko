@@ -60,6 +60,7 @@ def _reset_stuck_issues() -> None:
             storage = platform.get_project_storage(pid)
             for issue in storage.list_issues():
                 if issue.status == IssueStatus.IN_PROGRESS:
+                    print(f"[RESET] {issue.id}: in_progress → failed (startup reset)", flush=True)
                     issue.move_to(IssueStatus.FAILED)
                     storage.save_issue(issue)
                     _move_board_column(storage, issue.id, "todo")
@@ -108,25 +109,40 @@ def create_app(harness_root: Path | None = None) -> FastAPI:
                     from server.ws import ws_manager
                     from core.models import IssueStatus
                     from core.storage import PlatformStorage
+                    from datetime import datetime, timezone
                     root = get_harness_root()
                     platform = PlatformStorage(root)
+                    now = datetime.now(timezone.utc)
                     for pid, _ in platform.list_projects():
                         storage = platform.get_project_storage(pid)
                         for issue in storage.list_issues():
-                            if issue.status == IssueStatus.IN_PROGRESS and issue.id not in _cancel_events:
-                                # Also check scheduler's running set before resetting
-                                from core.scheduler import scheduler as _sched
-                                sched_running = set()
-                                for _s in _sched._schedules.values():
-                                    sched_running |= _s.running_issues
-                                if issue.id in sched_running:
+                            if issue.status != IssueStatus.IN_PROGRESS:
+                                continue
+                            # Skip if cancel event registered (manual run)
+                            if issue.id in _cancel_events:
+                                continue
+                            # Skip if scheduler is running it
+                            from core.scheduler import scheduler as _sched
+                            sched_running = set()
+                            for _s in _sched._schedules.values():
+                                sched_running |= _s.running_issues
+                            if issue.id in sched_running:
+                                continue
+                            # Grace period: don't touch issues that became in_progress < 5 min ago
+                            try:
+                                updated = datetime.fromisoformat(issue.updated_at)
+                                age_seconds = (now - updated).total_seconds()
+                                if age_seconds < 300:
                                     continue
-                                issue.move_to(IssueStatus.FAILED)
-                                storage.save_issue(issue)
-                                _move_board_column(storage, issue.id, "todo")  # no failed column; board shows in todo
-                                await ws_manager.broadcast(pid, {
-                                    "type": "issue_updated", "data": {"issue": issue.to_json()},
-                                })
+                            except Exception:
+                                pass
+                            print(f"[WATCHDOG] {issue.id}: stuck in_progress for {age_seconds:.0f}s, no active run → failed", flush=True)
+                            issue.move_to(IssueStatus.FAILED)
+                            storage.save_issue(issue)
+                            _move_board_column(storage, issue.id, "todo")
+                            await ws_manager.broadcast(pid, {
+                                "type": "issue_updated", "data": {"issue": issue.to_json()},
+                            })
                 except Exception:
                     pass
         asyncio.create_task(watchdog())

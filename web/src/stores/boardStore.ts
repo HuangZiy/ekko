@@ -59,6 +59,8 @@ interface BoardState {
   wsSend: ((msg: Record<string, unknown>) => void) | null
   planningActive: Record<string, boolean>
   setPlanningActive: (issueId: string, active: boolean) => void
+  fetchPlanningStatus: () => Promise<void>
+  replayPlanningOutput: (issueId: string) => Promise<string | null>
   startPlanning: (issueId: string, cols?: number, rows?: number) => Promise<void>
   stopPlanning: (issueId: string) => Promise<void>
   setProjectId: (id: string) => void
@@ -331,6 +333,34 @@ export const useBoardStore = create<BoardState>((set, get) => ({
   setPlanningActive: (issueId, active) => set(state => ({
     planningActive: { ...state.planningActive, [issueId]: active },
   })),
+
+  fetchPlanningStatus: async () => {
+    const { projectId } = get()
+    if (!projectId) return
+    try {
+      const res = await fetch(`/api/projects/${projectId}/planning/status`)
+      if (!res.ok) return
+      const data = await res.json()
+      const active: Record<string, boolean> = {}
+      for (const id of data.active_sessions ?? []) active[id] = true
+      set(state => ({ planningActive: { ...state.planningActive, ...active } }))
+    } catch { /* ignore */ }
+  },
+
+  replayPlanningOutput: async (issueId) => {
+    const { projectId } = get()
+    if (!projectId) return null
+    try {
+      const res = await fetch(`/api/projects/${projectId}/planning/replay?issue_id=${issueId}`)
+      if (!res.ok) return null
+      const data = await res.json()
+      // Server returns base64-encoded raw terminal bytes
+      const binary = atob(data.data)
+      const bytes = new Uint8Array(binary.length)
+      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i)
+      return new TextDecoder().decode(bytes)
+    } catch { return null }
+  },
 
   startPlanning: async (issueId, cols = 80, rows = 24) => {
     const { projectId } = get()

@@ -97,6 +97,12 @@ async def run_issue_loop(
         issue.move_to(IssueStatus.TODO)
         storage.save_issue(issue)
         await _sync_board(issue, storage, on_event)
+    if issue.status == IssueStatus.PLANNING:
+        issue.move_to(IssueStatus.IN_PROGRESS)
+        storage.save_issue(issue)
+        _log("State", C_CYAN, f"{issue.id}: planning → in_progress")
+        await _emit_harness(on_event, issue.id, "state", "→ in_progress")
+        await _sync_board(issue, storage, on_event)
     if issue.status in (IssueStatus.TODO, IssueStatus.FAILED):
         issue.move_to(IssueStatus.IN_PROGRESS)
         storage.save_issue(issue)

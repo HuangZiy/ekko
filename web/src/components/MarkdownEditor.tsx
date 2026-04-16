@@ -148,16 +148,21 @@ const toolbarActions: ToolbarAction[] = [
 ]
 
 const previewComponents: Components = {
-  img: ({ src, alt, ...props }) => (
-    <img
-      src={src}
-      alt={alt || ''}
-      loading="lazy"
-      style={{ maxWidth: '100%', height: 'auto', borderRadius: '0.5rem', cursor: 'pointer' }}
-      onClick={() => src && window.open(src, '_blank')}
-      {...props}
-    />
-  ),
+  img: ({ src, alt, ...props }) => {
+    const resolved = src && (src.startsWith('/Users/') || src.startsWith('/home/') || src.startsWith('/tmp/'))
+      ? `/api/local-file?path=${encodeURIComponent(src)}`
+      : src
+    return (
+      <img
+        src={resolved}
+        alt={alt || ''}
+        loading="lazy"
+        style={{ maxWidth: '100%', height: 'auto', borderRadius: '0.5rem', cursor: 'pointer' }}
+        onClick={() => resolved && window.open(resolved, '_blank')}
+        {...props}
+      />
+    )
+  },
   a: ({ href, children, ...props }) => (
     <a href={href} target="_blank" rel="noopener noreferrer" {...props}>
       {children}

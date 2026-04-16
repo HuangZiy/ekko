@@ -18,12 +18,22 @@ import { PlanningTerminal } from './PlanningTerminal'
 
 const VIDEO_EXTENSIONS = /\.(mp4|webm)$/i
 
+/** Convert absolute local paths to API-served URLs */
+function resolveImageSrc(src: string | undefined): string | undefined {
+  if (!src) return src
+  if (src.startsWith('/Users/') || src.startsWith('/home/') || src.startsWith('/tmp/')) {
+    return `/api/local-file?path=${encodeURIComponent(src)}`
+  }
+  return src
+}
+
 const markdownComponents: Components = {
   img: ({ src, alt, ...props }) => {
-    if (src && VIDEO_EXTENSIONS.test(src)) {
+    const resolved = resolveImageSrc(src)
+    if (resolved && VIDEO_EXTENSIONS.test(resolved)) {
       return (
         <video
-          src={src}
+          src={resolved}
           controls
           muted
           loop
@@ -33,11 +43,11 @@ const markdownComponents: Components = {
     }
     return (
       <img
-        src={src}
+        src={resolved}
         alt={alt || ''}
         loading="lazy"
         style={{ maxWidth: '100%', height: 'auto', borderRadius: '0.5rem', cursor: 'pointer' }}
-        onClick={() => src && window.open(src, '_blank')}
+        onClick={() => resolved && window.open(resolved, '_blank')}
         {...props}
       />
     )

@@ -16,6 +16,7 @@ export function useWebSocket() {
   const setWsSend = useBoardStore(s => s.setWsSend)
   const removeRunningIssue = useBoardStore(s => s.removeRunningIssue)
   const setPlanningActive = useBoardStore(s => s.setPlanningActive)
+  const fetchPlanningStatus = useBoardStore(s => s.fetchPlanningStatus)
   const fetchProjects = useProjectStore(s => s.fetchProjects)
 
   const wsRef = useRef<WebSocket | null>(null)
@@ -53,6 +54,7 @@ export function useWebSocket() {
       ws.onopen = () => {
         reconnectAttempt.current = 0
         setWsSend(sendMessage)
+        fetchPlanningStatus()
       }
 
       ws.onmessage = (event) => {
@@ -216,7 +218,7 @@ export function useWebSocket() {
         wsRef.current = null
       }
     }
-  }, [projectId, updateIssueFromEvent, moveBoardFromEvent, fetchBoard, fetchIssues, addSSELog, appendAgentLog, setWsSend, removeRunningIssue, setPlanningActive, fetchProjects, sendMessage])
+  }, [projectId, updateIssueFromEvent, moveBoardFromEvent, fetchBoard, fetchIssues, addSSELog, appendAgentLog, setWsSend, removeRunningIssue, setPlanningActive, fetchPlanningStatus, fetchProjects, sendMessage])
 
   return { sendMessage }
 }

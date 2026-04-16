@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Terminal } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
+import { Unicode11Addon } from '@xterm/addon-unicode11'
 import '@xterm/xterm/css/xterm.css'
 import { useBoardStore } from '../stores/boardStore'
 import { Play, Square } from 'lucide-react'
@@ -16,14 +17,21 @@ export function PlanningTerminal({ issueId, projectId }: PlanningTerminalProps) 
   const termRef = useRef<HTMLDivElement>(null)
   const terminalRef = useRef<Terminal | null>(null)
   const fitAddonRef = useRef<FitAddon | null>(null)
+  const wsSendRef = useRef<((msg: Record<string, unknown>) => void) | null>(null)
   const [started, setStarted] = useState(false)
 
   const isActive = useBoardStore(s => s.planningActive[issueId] ?? false)
   const startPlanning = useBoardStore(s => s.startPlanning)
   const stopPlanning = useBoardStore(s => s.stopPlanning)
+  const replayPlanningOutput = useBoardStore(s => s.replayPlanningOutput)
   const wsSend = useBoardStore(s => s.wsSend)
 
-  // Initialize xterm.js
+  // Keep wsSend ref in sync without triggering terminal re-init
+  useEffect(() => {
+    wsSendRef.current = wsSend
+  }, [wsSend])
+
+  // Initialize xterm.js — only depends on issueId
   useEffect(() => {
     if (!termRef.current) return
 
@@ -37,36 +45,35 @@ export function PlanningTerminal({ issueId, projectId }: PlanningTerminalProps) 
         cursor: '#c0caf5',
         selectionBackground: '#33467c',
       },
-      convertEol: true,
       scrollback: 5000,
+      allowProposedApi: true,
     })
 
     const fitAddon = new FitAddon()
+    const unicodeAddon = new Unicode11Addon()
     terminal.loadAddon(fitAddon)
+    terminal.loadAddon(unicodeAddon)
+    terminal.unicode.activeVersion = '11'
     terminal.open(termRef.current)
     fitAddon.fit()
 
     terminalRef.current = terminal
     fitAddonRef.current = fitAddon
 
-    // Handle user input -> send via WS
+    // Handle user input -> send via WS ref
     terminal.onData((data) => {
-      if (wsSend) {
-        wsSend({ type: 'planning_input', issue_id: issueId, data })
-      }
+      wsSendRef.current?.({ type: 'planning_input', issue_id: issueId, data })
     })
 
     // Handle resize
     const resizeObserver = new ResizeObserver(() => {
       fitAddon.fit()
-      if (wsSend) {
-        wsSend({
-          type: 'planning_resize',
-          issue_id: issueId,
-          cols: terminal.cols,
-          rows: terminal.rows,
-        })
-      }
+      wsSendRef.current?.({
+        type: 'planning_resize',
+        issue_id: issueId,
+        cols: terminal.cols,
+        rows: terminal.rows,
+      })
     })
     resizeObserver.observe(termRef.current)
 
@@ -76,7 +83,7 @@ export function PlanningTerminal({ issueId, projectId }: PlanningTerminalProps) 
       terminalRef.current = null
       fitAddonRef.current = null
     }
-  }, [issueId, wsSend])
+  }, [issueId])
 
   // Listen for planning_output CustomEvents
   useEffect(() => {
@@ -90,10 +97,17 @@ export function PlanningTerminal({ issueId, projectId }: PlanningTerminalProps) 
     return () => window.removeEventListener('planning_output', handler)
   }, [issueId])
 
-  // Sync started state from store
+  // Sync started state from store + replay on reconnect
   useEffect(() => {
     setStarted(isActive)
-  }, [isActive])
+    if (isActive && terminalRef.current) {
+      replayPlanningOutput(issueId).then(data => {
+        if (data && terminalRef.current) {
+          terminalRef.current.write(data)
+        }
+      })
+    }
+  }, [isActive, issueId, replayPlanningOutput])
 
   const handleStart = async () => {
     const terminal = terminalRef.current
@@ -101,6 +115,19 @@ export function PlanningTerminal({ issueId, projectId }: PlanningTerminalProps) 
     const rows = terminal?.rows ?? 24
     await startPlanning(issueId, cols, rows)
     setStarted(true)
+    // Delayed resize to force Claude CLI to redraw with correct dimensions
+    setTimeout(() => {
+      fitAddonRef.current?.fit()
+      const t = terminalRef.current
+      if (t) {
+        wsSendRef.current?.({
+          type: 'planning_resize',
+          issue_id: issueId,
+          cols: t.cols,
+          rows: t.rows,
+        })
+      }
+    }, 1000)
   }
 
   const handleStop = async () => {
@@ -134,7 +161,7 @@ export function PlanningTerminal({ issueId, projectId }: PlanningTerminalProps) 
       </div>
       <div
         ref={termRef}
-        style={{ height: '400px', padding: '4px' }}
+        style={{ height: '500px' }}
       />
     </div>
   )

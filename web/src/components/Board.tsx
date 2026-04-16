@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react'
-import { DndContext, closestCorners, PointerSensor, useSensor, useSensors, DragOverlay } from '@dnd-kit/core'
+import { DndContext, pointerWithin, PointerSensor, useSensor, useSensors, DragOverlay } from '@dnd-kit/core'
 import type { DragEndEvent, DragStartEvent } from '@dnd-kit/core'
 import type { Issue } from '../stores/boardStore'
 import { useBoardStore } from '../stores/boardStore'
@@ -25,23 +25,44 @@ export function Board({ onIssueClick }: BoardProps) {
     setActiveId(event.active.id as string)
   }, [])
 
+  // Find which column an issue belongs to
+  const findColumnForIssue = useCallback((issueId: string): string | null => {
+    for (const col of columns) {
+      if (col.issues.includes(issueId)) return col.id
+    }
+    return null
+  }, [columns])
+
   const handleDragEnd = useCallback(async (event: DragEndEvent) => {
     setActiveId(null)
     const { active, over } = event
     if (!over) return
 
     const issueId = active.id as string
-    const targetColumnId = over.id as string
+    const overId = over.id as string
 
-    const isColumn = columns.some(c => c.id === targetColumnId)
-    if (isColumn) {
-      const result = await moveIssue(issueId, targetColumnId)
-      if (result && !result.ok) {
-        setToast(result.error || 'Move failed')
-        setTimeout(() => setToast(null), 3000)
-      }
+    // Determine target column: either dropped on a column directly,
+    // or on a card inside a column
+    let targetColumnId: string | null = null
+    if (columns.some(c => c.id === overId)) {
+      targetColumnId = overId
+    } else {
+      // Dropped on a card — find which column that card is in
+      targetColumnId = findColumnForIssue(overId)
     }
-  }, [columns, moveIssue])
+
+    if (!targetColumnId) return
+
+    // Don't move if dropped back on the same column
+    const sourceColumnId = findColumnForIssue(issueId)
+    if (sourceColumnId === targetColumnId) return
+
+    const result = await moveIssue(issueId, targetColumnId)
+    if (result && !result.ok) {
+      setToast(result.error || 'Move failed')
+      setTimeout(() => setToast(null), 3000)
+    }
+  }, [columns, moveIssue, findColumnForIssue])
 
   const activeIssue = activeId ? issues[activeId] : null
 
@@ -49,7 +70,7 @@ export function Board({ onIssueClick }: BoardProps) {
     <>
       <DndContext
         sensors={sensors}
-        collisionDetection={closestCorners}
+        collisionDetection={pointerWithin}
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
       >

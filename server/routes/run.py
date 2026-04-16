@@ -151,6 +151,9 @@ async def run_issues(project_id: str, req: RunRequest, background_tasks: Backgro
         running = [i for i in storage.list_issues() if i.status == IssueStatus.IN_PROGRESS]
         if running:
             raise HTTPException(409, f"Issue {running[0].id} is already running")
+        # Register cancel event BEFORE background task starts, so watchdog
+        # won't kill the issue during the gap between response and task start.
+        get_cancel_event(req.issue_id)
     background_tasks.add_task(_run_in_background, project_id, req.issue_id)
     return {"ok": True, "issue_id": req.issue_id}
 

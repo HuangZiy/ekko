@@ -1,0 +1,1 @@
+/brainstorming 请对 Issue「{issue_title}」进行 Planning。Issue 目录：{issue_dir}。目标：阅读 Issue 目录下的 content.md 了解需求详情，探索代码库理解现有架构，制定执行计划写入 Issue 目录下的 plan.md。如果 Issue 过于复杂需要分拆，请使用 /harness 创建子 Issue 进行分拆。
